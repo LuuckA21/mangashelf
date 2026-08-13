@@ -1,0 +1,35 @@
+# Segreti e configurazione locale
+.env
+.env.local
+*.env.backup
+.mangashelf-env-backup
+
+# Backup del database
+*.sql.gz
+backup-*
+
+# Backend
+backend/target/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Log
+*.log
+
+# Other
+*.md

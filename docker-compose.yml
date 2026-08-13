@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: mangashelf-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Postgres 18+ vuole un unico mount su /var/lib/postgresql, non su
+      # /var/lib/postgresql/data: l'immagine mette i dati in una
+      # sottodirectory per major version (18/docker), cosi' che un futuro
+      # "pg_upgrade --link" non debba attraversare un confine di mount.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ./backend
+    container_name: mangashelf-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_REGISTRATION_ENABLED: ${APP_REGISTRATION_ENABLED:-true}
+      APP_COOKIE_SECURE: ${APP_COOKIE_SECURE:-true}
+      TZ: Europe/Rome
+    volumes:
+      - covers:/app/data/covers
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: mangashelf-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # IP (o CIDR) del server dove gira Nginx Proxy Manager.
+      # Serve a nginx per fidarsi degli header X-Forwarded-*.
+      MS_TRUSTED_PROXY: ${TRUSTED_PROXY}
+      NGINX_ENVSUBST_FILTER: "MS_"
+    ports:
+      # NPM sta su un'altra macchina della LAN, quindi la porta va
+      # pubblicata. BIND_ADDRESS = IP LAN del server, non 0.0.0.0.
+      - "${BIND_ADDRESS}:${HTTP_PORT:-8080}:80"
+    networks:
+      - internal
+
+volumes:
+  db-data:
+  covers:
+
+networks:
+  internal:
+    driver: bridge

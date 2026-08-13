@@ -1,0 +1,362 @@
+/*
+ * Design tokens.
+ *
+ * Indigo and vermilion on paper: the two dyes of a woodblock print, which
+ * is where this subject actually comes from. Indigo carries structure —
+ * spines, headings, rules. Vermilion appears only where the interface asks
+ * you to act, so it never becomes decoration.
+ */
+:root {
+  --paper: #f1efe8;
+  --paper-raised: #fbfaf7;
+  --indigo: #1e3a5f;
+  --indigo-deep: #142942;
+  --indigo-wash: #dfe4ec;
+  --vermilion: #d33a2c;
+  --vermilion-deep: #a82a1f;
+  --ash: #9c968a;
+  --ash-line: #d6d2c8;
+
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-data: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  --s: 8px;
+  --radius: 2px;
+  --shell: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--indigo-deep);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+a { color: var(--indigo); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+input, select, button, textarea { font: inherit; }
+
+input, select, textarea {
+  width: 100%;
+  padding: calc(var(--s) * 1.1) calc(var(--s) * 1.25);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  color: var(--indigo-deep);
+}
+
+textarea { resize: vertical; line-height: 1.5; font-family: var(--font-body); }
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+button {
+  padding: calc(var(--s) * 1.1) calc(var(--s) * 2);
+  background: var(--vermilion);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--vermilion-deep); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible { outline: 2px solid var(--indigo-deep); outline-offset: 2px; }
+
+button.quiet {
+  background: transparent;
+  color: var(--indigo);
+  border: 1px solid var(--ash-line);
+}
+button.quiet:hover:not(:disabled) { background: var(--indigo-wash); }
+
+label {
+  display: block;
+  margin-bottom: calc(var(--s) * 0.4);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.field { margin-bottom: calc(var(--s) * 2); }
+
+.error {
+  padding: var(--s) calc(var(--s) * 1.5);
+  margin-bottom: calc(var(--s) * 2);
+  border-left: 3px solid var(--vermilion);
+  background: var(--paper-raised);
+  font-size: 14px;
+}
+
+.muted { color: var(--ash); }
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+/* ---------------------------------------------------------- auth screens */
+
+.auth-shell { display: grid; place-items: center; min-height: 100vh; padding: calc(var(--s) * 3); }
+.auth-card { width: 100%; max-width: 380px; padding-left: calc(var(--s) * 3); border-left: 2px solid var(--indigo); }
+.auth-card h1 { font-size: 30px; margin-bottom: calc(var(--s) * 0.5); }
+.auth-card .subtitle { margin: 0 0 calc(var(--s) * 4); color: var(--ash); font-size: 14px; }
+.auth-card .switch { margin-top: calc(var(--s) * 3); font-size: 14px; color: var(--ash); }
+
+/* ---------------------------------------------------------------- layout */
+
+.topbar {
+  border-bottom: 1px solid var(--ash-line);
+  background: var(--paper-raised);
+}
+.topbar-inner {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 3);
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--s) * 3);
+}
+.topbar .brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--indigo-deep);
+  text-decoration: none;
+}
+.topbar nav { display: flex; gap: calc(var(--s) * 2); font-size: 14px; }
+.topbar nav a { color: var(--ash); text-decoration: none; }
+.topbar nav a:hover, .topbar nav a.active { color: var(--indigo); }
+.topbar .spacer { flex: 1; }
+
+.page { max-width: var(--shell); margin: 0 auto; padding: calc(var(--s) * 4) calc(var(--s) * 3) calc(var(--s) * 8); }
+.page-head { margin-bottom: calc(var(--s) * 3); }
+.page-head h1 { font-size: 32px; }
+
+.row { display: flex; gap: var(--s); align-items: center; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--s) * 2); }
+@media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  padding: calc(var(--s) * 3);
+}
+
+/* ------------------------------------------------------------ manga list */
+
+.manga-list { list-style: none; margin: 0; padding: 0; }
+.manga-list li { border-bottom: 1px solid var(--ash-line); }
+.manga-list a {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  align-items: baseline;
+  padding: calc(var(--s) * 2) 0;
+  text-decoration: none;
+  color: inherit;
+}
+.manga-list a:hover .title { color: var(--vermilion); }
+.manga-list .title { font-family: var(--font-display); font-size: 19px; }
+.manga-list .meta { font-size: 13px; color: var(--ash); }
+
+/* --------------------------------------------------------------- shelf --
+ * The signature: the whole run laid out as numbered tiles. Owned volumes
+ * are solid; missing ones keep their place as dashed outlines, so a gap in
+ * the sequence reads at a glance instead of having to be worked out from a
+ * list. Per-volume covers would be better still, but no free source has
+ * them, and a cover shrunk to this size would be unreadable anyway.
+ */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  padding: calc(var(--s) * 2) 0 calc(var(--s) * 2);
+  border-bottom: 3px solid var(--indigo-deep);
+}
+
+.tile {
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--indigo);
+  color: var(--paper-raised);
+  font-family: var(--font-data);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 100ms ease, background 100ms ease;
+}
+.tile:hover { background: var(--indigo-deep); transform: translateY(-2px); }
+
+.tile.missing {
+  background: transparent;
+  color: var(--ash);
+  border: 1px dashed var(--ash-line);
+}
+.tile.missing:hover { background: var(--indigo-wash); color: var(--indigo); }
+
+.tile:focus-visible { outline: 2px solid var(--vermilion); outline-offset: 2px; }
+.tile.busy { opacity: 0.4; pointer-events: none; }
+
+.shelf-legend {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  margin-top: calc(var(--s) * 1.5);
+  font-size: 13px;
+  color: var(--ash);
+}
+.shelf-legend span { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; display: inline-block; border-radius: var(--radius); }
+.swatch.owned { background: var(--indigo); }
+.swatch.missing { border: 1px dashed var(--ash-line); }
+
+/* Progress bar: how much of the run is on the shelf. */
+.progress {
+  height: 6px;
+  background: var(--indigo-wash);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: var(--s) 0 calc(var(--s) * 2);
+}
+.progress i { display: block; height: 100%; background: var(--indigo); }
+
+/* ------------------------------------------------------------- editions */
+
+.edition-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s); }
+.edition-list a {
+  display: block;
+  padding: calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-left: 3px solid var(--indigo);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+}
+.edition-list a:hover { border-left-color: var(--vermilion); }
+.edition-list .name { font-family: var(--font-display); font-size: 18px; }
+
+.empty {
+  padding: calc(var(--s) * 4);
+  text-align: center;
+  border: 1px dashed var(--ash-line);
+  border-radius: var(--radius);
+  color: var(--ash);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ------------------------------------------------- AniList search results */
+
+.result-list { list-style: none; margin: 0; padding: 0; }
+.result-list li {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 2);
+  padding: var(--s) 0;
+  border-bottom: 1px solid var(--ash-line);
+}
+.result-list li:last-child { border-bottom: none; }
+
+/* Covers keep the 2:3 proportion of a printed volume. */
+.result-cover {
+  width: 46px;
+  height: 69px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+  flex-shrink: 0;
+}
+
+.result-body { flex: 1; min-width: 0; }
+.result-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A cover on the catalogue rows, once a work has been imported. */
+.manga-list .cover {
+  width: 34px;
+  height: 51px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.detail-cover {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+}
+
+/* --------------------------------------------------------- destructive --
+ * Delete is the only place vermilion appears as an outline rather than a
+ * fill: present but not inviting, so it never competes with the action the
+ * page is actually for.
+ */
+button.danger {
+  background: transparent;
+  color: var(--vermilion);
+  border: 1px solid var(--vermilion);
+}
+button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; }
+
+.confirm { display: inline-flex; align-items: center; gap: var(--s); flex-wrap: wrap; }
+.confirm-text { font-size: 14px; color: var(--indigo-deep); }
+
+.inline-actions { display: flex; gap: var(--s); align-items: center; flex-wrap: wrap; }
+
+/* An edition row carries its own controls, so the link cannot wrap them. */
+.edition-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 2);
+  padding: calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-left: 3px solid var(--indigo);
+  border-radius: var(--radius);
+}
+.edition-row:hover { border-left-color: var(--vermilion); }
+.edition-row .grow { flex: 1; min-width: 0; }
+.edition-row a { text-decoration: none; color: inherit; }
+.edition-row .name { font-family: var(--font-display); font-size: 18px; }
+
+/* Volume management: the grid changes meaning, so it changes colour. */
+.shelf.managing .tile {
+  background: transparent;
+  color: var(--vermilion);
+  border: 1px solid var(--vermilion);
+}
+.shelf.managing .tile:hover { background: var(--vermilion); color: #fff; }

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    Three spines on a shelf, one of them missing: the gap is the thing the
+    app exists to show you. The absent volume is a plain outline rather than
+    a dashed one — at sixteen pixels a dash disappears and the shape reads
+    as noise instead of as a book.
+  -->
+  <rect width="32" height="32" rx="4" fill="#f1efe8"/>
+  <rect x="5.5"  y="8"  width="6" height="15" fill="#1e3a5f"/>
+  <rect x="13"   y="5"  width="6" height="18" fill="#1e3a5f"/>
+  <rect x="21.2" y="9.2" width="5.3" height="13.6" fill="none"
+        stroke="#a8a296" stroke-width="1.6"/>
+  <rect x="4" y="24.5" width="24" height="3" fill="#d33a2c"/>
+</svg>

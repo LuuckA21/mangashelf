@@ -1,0 +1,153 @@
+package me.luucka.mangashelf.catalog;
+
+import jakarta.validation.Valid;
+import me.luucka.mangashelf.catalog.dto.BulkVolumeRequest;
+import me.luucka.mangashelf.catalog.dto.MangaRequest;
+import me.luucka.mangashelf.catalog.dto.MangaResponse;
+import me.luucka.mangashelf.catalog.dto.SeriesRequest;
+import me.luucka.mangashelf.catalog.dto.SeriesResponse;
+import me.luucka.mangashelf.catalog.dto.VolumeRequest;
+import me.luucka.mangashelf.catalog.dto.VolumeResponse;
+import me.luucka.mangashelf.user.UserPrincipal;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * REST surface for the shared catalogue.
+ *
+ * <p>Routes are nested to mirror the ownership chain — volumes are reached
+ * through their series, series through their manga — so a URL always states
+ * which run a volume belongs to. Updates and deletes address a resource
+ * directly by id, since at that point the parent is already fixed.
+ */
+@RestController
+@RequestMapping("/api")
+public class CatalogController {
+
+    private final CatalogService catalog;
+
+    public CatalogController(CatalogService catalog) {
+        this.catalog = catalog;
+    }
+
+    // ---------------------------------------------------------------- manga
+
+    @GetMapping("/manga")
+    public Page<MangaResponse> listManga(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 24, sort = "titleRomaji", direction = Sort.Direction.ASC)
+            Pageable pageable) {
+        return catalog.listManga(q, pageable).map(MangaResponse::from);
+    }
+
+    @GetMapping("/manga/{id}")
+    public MangaResponse getManga(@PathVariable Long id) {
+        return MangaResponse.from(catalog.getManga(id));
+    }
+
+    @PostMapping("/manga")
+    public ResponseEntity<MangaResponse> createManga(@Valid @RequestBody MangaRequest request) {
+        Manga manga = catalog.createManga(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(MangaResponse.from(manga));
+    }
+
+    @PutMapping("/manga/{id}")
+    public MangaResponse updateManga(@PathVariable Long id,
+                                     @Valid @RequestBody MangaRequest request) {
+        return MangaResponse.from(catalog.updateManga(id, request));
+    }
+
+    @DeleteMapping("/manga/{id}")
+    public ResponseEntity<Void> deleteManga(@PathVariable Long id,
+                                            @AuthenticationPrincipal UserPrincipal principal) {
+        catalog.deleteManga(id, principal);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --------------------------------------------------------------- series
+
+    @GetMapping("/manga/{mangaId}/series")
+    public List<SeriesResponse> listSeries(@PathVariable Long mangaId) {
+        return catalog.listSeries(mangaId).stream().map(SeriesResponse::from).toList();
+    }
+
+    @GetMapping("/series/{id}")
+    public SeriesResponse getSeries(@PathVariable Long id) {
+        return SeriesResponse.from(catalog.getSeries(id));
+    }
+
+    @PostMapping("/manga/{mangaId}/series")
+    public ResponseEntity<SeriesResponse> createSeries(
+            @PathVariable Long mangaId,
+            @Valid @RequestBody SeriesRequest request) {
+        Series series = catalog.createSeries(mangaId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SeriesResponse.from(series));
+    }
+
+    @PutMapping("/series/{id}")
+    public SeriesResponse updateSeries(@PathVariable Long id,
+                                       @Valid @RequestBody SeriesRequest request) {
+        return SeriesResponse.from(catalog.updateSeries(id, request));
+    }
+
+    @DeleteMapping("/series/{id}")
+    public ResponseEntity<Void> deleteSeries(@PathVariable Long id,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        catalog.deleteSeries(id, principal);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --------------------------------------------------------------- volume
+
+    @GetMapping("/series/{seriesId}/volumes")
+    public List<VolumeResponse> listVolumes(@PathVariable Long seriesId) {
+        return catalog.listVolumes(seriesId).stream().map(VolumeResponse::from).toList();
+    }
+
+    @PostMapping("/series/{seriesId}/volumes")
+    public ResponseEntity<VolumeResponse> createVolume(
+            @PathVariable Long seriesId,
+            @Valid @RequestBody VolumeRequest request) {
+        Volume volume = catalog.createVolume(seriesId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(VolumeResponse.from(volume));
+    }
+
+    /** Creates a whole range at once; see {@link BulkVolumeRequest}. */
+    @PostMapping("/series/{seriesId}/volumes/bulk")
+    public ResponseEntity<List<VolumeResponse>> createVolumes(
+            @PathVariable Long seriesId,
+            @Valid @RequestBody BulkVolumeRequest request) {
+        List<VolumeResponse> created = catalog.createVolumes(seriesId, request)
+                .stream().map(VolumeResponse::from).toList();
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/volumes/{id}")
+    public VolumeResponse updateVolume(@PathVariable Long id,
+                                       @Valid @RequestBody VolumeRequest request) {
+        return VolumeResponse.from(catalog.updateVolume(id, request));
+    }
+
+    @DeleteMapping("/volumes/{id}")
+    public ResponseEntity<Void> deleteVolume(@PathVariable Long id,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        catalog.deleteVolume(id, principal);
+        return ResponseEntity.noContent().build();
+    }
+}
