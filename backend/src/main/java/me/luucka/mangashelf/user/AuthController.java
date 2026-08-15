@@ -57,10 +57,17 @@ public class AuthController {
                 UsernamePasswordAuthenticationToken.unauthenticated(
                         request.login(), request.password()));
 
-        // Rotating the session id here is what prevents session fixation:
-        // an id an attacker planted before login stops being valid the
-        // moment the session becomes authenticated.
-        httpRequest.changeSessionId();
+        // Rotating the session id is what prevents session fixation: an id
+        // an attacker planted before login stops being valid the moment the
+        // session becomes authenticated. But changeSessionId() throws when
+        // there is no session to rotate, which is the normal case for a
+        // browser arriving with no cookie at all — there the fresh session
+        // created below is already unguessable, so nothing needs rotating.
+        if (httpRequest.getSession(false) != null) {
+            httpRequest.changeSessionId();
+        } else {
+            httpRequest.getSession(true);
+        }
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);

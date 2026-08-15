@@ -138,8 +138,17 @@ export interface OwnedVolume {
   addedAt: string
 }
 
-/** Spring serialises Page as an object with a content array. */
-interface Page<T> { content: T[]; totalElements: number; totalPages: number }
+/**
+ * Involucro paginato di Spring Data.
+ *
+ * Con pageSerializationMode VIA_DTO i metadati stanno sotto "page"; la
+ * lista invece resta in "content" in entrambe le forme, che è l'unico
+ * campo che qui serve davvero.
+ */
+interface Page<T> {
+  content: T[]
+  page?: { size: number; number: number; totalElements: number; totalPages: number }
+}
 
 // --------------------------------------------------------------- endpoints
 
