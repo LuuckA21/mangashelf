@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  catalog, purchases, type Manga, type PurchaseList, type Series,
+  catalog, purchases,
+  type Manga, type PurchaseList, type PurchaseSuggestion, type Series,
 } from '../api/client'
 import { formatCents, formatDate, formatPeriod, MONTHS, parseAmount } from '../format'
 import ConfirmDelete from '../components/ConfirmDelete'
@@ -182,6 +183,13 @@ export default function PurchaseDetail() {
         </table>
       )}
 
+      <Suggestions
+        listId={list.id}
+        itemCount={list.items.length}
+        onAdded={setList}
+        onError={setError}
+      />
+
       <AddItem
         listId={list.id}
         onAdded={setList}
@@ -288,6 +296,75 @@ function ListSettings({ list, onSaved, onError }: {
 
       <button type="submit" disabled={busy}>{busy ? 'Salvo…' : 'Salva'}</button>
     </form>
+  )
+}
+
+/**
+ * Next volumes of runs already bought, one click each.
+ *
+ * <p>Reloads after every addition because adding one changes the rest: the
+ * volume just added stops being suggested, and the list totals move.
+ */
+function Suggestions({ listId, itemCount, onAdded, onError }: {
+  listId: number
+  itemCount: number
+  onAdded: (list: PurchaseList) => void
+  onError: (message: string) => void
+}) {
+  const [rows, setRows] = useState<PurchaseSuggestion[]>([])
+  const [busy, setBusy] = useState<number | null>(null)
+
+  useEffect(() => {
+    purchases.suggestions(listId).then(setRows).catch(() => undefined)
+  }, [listId, itemCount])
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="panel" style={{ marginTop: 32 }}>
+      <p className="eyebrow" style={{ marginTop: 0 }}>Continua una collana</p>
+      <ul className="suggestion-list">
+        {rows.map((row) => (
+          <li key={row.seriesId}>
+            <div className="grow">
+              <span className="suggestion-title">{row.mangaTitle}</span>
+              <span className="muted"> · {row.seriesName} · volume {row.volumeNumber}</span>
+              <div className="muted" style={{ fontSize: 13 }}>
+                {[
+                  row.priceChfCents != null ? `CHF ${formatCents(row.priceChfCents)}` : null,
+                  row.priceEurCents != null ? `EUR ${formatCents(row.priceEurCents)}` : null,
+                  `come in “${row.lastBoughtIn}”`,
+                ].filter(Boolean).join(' · ')}
+              </div>
+            </div>
+            <button
+              className="quiet"
+              disabled={busy !== null}
+              onClick={async () => {
+                setBusy(row.seriesId)
+                try {
+                  onAdded(await purchases.addItem(listId, {
+                    seriesId: row.seriesId,
+                    volumeNumber: row.volumeNumber,
+                    // Prices carry over, the date does not: a new volume
+                    // comes out on a new day, and inheriting the old one
+                    // would file it under the wrong week.
+                    priceEurCents: row.priceEurCents,
+                    priceChfCents: row.priceChfCents,
+                  }))
+                } catch {
+                  onError('Non sono riuscito ad aggiungere la riga.')
+                } finally {
+                  setBusy(null)
+                }
+              }}
+            >
+              {busy === row.seriesId ? 'Aggiungo…' : `Aggiungi vol. ${row.volumeNumber}`}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

@@ -292,7 +292,20 @@ interface ListBody {
   discountCents?: number | null
 }
 
+export interface PurchaseSuggestion {
+  seriesId: number
+  seriesName: string
+  publisher: string
+  mangaTitle: string
+  volumeNumber: number
+  priceEurCents: number | null
+  priceChfCents: number | null
+  lastBoughtIn: string
+}
+
 export const purchases = {
+  suggestions: (id: number) =>
+    api.get<PurchaseSuggestion[]>(`/api/purchases/${id}/suggestions`),
   listAll: () => api.get<PurchaseListSummary[]>('/api/purchases'),
   get: (id: number) => api.get<PurchaseList>(`/api/purchases/${id}`),
   create: (body: ListBody) => api.post<PurchaseList>('/api/purchases', body),

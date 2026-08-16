@@ -5,6 +5,7 @@ import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
+import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,14 @@ public class PurchaseController {
     public PurchaseListResponse get(@PathVariable Long id,
                                     @AuthenticationPrincipal UserPrincipal principal) {
         return purchases.get(id, principal);
+    }
+
+    /** Next volumes of runs already bought, with the prices last paid. */
+    @GetMapping("/{id}/suggestions")
+    public List<PurchaseSuggestion> suggestions(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.suggestions(id, principal);
     }
 
     @PostMapping

@@ -6,6 +6,7 @@ import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
+import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
 import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AppUserRepository;
 import me.luucka.mangashelf.user.UserPrincipal;
@@ -13,7 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Purchase lists, scoped to their owner.
@@ -26,13 +33,16 @@ import java.util.List;
 public class PurchaseService {
 
     private final PurchaseListRepository lists;
+    private final PurchaseItemRepository items;
     private final AppUserRepository users;
     private final CatalogService catalog;
 
     public PurchaseService(PurchaseListRepository lists,
+                           PurchaseItemRepository items,
                            AppUserRepository users,
                            CatalogService catalog) {
         this.lists = lists;
+        this.items = items;
         this.users = users;
         this.catalog = catalog;
     }
@@ -106,6 +116,57 @@ public class PurchaseService {
             throw ApiException.notFound("item_not_found");
         }
         return PurchaseListResponse.from(list);
+    }
+
+    /**
+     * What to add next, read from what was bought before.
+     *
+     * <p>For every run this user has ever put on a list, proposes the volume
+     * after the highest one bought, carrying the prices of that purchase. A
+     * new volume of an ongoing series is last month's line with the number
+     * moved on by one, and retyping it is the friction this removes.
+     *
+     * <p>Runs already covered in the target list are left out: suggesting a
+     * line that is on screen just below would be noise.
+     */
+    @Transactional(readOnly = true)
+    public List<PurchaseSuggestion> suggestions(Long listId, UserPrincipal principal) {
+        PurchaseList target = load(listId, principal);
+
+        // What the list already asks for, so the same volume is not offered
+        // twice — by series and by number, since two runs of one work can
+        // both be in progress.
+        Set<String> present = target.getItems().stream()
+                .map(item -> item.getSeries().getId() + "#" + item.getVolumeNumber())
+                .collect(Collectors.toSet());
+
+        // Ordered by number ascending, so the last write per series wins and
+        // holds both the highest number and the prices that went with it.
+        Map<Long, PurchaseItem> latestPerSeries = new LinkedHashMap<>();
+        for (PurchaseItem item : items.findAllByUser(principal.id())) {
+            latestPerSeries.put(item.getSeries().getId(), item);
+        }
+
+        List<PurchaseSuggestion> result = new ArrayList<>();
+        for (PurchaseItem last : latestPerSeries.values()) {
+            short next = (short) (last.getVolumeNumber() + 1);
+            if (present.contains(last.getSeries().getId() + "#" + next)) {
+                continue;
+            }
+            result.add(new PurchaseSuggestion(
+                    last.getSeries().getId(),
+                    last.getSeries().getName(),
+                    last.getSeries().getPublisher(),
+                    last.getSeries().getManga().displayTitle(),
+                    next,
+                    last.getPriceEurCents(),
+                    last.getPriceChfCents(),
+                    last.getList().getName()));
+        }
+
+        result.sort(Comparator.comparing(PurchaseSuggestion::mangaTitle,
+                String.CASE_INSENSITIVE_ORDER));
+        return result;
     }
 
     /** Marks the list paid, or reopens it. */
