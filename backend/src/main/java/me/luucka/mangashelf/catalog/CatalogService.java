@@ -145,9 +145,9 @@ public class CatalogService {
         Series series = getSeries(id);
         String language = request.language() == null ? series.getLanguage() : request.language();
 
-        // La stessa terna editore/lingua/nome sotto una stessa opera viola il
-        // vincolo di unicita': intercettarlo qui restituisce un messaggio
-        // comprensibile invece di lasciar arrivare l'errore dal database.
+        // The same publisher/language/name triple under one work violates the
+        // unique constraint. Catching it here returns a readable message
+        // rather than letting the database error surface as a 500.
         seriesRepository
                 .findByMangaIdAndPublisherIgnoreCaseAndLanguageAndNameIgnoreCase(
                         series.getManga().getId(), request.publisher(), language, request.name())

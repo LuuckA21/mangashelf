@@ -1,10 +1,10 @@
-# Processato da envsubst all'avvio del container (solo le var MS_*).
+# Processed by envsubst at container startup (MS_* variables only).
 
-# NPM sta su un'altra macchina e parla con noi in HTTP: $scheme qui vale
-# sempre "http". Se lo propagassimo, Spring crederebbe di essere servito
-# in chiaro e il cookie di sessione con Secure=true verrebbe scartato dal
-# browser -> login impossibile. Propaghiamo invece l'header originale di
-# NPM, con fallback su $scheme in caso di accesso diretto.
+# NPM sits on another machine and talks to us over HTTP, so $scheme is
+# always "http" here. Propagating it would make Spring believe it is served
+# in the clear, and the browser would then drop the Secure session cookie —
+# a login that appears to succeed but creates no session. We forward NPM's
+# original header instead, falling back to $scheme on direct access.
 map $http_x_forwarded_proto $forwarded_proto {
     default $http_x_forwarded_proto;
     ""      $scheme;
@@ -19,8 +19,9 @@ server {
     listen 80;
     server_name _;
 
-    # Con NPM remoto l'IP sorgente e' sempre quello del proxy: senza
-    # questo, ogni log e ogni futuro rate limit vedrebbe un solo client.
+    # With NPM on another host the source address is always the proxy's:
+    # without this, every log line and any future rate limit would see a
+    # single client.
     set_real_ip_from ${MS_TRUSTED_PROXY};
     real_ip_header X-Forwarded-For;
     real_ip_recursive on;
@@ -32,21 +33,21 @@ server {
     gzip_types text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
 
-    # Gli asset di Vite hanno l'hash nel nome: cache aggressiva.
+    # Vite asset names carry a content hash, so they can be cached hard.
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    # Le icone invece hanno nomi fissi: una cache lunga terrebbe in giro la
-    # versione vecchia per un anno dopo un cambio di logo.
+    # Icons have fixed names, so a long cache would keep serving the old
+    # logo for a year after it changed.
     location ~* ^/(favicon\.(svg|ico)|apple-touch-icon\.png)$ {
         expires 7d;
         add_header Cache-Control "public";
     }
 
-    # L'API viaggia sullo stesso host: niente CORS, il cookie di
-    # sessione e' first-party.
+    # The API is served from the same host: no CORS, and the session cookie
+    # stays first-party.
     location /api/ {
         proxy_pass http://backend:8080/api/;
         proxy_http_version 1.1;

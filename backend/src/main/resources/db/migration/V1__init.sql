@@ -1,13 +1,13 @@
 -- ============================================================
--- MangaShelf - schema iniziale
+-- MangaShelf - initial schema
 --
---   manga   = l'opera (One Piece)
---   series  = una edizione pubblicata (Normale, New Edition, Gazzetta)
---   volume  = il singolo volume di una edizione
---   user_volume = i volumi posseduti da un utente
+--   manga   = the work itself (One Piece)
+--   series  = one published edition (Normale, New Edition, Gazzetta)
+--   volume  = a single tome of an edition
+--   user_volume = the volumes a user owns
 --
--- Voto, wishlist, tag e dettagli d'acquisto sono volutamente assenti:
--- si aggiungono con una migrazione successiva quando serviranno.
+-- Score, wishlist, tags and purchase details are deliberately absent:
+-- they can be added by a later migration once they are actually needed.
 -- ============================================================
 
 CREATE TABLE app_user (
@@ -21,7 +21,7 @@ CREATE TABLE app_user (
 );
 
 -- ------------------------------------------------------------
--- Catalogo, condiviso fra tutti gli utenti
+-- Catalogue, shared by every user
 -- ------------------------------------------------------------
 
 CREATE TABLE manga (
@@ -73,12 +73,12 @@ CREATE INDEX idx_volume_series ON volume (series_id);
 CREATE INDEX idx_volume_isbn ON volume (isbn13);
 
 -- ------------------------------------------------------------
--- Collezione personale
+-- Personal collection
 -- ------------------------------------------------------------
 
--- Quali volumi possiede un utente. La chiave primaria e' la coppia
--- stessa: un utente possiede un volume oppure no, non esiste un terzo
--- stato, quindi non serve una chiave surrogata.
+-- Which volumes a user owns. The pair itself is the primary key: a user
+-- either owns a volume or does not, and there is no third state a
+-- surrogate key could distinguish.
 CREATE TABLE user_volume (
     user_id    BIGINT NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
     volume_id  BIGINT NOT NULL REFERENCES volume(id) ON DELETE CASCADE,

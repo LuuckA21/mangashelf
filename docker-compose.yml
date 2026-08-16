@@ -8,10 +8,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Postgres 18+ vuole un unico mount su /var/lib/postgresql, non su
-      # /var/lib/postgresql/data: l'immagine mette i dati in una
-      # sottodirectory per major version (18/docker), cosi' che un futuro
-      # "pg_upgrade --link" non debba attraversare un confine di mount.
+      # Postgres 18+ wants a single mount at /var/lib/postgresql, not at
+      # /var/lib/postgresql/data: the image places data in a per-major-version
+      # subdirectory so that a future "pg_upgrade --link" never has to cross a
+      # mount boundary.
       - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -49,13 +49,13 @@ services:
     depends_on:
       - backend
     environment:
-      # IP (o CIDR) del server dove gira Nginx Proxy Manager.
-      # Serve a nginx per fidarsi degli header X-Forwarded-*.
+      # IP (or CIDR) of the host running Nginx Proxy Manager. nginx trusts
+      # the X-Forwarded-* headers only when they arrive from here.
       MS_TRUSTED_PROXY: ${TRUSTED_PROXY}
       NGINX_ENVSUBST_FILTER: "MS_"
     ports:
-      # NPM sta su un'altra macchina della LAN, quindi la porta va
-      # pubblicata. BIND_ADDRESS = IP LAN del server, non 0.0.0.0.
+      # NPM runs on another machine on the LAN, so the port has to be
+      # published. BIND_ADDRESS is this server's LAN IP, never 0.0.0.0.
       - "${BIND_ADDRESS}:${HTTP_PORT:-8080}:80"
     networks:
       - internal

@@ -71,10 +71,10 @@ export default function SeriesDetail() {
       if (owned) await collection.remove(volume.id)
       else await collection.add(volume.id)
     } catch (e) {
-      // "già posseduto" e "non posseduto" significano che lo stato del
-      // server coincide già con quello richiesto: con l'aggiornamento
-      // ottimistico capita quando la vista era indietro, e mostrarlo come
-      // errore confonderebbe senza che ci sia nulla da correggere.
+      // "already owned" and "not owned" mean the server is already in the
+      // requested state. With the optimistic update this happens when the
+      // view had fallen behind, and reporting it as an error would confuse
+      // without there being anything to fix.
       const benign = e instanceof ApiError
         && (e.code === 'already_owned' || e.code === 'not_owned')
       if (!benign) setError('Modifica non riuscita.')

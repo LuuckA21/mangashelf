@@ -139,11 +139,11 @@ export interface OwnedVolume {
 }
 
 /**
- * Involucro paginato di Spring Data.
+ * Spring Data's paged wrapper.
  *
- * Con pageSerializationMode VIA_DTO i metadati stanno sotto "page"; la
- * lista invece resta in "content" in entrambe le forme, che è l'unico
- * campo che qui serve davvero.
+ * With pageSerializationMode VIA_DTO the metadata sits under "page", while
+ * the list stays in "content" in both shapes — and "content" is the only
+ * field this client actually needs.
  */
 interface Page<T> {
   content: T[]

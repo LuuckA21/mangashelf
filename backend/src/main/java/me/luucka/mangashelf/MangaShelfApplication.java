@@ -10,9 +10,9 @@ import static org.springframework.data.web.config.EnableSpringDataWebSupport.Pag
 
 @SpringBootApplication
 @EnableConfigurationProperties(AppProperties.class)
-// Serializzare Page direttamente espone la struttura interna di Spring Data,
-// che non ne garantisce la stabilita' fra versioni: VIA_DTO produce invece
-// un involucro documentato, con "content" e un oggetto "page".
+// Serialising Page directly exposes Spring Data's internal shape, whose
+// stability across versions is not guaranteed. VIA_DTO produces a documented
+// wrapper instead, with "content" and a "page" object.
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class MangaShelfApplication {
 

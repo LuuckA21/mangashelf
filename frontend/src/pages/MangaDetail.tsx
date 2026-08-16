@@ -158,7 +158,7 @@ export default function MangaDetail() {
                 />
               ) : (
                 <div className="edition-row">
-                  <Link to={`/edizione/${s.id}`} className="grow">
+                  <Link to={`/edition/${s.id}`} className="grow">
                     <div className="name">{s.name}</div>
                     <div className="muted" style={{ fontSize: 14 }}>
                       {s.publisher} · {s.volumeCount} volumi catalogati
@@ -253,8 +253,8 @@ function MangaForm({ manga, onSaved, onError }: {
                  onChange={(e) => setTitleRomaji(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="titleEnglish">Titolo inglese</label>
-          <input id="titleEnglish" value={titleEnglish}
+          <label htmlFor="titleEnglishEdit">Titolo inglese</label>
+          <input id="titleEnglishEdit" value={titleEnglish}
                  onChange={(e) => setTitleEnglish(e.target.value)} />
         </div>
       </div>

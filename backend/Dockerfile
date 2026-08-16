@@ -2,7 +2,8 @@
 FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 
-# Cache delle dipendenze: copia prima solo il pom
+# Dependency cache: copy only the pom first, so a source change does not
+# invalidate the layer that downloaded the whole dependency tree.
 COPY pom.xml .
 RUN mvn -B dependency:go-offline
 

@@ -44,13 +44,13 @@ public class CollectionService {
     }
 
     /**
-     * Aggiunge una copia allo scaffale.
+     * Adds a copy to the shelf.
      *
-     * <p>Restituisce il DTO e non l'entita': la risposta risale da volume a
-     * serie a opera, e con {@code open-in-view: false} quel percorso non e'
-     * piu' percorribile una volta usciti dal metodo. Costruirlo qui, dentro
-     * la transazione, e' l'unico punto in cui le associazioni sono ancora
-     * raggiungibili.
+     * <p>Returns the DTO rather than the entity: the response walks volume to
+     * series to manga, and with {@code open-in-view: false} that path is
+     * already closed once this method returns. Building it here, inside the
+     * transaction, is the only point where the associations are still
+     * reachable.
      */
     @Transactional
     public UserVolumeResponse add(Long volumeId, UserPrincipal principal) {

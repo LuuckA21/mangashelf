@@ -8,7 +8,7 @@ spring:
 
   jpa:
     hibernate:
-      # Lo schema lo gestisce Flyway: Hibernate deve solo validare.
+      # Flyway owns the schema; Hibernate only validates against it.
       ddl-auto: validate
     open-in-view: false
     properties:
@@ -34,10 +34,10 @@ server:
         http-only: true
         secure: ${APP_COOKIE_SECURE:true}
         same-site: lax
-        # Senza max-age il browser tratta il cookie come "di sessione" e lo
-        # cancella alla chiusura, costringendo a rifare login ogni volta —
-        # fastidioso soprattutto da telefono. Il valore accompagna il
-        # timeout lato server, che da solo non basta.
+        # Without max-age the browser treats this as a session cookie and
+        # drops it on close, forcing a fresh login every time — tiresome on
+        # a phone especially. It complements the server-side timeout, which
+        # alone is not enough.
         max-age: 30d
 
 management:
@@ -55,9 +55,9 @@ app:
   covers-dir: /app/data/covers
   metadata:
     anilist-url: https://graphql.anilist.co
-    # AniList consente 90 richieste al minuto e applica anche un
-    # limitatore di burst. Restiamo sotto il tetto per lasciare margine:
-    # superarlo costa un minuto di timeout su tutte le chiamate.
+    # AniList allows 90 requests a minute and also enforces a burst limiter.
+    # Staying under the ceiling leaves headroom: crossing it costs a minute
+    # of timeout on every call.
     anilist-requests-per-minute: 60
 
 logging:

@@ -17,11 +17,10 @@ export default function MyCollection() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Filtro e raggruppamento avvengono nel browser: listOwned() restituisce
-  // già l'intera collezione in una richiesta, quindi una query per ogni
-  // tasto premuto costerebbe latenza senza aggiungere nulla. Se un giorno
-  // la collezione diventasse troppo grande per una singola risposta, allora
-  // anche la ricerca dovrà spostarsi sul server.
+  // Filtering and grouping happen in the browser: listOwned() already
+  // returns the whole collection in one request, so a query per keystroke
+  // would add latency and nothing else. If the collection ever outgrows a
+  // single response, the search will have to move to the server too.
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase()
 
@@ -83,8 +82,8 @@ export default function MyCollection() {
         <p className="muted">Carico…</p>
       ) : owned.length === 0 ? (
         <div className="empty">
-          Non hai ancora segnato nessun volume. Apri un’edizione dal catalogo e
-          clicca i volumi che possiedi.
+          Non hai ancora segnato nessun volume. Apri un’edizione dal
+          catalogo e clicca i volumi che possiedi.
         </div>
       ) : groups.length === 0 ? (
         <div className="empty">Nessun risultato per “{query}”.</div>
@@ -92,7 +91,7 @@ export default function MyCollection() {
         <ul className="edition-list">
           {groups.map(({ seriesId, first, numbers }) => (
             <li key={seriesId}>
-              <Link to={`/edizione/${seriesId}`}>
+              <Link to={`/edition/${seriesId}`}>
                 <div className="name">{first.mangaTitle}</div>
                 <div className="muted" style={{ fontSize: 14 }}>
                   {first.seriesName} · {first.publisher} · {numbers.length} volumi
@@ -110,11 +109,11 @@ export default function MyCollection() {
 }
 
 /**
- * Collassa una sequenza di numeri in intervalli: "1-12, 15, 18-20".
+ * Collapses a run of numbers into ranges: "1-12, 15, 18-20".
  *
- * Una collana lunga elencata numero per numero occupa tre righe illeggibili,
- * mentre gli intervalli mostrano a colpo d'occhio dove sono i buchi — che è
- * poi l'unica cosa che si cerca guardando la propria collezione.
+ * A long series listed number by number fills three unreadable lines, while
+ * ranges show at a glance where the gaps are — which is the only thing one
+ * looks for when scanning their own collection.
  */
 function summarise(numbers: number[]): string {
   if (numbers.length === 0) return ''

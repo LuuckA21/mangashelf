@@ -24,7 +24,7 @@ export default function Register() {
     setError(null)
     try {
       await auth.register(username, email, password)
-      // Registration does not open a session, so sign in straight after.
+      // Sign upon does not open a session, so sign in straight after.
       setUser(await auth.login(username, password))
     } catch (e) {
       setError(

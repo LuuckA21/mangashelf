@@ -45,12 +45,12 @@ public class ApiExceptionHandler {
     }
 
     /**
-     * Violazione di un vincolo del database.
+     * A database constraint was violated.
      *
-     * <p>I controlli applicativi che precedono una scrittura corrono contro
-     * le richieste concorrenti, e non tutti i vincoli hanno un controllo
-     * corrispondente: senza questo, quei casi arrivano al client come 500
-     * con uno stack trace, quando la risposta corretta e' un conflitto.
+     * <p>The application checks that precede a write race against concurrent
+     * requests, and not every constraint has a matching check. Without this,
+     * those cases reach the client as a 500 with a stack trace when the
+     * correct answer is a conflict.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConstraint(DataIntegrityViolationException ex) {

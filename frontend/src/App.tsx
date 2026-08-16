@@ -28,8 +28,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Library />} />
       <Route path="/manga/:id" element={<MangaDetail />} />
-      <Route path="/edizione/:id" element={<SeriesDetail />} />
-      <Route path="/collezione" element={<MyCollection />} />
+      <Route path="/edition/:id" element={<SeriesDetail />} />
+      <Route path="/collection" element={<MyCollection />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

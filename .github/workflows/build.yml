@@ -1,8 +1,8 @@
 name: build
 
-# Compila backend e frontend a ogni push. Serve a intercettare subito gli
-# errori che finora sono emersi solo durante il build Docker sul server,
-# dove costano minuti invece di secondi.
+# Builds backend and frontend on every push. Catches the errors that would
+# otherwise only surface during the Docker build on the server, where they
+# cost minutes instead of seconds.
 
 on:
   push:
