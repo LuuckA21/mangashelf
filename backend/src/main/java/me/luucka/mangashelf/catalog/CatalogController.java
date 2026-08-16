@@ -1,6 +1,7 @@
 package me.luucka.mangashelf.catalog;
 
 import jakarta.validation.Valid;
+import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.catalog.dto.BulkVolumeRequest;
 import me.luucka.mangashelf.catalog.dto.MangaRequest;
 import me.luucka.mangashelf.catalog.dto.MangaResponse;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -71,6 +73,31 @@ public class CatalogController {
     public MangaResponse updateManga(@PathVariable Long id,
                                      @Valid @RequestBody MangaRequest request) {
         return MangaResponse.from(catalog.updateManga(id, request));
+    }
+
+    /**
+     * Replaces a work's cover with an uploaded image.
+     *
+     * <p>Separate from the update endpoint because a file cannot travel in a
+     * JSON body, and because the two are used at different moments: the form
+     * is saved often, the cover is chosen once.
+     */
+    @PostMapping("/manga/{id}/cover")
+    public MangaResponse uploadCover(@PathVariable Long id,
+                                     @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            throw ApiException.badRequest("empty_file");
+        }
+        String type = file.getContentType();
+        if (type == null || !type.startsWith("image/")) {
+            throw ApiException.badRequest("not_an_image");
+        }
+        try {
+            return MangaResponse.from(
+                    catalog.setCover(id, file.getBytes(), file.getOriginalFilename()));
+        } catch (java.io.IOException e) {
+            throw ApiException.badRequest("unreadable_file");
+        }
     }
 
     @DeleteMapping("/manga/{id}")

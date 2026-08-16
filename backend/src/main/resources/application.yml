@@ -23,6 +23,13 @@ spring:
     virtual:
       enabled: true
 
+  servlet:
+    multipart:
+      # Covers are a few hundred kilobytes; the 1 MB default would reject a
+      # decent scan, while a larger ceiling would let anything through.
+      max-file-size: 5MB
+      max-request-size: 5MB
+
 server:
   port: 8080
   forward-headers-strategy: native   # dietro Nginx Proxy Manager

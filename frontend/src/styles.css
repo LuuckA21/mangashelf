@@ -390,3 +390,29 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   font-size: 13px;
   color: var(--vermilion);
 }
+
+/* ---------------------------------------------------------- cover picker --
+ * Preview beside the controls, at the 2:3 of a printed volume: seeing the
+ * image is the only way to know a pasted address is the right one.
+ */
+.cover-picker { display: flex; gap: calc(var(--s) * 2); align-items: flex-start; }
+
+.cover-preview {
+  width: 96px;
+  height: 144px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+  flex-shrink: 0;
+}
+
+.empty-cover {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--ash-line);
+  background: transparent;
+  color: var(--ash);
+  font-size: 13px;
+}
+
+.cover-controls { flex: 1; min-width: 0; display: grid; gap: var(--s); }

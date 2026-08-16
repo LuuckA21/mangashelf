@@ -6,6 +6,7 @@ import me.luucka.mangashelf.catalog.dto.SeriesRequest;
 import me.luucka.mangashelf.catalog.dto.VolumeRequest;
 import me.luucka.mangashelf.collection.UserVolumeRepository;
 import me.luucka.mangashelf.common.ApiException;
+import me.luucka.mangashelf.common.CoverStore;
 import me.luucka.mangashelf.user.Role;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.data.domain.Page;
@@ -33,15 +34,18 @@ public class CatalogService {
     private final SeriesRepository seriesRepository;
     private final VolumeRepository volumeRepository;
     private final UserVolumeRepository userVolumeRepository;
+    private final CoverStore covers;
 
     public CatalogService(MangaRepository mangaRepository,
                           SeriesRepository seriesRepository,
                           VolumeRepository volumeRepository,
-                          UserVolumeRepository userVolumeRepository) {
+                          UserVolumeRepository userVolumeRepository,
+                          CoverStore covers) {
         this.mangaRepository = mangaRepository;
         this.seriesRepository = seriesRepository;
         this.volumeRepository = volumeRepository;
         this.userVolumeRepository = userVolumeRepository;
+        this.covers = covers;
     }
 
     // ---------------------------------------------------------------- manga
@@ -63,7 +67,11 @@ public class CatalogService {
     public Manga createManga(MangaRequest request) {
         Manga manga = new Manga(request.titleRomaji());
         apply(manga, request);
-        return mangaRepository.save(manga);
+        // Saved first because the file name is derived from the id, which
+        // only exists once the row does.
+        Manga saved = mangaRepository.save(manga);
+        localiseCover(saved);
+        return saved;
     }
 
     @Transactional
@@ -71,6 +79,31 @@ public class CatalogService {
         Manga manga = getManga(id);
         manga.setTitleRomaji(request.titleRomaji());
         apply(manga, request);
+        localiseCover(manga);
+        return manga;
+    }
+
+    /**
+     * Pulls a pasted cover URL onto local disk.
+     *
+     * <p>A remote address in the form field would otherwise stay a hotlink:
+     * the image would break the day that host changes, and every visitor's
+     * address would be handed to it. Values already served from
+     * {@code /covers/} are left alone, so re-saving a form costs nothing.
+     */
+    private void localiseCover(Manga manga) {
+        String url = manga.getCoverUrl();
+        if (covers.isRemote(url)) {
+            manga.setCoverUrl(covers.store(url, "manga-" + manga.getId()));
+        }
+    }
+
+    /** Replaces the cover with an uploaded file. */
+    @Transactional
+    public Manga setCover(Long id, byte[] bytes, String originalName) {
+        Manga manga = getManga(id);
+        manga.setCoverUrl(covers.storeBytes(
+                bytes, "manga-" + id, covers.extensionOf(originalName)));
         return manga;
     }
 

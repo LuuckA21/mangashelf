@@ -184,6 +184,30 @@ export const catalog = {
     api.put<Manga>(`/api/manga/${id}`, body),
   deleteManga: (id: number) => api.delete<void>(`/api/manga/${id}`),
 
+  /**
+   * Uploads a cover image. Goes through fetch directly because the body is
+   * multipart: setting Content-Type by hand would omit the boundary the
+   * browser generates, and the server would not be able to split the parts.
+   */
+  uploadCover: async (id: number, file: File): Promise<Manga> => {
+    const body = new FormData()
+    body.append('file', file)
+
+    const token = document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1]
+    const response = await fetch(`/api/manga/${id}/cover`, {
+      method: 'POST',
+      headers: token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {},
+      credentials: 'same-origin',
+      body,
+    })
+
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      throw new ApiError(response.status, payload?.error ?? 'unknown_error')
+    }
+    return payload as Manga
+  },
+
   listSeries: (mangaId: number) => api.get<Series[]>(`/api/manga/${mangaId}/series`),
   getSeries: (id: number) => api.get<Series>(`/api/series/${id}`),
   createSeries: (mangaId: number, body: Partial<Series>) =>

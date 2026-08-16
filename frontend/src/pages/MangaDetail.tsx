@@ -4,6 +4,7 @@ import { ApiError, catalog, type Manga, type Series } from '../api/client'
 import { useSession } from '../api/session'
 import ConfirmDelete from '../components/ConfirmDelete'
 import Layout from '../components/Layout'
+import MangaForm from '../components/MangaForm'
 
 const DELETE_ERRORS: Record<string, string> = {
   manga_has_owned_volumes:
@@ -107,8 +108,9 @@ export default function MangaDetail() {
       {editingManga && manga && (
         <MangaForm
           manga={manga}
-          onSaved={(updated) => { setManga(updated); setEditingManga(false) }}
-          onError={(message) => setError(message)}
+          onSaved={setManga}
+          onCancel={() => setEditingManga(false)}
+          onError={setError}
         />
       )}
 
@@ -189,143 +191,6 @@ export default function MangaDetail() {
         </ul>
       )}
     </Layout>
-  )
-}
-
-/**
- * Edits every field of the work.
- *
- * The endpoint replaces the whole record, so the form must carry all of it:
- * a field left out of the payload is written back as null, which is how an
- * imported description or cover silently disappears after an unrelated
- * title fix.
- */
-function MangaForm({ manga, onSaved, onError }: {
-  manga: Manga
-  onSaved: (m: Manga) => void
-  onError: (message: string) => void
-}) {
-  const [titleRomaji, setTitleRomaji] = useState(manga.titleRomaji)
-  const [titleEnglish, setTitleEnglish] = useState(manga.titleEnglish ?? '')
-  const [titleNative, setTitleNative] = useState(manga.titleNative ?? '')
-  const [authors, setAuthors] = useState(manga.authors ?? '')
-  const [description, setDescription] = useState(manga.description ?? '')
-  const [coverUrl, setCoverUrl] = useState(manga.coverUrl ?? '')
-  const [status, setStatus] = useState<string>(manga.status ?? '')
-  const [genres, setGenres] = useState((manga.genres ?? []).join(', '))
-  const [startYear, setStartYear] = useState(
-    manga.startYear === null ? '' : String(manga.startYear))
-  const [totalVolumes, setTotalVolumes] = useState(
-    manga.totalVolumes === null ? '' : String(manga.totalVolumes))
-  const [busy, setBusy] = useState(false)
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    try {
-      onSaved(await catalog.updateManga(manga.id, {
-        titleRomaji,
-        titleEnglish: titleEnglish || null,
-        titleNative: titleNative || null,
-        authors: authors || null,
-        description: description || null,
-        coverUrl: coverUrl || null,
-        status: (status || null) as Manga['status'],
-        genres: genres.trim()
-          ? genres.split(',').map((g) => g.trim()).filter(Boolean)
-          : null,
-        startYear: startYear === '' ? null : Number(startYear),
-        totalVolumes: totalVolumes === '' ? null : Number(totalVolumes),
-      }))
-    } catch {
-      onError('Salvataggio non riuscito.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
-      <div className="grid-2">
-        <div className="field">
-          <label htmlFor="titleRomaji">Titolo (romaji)</label>
-          <input id="titleRomaji" value={titleRomaji} required
-                 onChange={(e) => setTitleRomaji(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="titleEnglishEdit">Titolo inglese</label>
-          <input id="titleEnglishEdit" value={titleEnglish}
-                 onChange={(e) => setTitleEnglish(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="grid-2">
-        <div className="field">
-          <label htmlFor="titleNative">Titolo originale</label>
-          <input id="titleNative" value={titleNative}
-                 onChange={(e) => setTitleNative(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="authorsEdit">Autore</label>
-          <input id="authorsEdit" value={authors}
-                 onChange={(e) => setAuthors(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="field">
-        <label htmlFor="descriptionEdit">Trama</label>
-        <textarea id="descriptionEdit" rows={6} value={description}
-                  onChange={(e) => setDescription(e.target.value)} />
-      </div>
-
-      <div className="field">
-        <label htmlFor="coverEdit">URL copertina</label>
-        <input id="coverEdit" value={coverUrl}
-               onChange={(e) => setCoverUrl(e.target.value)} />
-      </div>
-
-      <div className="field">
-        <label htmlFor="genresEdit">Generi (separati da virgola)</label>
-        <input id="genresEdit" value={genres} placeholder="Action, Adventure"
-               onChange={(e) => setGenres(e.target.value)} />
-      </div>
-
-      <div className="grid-2">
-        <div className="field">
-          <label htmlFor="statusEdit">Stato pubblicazione</label>
-          <select id="statusEdit" value={status}
-                  onChange={(e) => setStatus(e.target.value)}>
-            <option value="">Non indicato</option>
-            <option value="RELEASING">In corso</option>
-            <option value="FINISHED">Conclusa</option>
-            <option value="HIATUS">In pausa</option>
-            <option value="NOT_YET_RELEASED">Non ancora uscita</option>
-            <option value="CANCELLED">Cancellata</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="yearEdit">Anno di inizio</label>
-          <input id="yearEdit" type="number" min={1900} max={2200} value={startYear}
-                 onChange={(e) => setStartYear(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="field">
-        <label htmlFor="volsEdit">Volumi originali (edizione giapponese)</label>
-        <input id="volsEdit" type="number" min={0} value={totalVolumes}
-               placeholder="vuoto se ancora in corso"
-               onChange={(e) => setTotalVolumes(e.target.value)} />
-      </div>
-
-      {manga.anilistId && (
-        <p className="muted" style={{ fontSize: 13 }}>
-          Collegata ad AniList (id {manga.anilistId}). Un nuovo import da
-          AniList sovrascrive queste modifiche.
-        </p>
-      )}
-
-      <button type="submit" disabled={busy}>{busy ? 'Salvo…' : 'Salva'}</button>
-    </form>
   )
 }
 

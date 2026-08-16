@@ -4,6 +4,7 @@ import { catalog, type Manga } from '../api/client'
 import { useSession } from '../api/session'
 import AniListSearch from '../components/AniListSearch'
 import Layout from '../components/Layout'
+import MangaForm from '../components/MangaForm'
 
 /** The catalogue: every work known to this instance, shared by all users. */
 export default function Library() {
@@ -15,8 +16,6 @@ export default function Library() {
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [title, setTitle] = useState('')
-  const [authors, setAuthors] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   async function load(q?: string) {
@@ -35,23 +34,6 @@ export default function Library() {
   function handleSearch(event: FormEvent) {
     event.preventDefault()
     load(query)
-  }
-
-  async function handleAdd(event: FormEvent) {
-    event.preventDefault()
-    setError(null)
-    try {
-      const created = await catalog.createManga({
-        titleRomaji: title,
-        authors: authors || null,
-      })
-      setManga((current) => [created, ...current])
-      setTitle('')
-      setAuthors('')
-      setAdding(false)
-    } catch {
-      setError('Non sono riuscito ad aggiungere il manga.')
-    }
   }
 
   return (
@@ -77,7 +59,7 @@ export default function Library() {
               {importing ? 'Chiudi' : 'Importa da AniList'}
             </button>
             <button type="button" className="quiet" onClick={() => setAdding(!adding)}>
-              {adding ? 'Annulla' : 'Aggiungi a mano'}
+              {adding ? 'Annulla' : 'Inserisci a mano'}
             </button>
           </>
         )}
@@ -93,21 +75,15 @@ export default function Library() {
       )}
 
       {adding && (
-        <form className="panel" onSubmit={handleAdd} style={{ marginBottom: 24 }}>
-          <div className="grid-2">
-            <div className="field">
-              <label htmlFor="title">Titolo</label>
-              <input id="title" value={title} required
-                     onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="authors">Autore</label>
-              <input id="authors" value={authors}
-                     onChange={(e) => setAuthors(e.target.value)} />
-            </div>
-          </div>
-          <button type="submit">Salva</button>
-        </form>
+        <MangaForm
+          manga={null}
+          onSaved={(created) => {
+            setManga((current) => [created, ...current])
+            setAdding(false)
+          }}
+          onCancel={() => setAdding(false)}
+          onError={setError}
+        />
       )}
 
       {loading ? (

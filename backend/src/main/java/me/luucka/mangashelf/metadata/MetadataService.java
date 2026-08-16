@@ -4,6 +4,7 @@ import me.luucka.mangashelf.catalog.Manga;
 import me.luucka.mangashelf.catalog.MangaRepository;
 import me.luucka.mangashelf.catalog.PublicationStatus;
 import me.luucka.mangashelf.common.ApiException;
+import me.luucka.mangashelf.common.CoverStore;
 import me.luucka.mangashelf.metadata.dto.AniListResponse;
 import me.luucka.mangashelf.metadata.dto.MangaSearchResult;
 import org.springframework.stereotype.Service;
