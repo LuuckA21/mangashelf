@@ -126,6 +126,19 @@ export interface SeriesProgress {
   missingNumbers: number[]
 }
 
+export interface EditionSummary {
+  seriesId: number
+  seriesName: string
+  publisher: string
+  mangaId: number
+  mangaTitle: string
+  coverUrl: string | null
+  totalVolumes: number
+  ownedCount: number
+  ownedNumbers: number[]
+  missingNumbers: number[]
+}
+
 export interface OwnedVolume {
   volumeId: number
   number: number
@@ -209,6 +222,7 @@ export const metadata = {
 
 export const collection = {
   listOwned: () => api.get<OwnedVolume[]>('/api/collection/volumes'),
+  summary: () => api.get<EditionSummary[]>('/api/collection/summary'),
   progress: (seriesId: number) =>
     api.get<SeriesProgress>(`/api/collection/series/${seriesId}`),
   add: (volumeId: number) => api.post<unknown>(`/api/collection/volumes/${volumeId}`),

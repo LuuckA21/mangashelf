@@ -1,5 +1,6 @@
 package me.luucka.mangashelf.collection;
 
+import me.luucka.mangashelf.collection.dto.EditionSummary;
 import me.luucka.mangashelf.collection.dto.SeriesProgressResponse;
 import me.luucka.mangashelf.collection.dto.UserVolumeResponse;
 import me.luucka.mangashelf.user.UserPrincipal;
@@ -31,6 +32,12 @@ public class CollectionController {
     @GetMapping("/volumes")
     public List<UserVolumeResponse> listOwned(@AuthenticationPrincipal UserPrincipal principal) {
         return collection.listOwned(principal);
+    }
+
+    /** The shelf grouped by edition, with owned and missing numbers. */
+    @GetMapping("/summary")
+    public List<EditionSummary> summary(@AuthenticationPrincipal UserPrincipal principal) {
+        return collection.summary(principal);
     }
 
     @PostMapping("/volumes/{volumeId}")

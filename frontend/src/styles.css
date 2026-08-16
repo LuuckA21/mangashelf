@@ -360,3 +360,33 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   border: 1px solid var(--vermilion);
 }
 .shelf.managing .tile:hover { background: var(--vermilion); color: #fff; }
+
+/* ------------------------------------------------------------------ chips --
+ * Filters read as a single row of switches rather than a dropdown: with
+ * three options the choice and its state are both visible at a glance.
+ */
+.chips { display: flex; gap: var(--s); flex-wrap: wrap; }
+
+.chip {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--ash);
+  border: 1px solid var(--ash-line);
+  border-radius: 999px;
+  font-size: 14px;
+}
+.chip:hover:not(.active) { color: var(--indigo); border-color: var(--indigo); }
+.chip.active {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--paper-raised);
+}
+
+/* Missing volumes are the shopping list, so they carry the action colour
+   without shouting — this is information, not an error. */
+.missing-line {
+  margin-top: 6px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  color: var(--vermilion);
+}

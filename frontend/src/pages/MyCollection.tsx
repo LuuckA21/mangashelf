@@ -1,107 +1,143 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, type OwnedVolume } from '../api/client'
+import { collection, type EditionSummary } from '../api/client'
 import Layout from '../components/Layout'
 
-/** Everything on your shelf, grouped by edition and filterable. */
+type Filter = 'all' | 'incomplete' | 'complete'
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'Tutte' },
+  { key: 'incomplete', label: 'Da completare' },
+  { key: 'complete', label: 'Complete' },
+]
+
+/** Your shelf, grouped by edition, searchable and filterable. */
 export default function MyCollection() {
-  const [owned, setOwned] = useState<OwnedVolume[]>([])
+  const [editions, setEditions] = useState<EditionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
 
   useEffect(() => {
-    collection.listOwned()
-      .then(setOwned)
+    collection.summary()
+      .then(setEditions)
       .catch(() => setError('Non riesco a caricare la collezione.'))
       .finally(() => setLoading(false))
   }, [])
 
-  // Filtering and grouping happen in the browser: listOwned() already
-  // returns the whole collection in one request, so a query per keystroke
-  // would add latency and nothing else. If the collection ever outgrows a
-  // single response, the search will have to move to the server too.
-  const groups = useMemo(() => {
+  // Filtering happens in the browser: the summary endpoint already returns
+  // the whole shelf in one request, so a query per keystroke would add
+  // latency and nothing else. If the collection ever outgrows a single
+  // response, this will have to move to the server.
+  const shown = useMemo(() => {
     const needle = query.trim().toLowerCase()
 
-    const matching = needle
-      ? owned.filter((item) =>
-          item.mangaTitle.toLowerCase().includes(needle) ||
-          item.seriesName.toLowerCase().includes(needle) ||
-          item.publisher.toLowerCase().includes(needle))
-      : owned
+    return editions
+      .filter((e) => {
+        if (filter === 'incomplete' && e.missingNumbers.length === 0) return false
+        if (filter === 'complete' && e.missingNumbers.length > 0) return false
+        if (!needle) return true
+        return e.mangaTitle.toLowerCase().includes(needle)
+          || e.seriesName.toLowerCase().includes(needle)
+          || e.publisher.toLowerCase().includes(needle)
+      })
+      .sort((a, b) => a.mangaTitle.localeCompare(b.mangaTitle, 'it'))
+  }, [editions, query, filter])
 
-    const byEdition = new Map<number, OwnedVolume[]>()
-    for (const item of matching) {
-      const list = byEdition.get(item.seriesId) ?? []
-      list.push(item)
-      byEdition.set(item.seriesId, list)
-    }
-
-    return [...byEdition.entries()]
-      .map(([seriesId, items]) => ({
-        seriesId,
-        first: items[0],
-        numbers: items.map((i) => i.number).sort((a, b) => a - b),
-      }))
-      .sort((a, b) => a.first.mangaTitle.localeCompare(b.first.mangaTitle, 'it'))
-  }, [owned, query])
-
-  const shown = groups.reduce((sum, g) => sum + g.numbers.length, 0)
+  const ownedTotal = editions.reduce((sum, e) => sum + e.ownedCount, 0)
+  const missingTotal = editions.reduce((sum, e) => sum + e.missingNumbers.length, 0)
 
   return (
     <Layout>
       <div className="page-head">
         <p className="eyebrow">
-          {query.trim()
-            ? `${shown} di ${owned.length} volumi`
-            : `${owned.length} volumi · ${groups.length} edizioni`}
+          {ownedTotal} volumi · {editions.length} edizioni
+          {missingTotal > 0 && ` · ${missingTotal} da recuperare`}
         </p>
         <h1>La mia collezione</h1>
       </div>
 
       {error && <div className="error">{error}</div>}
 
-      {owned.length > 0 && (
-        <div className="row" style={{ marginBottom: 24 }}>
-          <input
-            placeholder="Filtra per opera, edizione o editore"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ flex: 1, minWidth: 200 }}
-          />
-          {query && (
-            <button type="button" className="quiet" onClick={() => setQuery('')}>
-              Pulisci
-            </button>
-          )}
-        </div>
+      {editions.length > 0 && (
+        <>
+          <div className="row" style={{ marginBottom: 12 }}>
+            <input
+              placeholder="Filtra per opera, edizione o editore"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ flex: 1, minWidth: 200 }}
+            />
+            {query && (
+              <button type="button" className="quiet" onClick={() => setQuery('')}>
+                Pulisci
+              </button>
+            )}
+          </div>
+
+          <div className="chips" style={{ marginBottom: 24 }}>
+            {FILTERS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                className={`chip${filter === key ? ' active' : ''}`}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {loading ? (
         <p className="muted">Carico…</p>
-      ) : owned.length === 0 ? (
+      ) : editions.length === 0 ? (
         <div className="empty">
           Non hai ancora segnato nessun volume. Apri un’edizione dal
           catalogo e clicca i volumi che possiedi.
         </div>
-      ) : groups.length === 0 ? (
-        <div className="empty">Nessun risultato per “{query}”.</div>
+      ) : shown.length === 0 ? (
+        <div className="empty">
+          {filter === 'incomplete'
+            ? 'Nessuna edizione da completare: hai tutto quello che è catalogato.'
+            : filter === 'complete'
+              ? 'Nessuna edizione completa, per ora.'
+              : `Nessun risultato per “${query}”.`}
+        </div>
       ) : (
         <ul className="edition-list">
-          {groups.map(({ seriesId, first, numbers }) => (
-            <li key={seriesId}>
-              <Link to={`/edition/${seriesId}`}>
-                <div className="name">{first.mangaTitle}</div>
-                <div className="muted" style={{ fontSize: 14 }}>
-                  {first.seriesName} · {first.publisher} · {numbers.length} volumi
-                </div>
-                <div style={{ fontFamily: 'var(--font-data)', fontSize: 13, marginTop: 6 }}>
-                  {summarise(numbers)}
-                </div>
-              </Link>
-            </li>
-          ))}
+          {shown.map((e) => {
+            const percent = e.totalVolumes > 0
+              ? Math.round((e.ownedCount / e.totalVolumes) * 100)
+              : 0
+            return (
+              <li key={e.seriesId}>
+                <Link to={`/edition/${e.seriesId}`}>
+                  <div className="name">{e.mangaTitle}</div>
+                  <div className="muted" style={{ fontSize: 14 }}>
+                    {e.seriesName} · {e.publisher} · {e.ownedCount} di {e.totalVolumes} volumi
+                  </div>
+
+                  <div className="progress" style={{ margin: '8px 0' }}>
+                    <i style={{ width: `${percent}%` }} />
+                  </div>
+
+                  <div style={{ fontFamily: 'var(--font-data)', fontSize: 13 }}>
+                    {summarise(e.ownedNumbers)}
+                  </div>
+
+                  {e.missingNumbers.length > 0 && (
+                    <div className="missing-line">
+                      Mancano: {summarise(e.missingNumbers)}
+                    </div>
+                  )}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </Layout>

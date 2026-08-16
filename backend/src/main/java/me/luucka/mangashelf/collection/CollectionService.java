@@ -1,8 +1,11 @@
 package me.luucka.mangashelf.collection;
 
 import me.luucka.mangashelf.catalog.CatalogService;
+import me.luucka.mangashelf.catalog.VolumeRepository;
+import me.luucka.mangashelf.catalog.dto.SeriesVolumeNumber;
 import me.luucka.mangashelf.catalog.Series;
 import me.luucka.mangashelf.catalog.Volume;
+import me.luucka.mangashelf.collection.dto.EditionSummary;
 import me.luucka.mangashelf.collection.dto.SeriesProgressResponse;
 import me.luucka.mangashelf.collection.dto.UserVolumeResponse;
 import me.luucka.mangashelf.common.ApiException;
@@ -13,7 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Operations on one user's shelf.
@@ -28,13 +35,16 @@ public class CollectionService {
     private final UserVolumeRepository userVolumes;
     private final AppUserRepository users;
     private final CatalogService catalog;
+    private final VolumeRepository volumes;
 
     public CollectionService(UserVolumeRepository userVolumes,
                              AppUserRepository users,
-                             CatalogService catalog) {
+                             CatalogService catalog,
+                             VolumeRepository volumes) {
         this.userVolumes = userVolumes;
         this.users = users;
         this.catalog = catalog;
+        this.volumes = volumes;
     }
 
     @Transactional(readOnly = true)
@@ -103,6 +113,66 @@ public class CollectionService {
             added.add(volume.getId());
         }
         return added;
+    }
+
+    /**
+     * The shelf grouped by edition, with what is owned and what is missing.
+     *
+     * <p>Two queries regardless of how many editions are involved: one for
+     * the owned rows, one for every volume number of the editions they
+     * touch. Asking each edition separately would issue a round trip per row
+     * of the collection page.
+     */
+    @Transactional(readOnly = true)
+    public List<EditionSummary> summary(UserPrincipal principal) {
+        List<UserVolume> owned = userVolumes.findByIdUserIdOrderByAddedAtDesc(principal.id());
+        if (owned.isEmpty()) {
+            return List.of();
+        }
+
+        // LinkedHashMap: keeps the newest-first order the query returned, so
+        // the caller can sort as it likes without the grouping shuffling it.
+        Map<Long, List<UserVolume>> byEdition = new LinkedHashMap<>();
+        for (UserVolume uv : owned) {
+            byEdition.computeIfAbsent(uv.getVolume().getSeries().getId(),
+                    id -> new ArrayList<>()).add(uv);
+        }
+
+        Map<Long, Set<Short>> catalogued = new LinkedHashMap<>();
+        for (SeriesVolumeNumber row : volumes.findNumbersBySeriesIds(
+                List.copyOf(byEdition.keySet()))) {
+            catalogued.computeIfAbsent(row.seriesId(), id -> new TreeSet<>())
+                    .add(row.number());
+        }
+
+        List<EditionSummary> result = new ArrayList<>();
+        for (Map.Entry<Long, List<UserVolume>> entry : byEdition.entrySet()) {
+            List<UserVolume> items = entry.getValue();
+            Series series = items.getFirst().getVolume().getSeries();
+
+            Set<Short> ownedNumbers = new TreeSet<>();
+            for (UserVolume uv : items) {
+                ownedNumbers.add(uv.getVolume().getNumber());
+            }
+
+            List<Short> missing = catalogued
+                    .getOrDefault(entry.getKey(), Set.of()).stream()
+                    .filter(n -> !ownedNumbers.contains(n))
+                    .toList();
+
+            result.add(new EditionSummary(
+                    series.getId(),
+                    series.getName(),
+                    series.getPublisher(),
+                    series.getManga().getId(),
+                    series.getManga().displayTitle(),
+                    series.getManga().getCoverUrl(),
+                    ownedNumbers.size() + missing.size(),
+                    ownedNumbers.size(),
+                    List.copyOf(ownedNumbers),
+                    missing));
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)
