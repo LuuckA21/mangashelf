@@ -416,3 +416,69 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 }
 
 .cover-controls { flex: 1; min-width: 0; display: grid; gap: var(--s); }
+
+/* --------------------------------------------------------- purchase list --
+ * A table, not cards: these are figures to add up and compare down a column,
+ * which is exactly what a spreadsheet does well and what the app has to
+ * match to be worth leaving one.
+ */
+.purchase-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.purchase-table th,
+.purchase-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--ash-line);
+}
+
+.purchase-table thead th {
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ash);
+  border-bottom: 1px solid var(--indigo-deep);
+}
+
+/* Figures right-aligned and monospaced so the decimal points line up. */
+.purchase-table .num {
+  text-align: right;
+  font-family: var(--font-data);
+  white-space: nowrap;
+}
+
+.purchase-table .date-row th {
+  padding-top: 18px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--indigo-deep);
+  border-bottom: 1px solid var(--ash-line);
+}
+
+.purchase-table tfoot td {
+  border-bottom: none;
+  padding-top: 12px;
+}
+.purchase-table tfoot tr:first-child td { border-top: 2px solid var(--indigo-deep); }
+
+.purchase-table .grand-total td {
+  font-size: 17px;
+  color: var(--vermilion);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--ash);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.link-button:hover { color: var(--vermilion); background: none; }

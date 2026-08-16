@@ -19,6 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav>
             <NavLink to="/" end>Catalogo</NavLink>
             <NavLink to="/collection">La mia collezione</NavLink>
+            <NavLink to="/purchases">Acquisti</NavLink>
           </nav>
           <span className="spacer" />
           <span className="muted" style={{ fontSize: 14 }}>{user?.username}</span>

@@ -244,6 +244,56 @@ export const metadata = {
     api.post<Manga>(`/api/metadata/import/${anilistId}`),
 }
 
+export interface PurchaseItem {
+  id: number
+  seriesId: number
+  seriesName: string
+  publisher: string
+  mangaTitle: string
+  volumeNumber: number
+  releaseDate: string | null
+  priceEurCents: number | null
+  priceChfCents: number | null
+}
+
+export interface PurchaseList {
+  id: number
+  name: string
+  discountPercent: string | null
+  discountCents: number | null
+  items: PurchaseItem[]
+  totalEurCents: number
+  subtotalChfCents: number
+  discountAppliedCents: number
+  totalChfCents: number
+}
+
+export interface PurchaseListSummary {
+  id: number
+  name: string
+  itemCount: number
+  totalChfCents: number
+}
+
+export const purchases = {
+  listAll: () => api.get<PurchaseListSummary[]>('/api/purchases'),
+  get: (id: number) => api.get<PurchaseList>(`/api/purchases/${id}`),
+  create: (body: { name: string; discountPercent?: string | null; discountCents?: number | null }) =>
+    api.post<PurchaseList>('/api/purchases', body),
+  update: (id: number, body: { name: string; discountPercent?: string | null; discountCents?: number | null }) =>
+    api.put<PurchaseList>(`/api/purchases/${id}`, body),
+  remove: (id: number) => api.delete<void>(`/api/purchases/${id}`),
+  addItem: (id: number, body: {
+    seriesId: number
+    volumeNumber: number
+    releaseDate?: string | null
+    priceEurCents?: number | null
+    priceChfCents?: number | null
+  }) => api.post<PurchaseList>(`/api/purchases/${id}/items`, body),
+  removeItem: (id: number, itemId: number) =>
+    api.delete<PurchaseList>(`/api/purchases/${id}/items/${itemId}`),
+}
+
 export const collection = {
   listOwned: () => api.get<OwnedVolume[]>('/api/collection/volumes'),
   summary: () => api.get<EditionSummary[]>('/api/collection/summary'),

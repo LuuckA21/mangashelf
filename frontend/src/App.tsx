@@ -4,6 +4,8 @@ import Library from './pages/Library'
 import Login from './pages/Login'
 import MangaDetail from './pages/MangaDetail'
 import MyCollection from './pages/MyCollection'
+import PurchaseDetail from './pages/PurchaseDetail'
+import Purchases from './pages/Purchases'
 import Register from './pages/Register'
 import SeriesDetail from './pages/SeriesDetail'
 
@@ -30,6 +32,8 @@ export default function App() {
       <Route path="/manga/:id" element={<MangaDetail />} />
       <Route path="/edition/:id" element={<SeriesDetail />} />
       <Route path="/collection" element={<MyCollection />} />
+      <Route path="/purchases" element={<Purchases />} />
+      <Route path="/purchases/:id" element={<PurchaseDetail />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
