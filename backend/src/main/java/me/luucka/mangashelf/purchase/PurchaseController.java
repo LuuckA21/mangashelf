@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Purchase lists. Open to any signed-in user: a list is personal, like the
@@ -65,6 +66,24 @@ public class PurchaseController {
                                        @AuthenticationPrincipal UserPrincipal principal) {
         purchases.delete(id, principal);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Marks the list paid, or reopens it. */
+    @PutMapping("/{id}/paid")
+    public PurchaseListResponse setPaid(@PathVariable Long id,
+                                        @RequestBody Map<String, Boolean> body,
+                                        @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.setPaid(id, Boolean.TRUE.equals(body.get("paid")), principal);
+    }
+
+    /** Marks one line as set aside at the shop, or clears it. */
+    @PutMapping("/{id}/items/{itemId}/reserved")
+    public PurchaseListResponse setReserved(@PathVariable Long id,
+                                            @PathVariable Long itemId,
+                                            @RequestBody Map<String, Boolean> body,
+                                            @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.setReserved(id, itemId,
+                Boolean.TRUE.equals(body.get("reserved")), principal);
     }
 
     @PostMapping("/{id}/items")

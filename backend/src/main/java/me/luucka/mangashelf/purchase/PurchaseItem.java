@@ -51,6 +51,10 @@ public class PurchaseItem extends BaseEntity {
     @Column(name = "price_chf_cents")
     private Integer priceChfCents;
 
+    /** Set aside at the shop, waiting to be collected. */
+    @Column(nullable = false)
+    private boolean reserved = false;
+
     @Column(name = "added_at", nullable = false, updatable = false)
     private Instant addedAt = Instant.now();
 

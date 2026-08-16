@@ -482,3 +482,43 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   cursor: pointer;
 }
 .link-button:hover { color: var(--vermilion); background: none; }
+
+/* ------------------------------------------------------- purchase status --
+ * Reserved rows are tinted rather than outlined: the point is to see at a
+ * glance how much of the list the shop is already holding, which reads
+ * better as a filled band than as a column of marks.
+ */
+.purchase-table tr.reserved { background: var(--indigo-wash); }
+
+.reserve-cell { width: 34px; text-align: center; }
+
+.reserve-toggle {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  color: var(--indigo);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.reserve-toggle:hover { border-color: var(--indigo); background: var(--paper-raised); }
+.reserve-toggle[aria-pressed="true"] {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--paper-raised);
+}
+
+.paid-badge {
+  margin-left: 10px;
+  padding: 3px 9px;
+  background: var(--indigo);
+  color: var(--paper-raised);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}

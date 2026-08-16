@@ -5,6 +5,7 @@ import me.luucka.mangashelf.purchase.PurchaseList;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -21,9 +22,13 @@ import java.util.List;
 public record PurchaseListResponse(
         Long id,
         String name,
+        Short periodYear,
+        Short periodMonth,
+        Instant paidAt,
         BigDecimal discountPercent,
         Integer discountCents,
         List<PurchaseItemResponse> items,
+        int reservedCount,
         int totalEurCents,
         int subtotalChfCents,
         int discountAppliedCents,
@@ -33,9 +38,11 @@ public record PurchaseListResponse(
     public static PurchaseListResponse from(PurchaseList list) {
         int eur = 0;
         int chf = 0;
+        int reserved = 0;
         for (PurchaseItem item : list.getItems()) {
             if (item.getPriceEurCents() != null) eur += item.getPriceEurCents();
             if (item.getPriceChfCents() != null) chf += item.getPriceChfCents();
+            if (item.isReserved()) reserved++;
         }
 
         int discount = 0;
@@ -57,9 +64,13 @@ public record PurchaseListResponse(
         return new PurchaseListResponse(
                 list.getId(),
                 list.getName(),
+                list.getPeriodYear(),
+                list.getPeriodMonth(),
+                list.getPaidAt(),
                 list.getDiscountPercent(),
                 list.getDiscountCents(),
                 list.getItems().stream().map(PurchaseItemResponse::from).toList(),
+                reserved,
                 eur,
                 chf,
                 discount,

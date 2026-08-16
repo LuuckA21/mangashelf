@@ -48,6 +48,22 @@ public class PurchaseList extends BaseEntity {
     @Column(name = "discount_cents")
     private Integer discountCents;
 
+    /** Year of the month this list covers, or null when it is not tied to one. */
+    @Column(name = "period_year")
+    private Short periodYear;
+
+    @Column(name = "period_month")
+    private Short periodMonth;
+
+    /**
+     * When the list was paid, or null while it is still open.
+     *
+     * <p>A timestamp rather than a flag: "paid" and "paid when" are one
+     * fact, and two columns would allow a list that is paid on no date.
+     */
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

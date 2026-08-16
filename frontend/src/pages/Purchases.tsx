@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { purchases, type PurchaseListSummary } from '../api/client'
-import { formatCents } from '../money'
+import { formatCents, formatPeriod } from '../format'
 import Layout from '../components/Layout'
 
 /** Index of the purchase lists, newest first. */
@@ -22,9 +22,25 @@ export default function Purchases() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
     try {
-      const created = await purchases.create({ name })
+      // A new list defaults to the current month: that is what it is for,
+      // and correcting it is one field away.
+      const now = new Date()
+      const created = await purchases.create({
+        name,
+        periodYear: now.getFullYear(),
+        periodMonth: now.getMonth() + 1,
+      })
       setLists((current) => [
-        { id: created.id, name: created.name, itemCount: 0, totalChfCents: 0 },
+        {
+          id: created.id,
+          name: created.name,
+          periodYear: created.periodYear,
+          periodMonth: created.periodMonth,
+          paidAt: null,
+          itemCount: 0,
+          reservedCount: 0,
+          totalChfCents: 0,
+        },
         ...current,
       ])
       setName('')
@@ -72,9 +88,19 @@ export default function Purchases() {
           {lists.map((list) => (
             <li key={list.id}>
               <Link to={`/purchases/${list.id}`}>
-                <div className="name">{list.name}</div>
+                <div className="name">
+                  {list.name}
+                  {list.paidAt && <span className="paid-badge">pagata</span>}
+                </div>
                 <div className="muted" style={{ fontSize: 14 }}>
-                  {list.itemCount} volumi · CHF {formatCents(list.totalChfCents)}
+                  {[
+                    formatPeriod(list.periodYear, list.periodMonth),
+                    `${list.itemCount} volumi`,
+                    list.reservedCount > 0 && !list.paidAt
+                      ? `${list.reservedCount} riservati`
+                      : null,
+                    `CHF ${formatCents(list.totalChfCents)}`,
+                  ].filter(Boolean).join(' · ')}
                 </div>
               </Link>
             </li>

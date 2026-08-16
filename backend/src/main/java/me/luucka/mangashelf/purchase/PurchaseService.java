@@ -12,6 +12,7 @@ import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -43,7 +44,10 @@ public class PurchaseService {
                     PurchaseListResponse full = PurchaseListResponse.from(list);
                     return new PurchaseListSummary(
                             list.getId(), list.getName(),
-                            full.items().size(), full.totalChfCents());
+                            list.getPeriodYear(), list.getPeriodMonth(),
+                            list.getPaidAt(),
+                            full.items().size(), full.reservedCount(),
+                            full.totalChfCents());
                 })
                 .toList();
     }
@@ -59,6 +63,7 @@ public class PurchaseService {
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
 
         PurchaseList list = new PurchaseList(user, request.name());
+        applyPeriod(list, request);
         applyDiscount(list, request);
         return PurchaseListResponse.from(lists.save(list));
     }
@@ -68,6 +73,7 @@ public class PurchaseService {
                                        UserPrincipal principal) {
         PurchaseList list = load(id, principal);
         list.setName(request.name());
+        applyPeriod(list, request);
         applyDiscount(list, request);
         return PurchaseListResponse.from(list);
     }
@@ -100,6 +106,44 @@ public class PurchaseService {
             throw ApiException.notFound("item_not_found");
         }
         return PurchaseListResponse.from(list);
+    }
+
+    /** Marks the list paid, or reopens it. */
+    @Transactional
+    public PurchaseListResponse setPaid(Long id, boolean paid, UserPrincipal principal) {
+        PurchaseList list = load(id, principal);
+        // Re-marking an already paid list keeps the original date: the
+        // interesting fact is when it was settled, not when the button was
+        // last pressed.
+        if (paid && list.getPaidAt() == null) {
+            list.setPaidAt(Instant.now());
+        } else if (!paid) {
+            list.setPaidAt(null);
+        }
+        return PurchaseListResponse.from(list);
+    }
+
+    /** Marks one line as set aside at the shop, or clears it. */
+    @Transactional
+    public PurchaseListResponse setReserved(Long listId, Long itemId, boolean reserved,
+                                            UserPrincipal principal) {
+        PurchaseList list = load(listId, principal);
+        PurchaseItem item = list.getItems().stream()
+                .filter(candidate -> candidate.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> ApiException.notFound("item_not_found"));
+        item.setReserved(reserved);
+        return PurchaseListResponse.from(list);
+    }
+
+    /**
+     * Year and month travel together: the schema rejects one without the
+     * other, because a month with no year identifies nothing.
+     */
+    private void applyPeriod(PurchaseList list, PurchaseListRequest request) {
+        boolean complete = request.periodYear() != null && request.periodMonth() != null;
+        list.setPeriodYear(complete ? request.periodYear() : null);
+        list.setPeriodMonth(complete ? request.periodMonth() : null);
     }
 
     /**

@@ -254,14 +254,19 @@ export interface PurchaseItem {
   releaseDate: string | null
   priceEurCents: number | null
   priceChfCents: number | null
+  reserved: boolean
 }
 
 export interface PurchaseList {
   id: number
   name: string
+  periodYear: number | null
+  periodMonth: number | null
+  paidAt: string | null
   discountPercent: string | null
   discountCents: number | null
   items: PurchaseItem[]
+  reservedCount: number
   totalEurCents: number
   subtotalChfCents: number
   discountAppliedCents: number
@@ -271,17 +276,32 @@ export interface PurchaseList {
 export interface PurchaseListSummary {
   id: number
   name: string
+  periodYear: number | null
+  periodMonth: number | null
+  paidAt: string | null
   itemCount: number
+  reservedCount: number
   totalChfCents: number
+}
+
+interface ListBody {
+  name: string
+  periodYear?: number | null
+  periodMonth?: number | null
+  discountPercent?: string | null
+  discountCents?: number | null
 }
 
 export const purchases = {
   listAll: () => api.get<PurchaseListSummary[]>('/api/purchases'),
   get: (id: number) => api.get<PurchaseList>(`/api/purchases/${id}`),
-  create: (body: { name: string; discountPercent?: string | null; discountCents?: number | null }) =>
-    api.post<PurchaseList>('/api/purchases', body),
-  update: (id: number, body: { name: string; discountPercent?: string | null; discountCents?: number | null }) =>
+  create: (body: ListBody) => api.post<PurchaseList>('/api/purchases', body),
+  update: (id: number, body: ListBody) =>
     api.put<PurchaseList>(`/api/purchases/${id}`, body),
+  setPaid: (id: number, paid: boolean) =>
+    api.put<PurchaseList>(`/api/purchases/${id}/paid`, { paid }),
+  setReserved: (id: number, itemId: number, reserved: boolean) =>
+    api.put<PurchaseList>(`/api/purchases/${id}/items/${itemId}/reserved`, { reserved }),
   remove: (id: number) => api.delete<void>(`/api/purchases/${id}`),
   addItem: (id: number, body: {
     seriesId: number

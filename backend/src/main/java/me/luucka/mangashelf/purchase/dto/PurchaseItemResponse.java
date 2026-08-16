@@ -13,7 +13,8 @@ public record PurchaseItemResponse(
         Short volumeNumber,
         LocalDate releaseDate,
         Integer priceEurCents,
-        Integer priceChfCents
+        Integer priceChfCents,
+        boolean reserved
 ) {
 
     public static PurchaseItemResponse from(PurchaseItem item) {
@@ -27,6 +28,7 @@ public record PurchaseItemResponse(
                 item.getVolumeNumber(),
                 item.getReleaseDate(),
                 item.getPriceEurCents(),
-                item.getPriceChfCents());
+                item.getPriceChfCents(),
+                item.isReserved());
     }
 }

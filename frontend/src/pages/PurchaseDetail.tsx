@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   catalog, purchases, type Manga, type PurchaseList, type Series,
 } from '../api/client'
-import { formatCents, parseAmount } from '../money'
+import { formatCents, formatDate, formatPeriod, MONTHS, parseAmount } from '../format'
 import ConfirmDelete from '../components/ConfirmDelete'
 import Layout from '../components/Layout'
 
@@ -44,11 +44,29 @@ export default function PurchaseDetail() {
   return (
     <Layout>
       <div className="page-head">
-        <p className="eyebrow">Acquisti</p>
-        <h1>{list.name}</h1>
+        <p className="eyebrow">
+          {formatPeriod(list.periodYear, list.periodMonth) || 'Acquisti'}
+          {list.items.length > 0 && ` · ${list.reservedCount} di ${list.items.length} riservati`}
+        </p>
+        <h1>
+          {list.name}
+          {list.paidAt && <span className="paid-badge">pagata</span>}
+        </h1>
         <div className="inline-actions" style={{ marginTop: 12 }}>
+          <button
+            className={list.paidAt ? 'quiet' : ''}
+            onClick={async () => {
+              try {
+                setList(await purchases.setPaid(list.id, !list.paidAt))
+              } catch {
+                setError('Non sono riuscito a cambiare lo stato.')
+              }
+            }}
+          >
+            {list.paidAt ? 'Riapri la lista' : 'Segna come pagata'}
+          </button>
           <button className="quiet" onClick={() => setEditing(!editing)}>
-            {editing ? 'Chiudi' : 'Nome e sconto'}
+            {editing ? 'Chiudi' : 'Nome, periodo e sconto'}
           </button>
           <ConfirmDelete
             what={`la lista “${list.name}”`}
@@ -76,6 +94,7 @@ export default function PurchaseDetail() {
         <table className="purchase-table">
           <thead>
             <tr>
+              <th className="reserve-cell" title="Riservato in fumetteria">R</th>
               <th>Manga</th>
               <th>Edizione</th>
               <th className="num">Vol.</th>
@@ -87,10 +106,29 @@ export default function PurchaseDetail() {
           {[...byDate.entries()].map(([date, rows]) => (
             <tbody key={date || 'senza-data'}>
               <tr className="date-row">
-                <th colSpan={6}>{date ? formatDate(date) : 'Senza data'}</th>
+                <th colSpan={7}>{date ? formatDate(date) : 'Senza data'}</th>
               </tr>
               {rows.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className={item.reserved ? 'reserved' : ''}>
+                  <td className="reserve-cell">
+                    <button
+                      className="reserve-toggle"
+                      aria-pressed={item.reserved}
+                      title={item.reserved
+                        ? 'Riservato in fumetteria'
+                        : 'Segna come riservato in fumetteria'}
+                      onClick={async () => {
+                        try {
+                          setList(await purchases.setReserved(
+                            list.id, item.id, !item.reserved))
+                        } catch {
+                          setError('Non sono riuscito a cambiare la prenotazione.')
+                        }
+                      }}
+                    >
+                      {item.reserved ? '✓' : ''}
+                    </button>
+                  </td>
                   <td>{item.mangaTitle}</td>
                   <td className="muted">{item.seriesName}</td>
                   <td className="num">{item.volumeNumber}</td>
@@ -117,7 +155,7 @@ export default function PurchaseDetail() {
           ))}
           <tfoot>
             <tr>
-              <td colSpan={3}>Totale</td>
+              <td colSpan={4}>Totale</td>
               <td className="num">{formatCents(list.totalEurCents)}</td>
               <td className="num">{formatCents(list.subtotalChfCents)}</td>
               <td />
@@ -125,7 +163,7 @@ export default function PurchaseDetail() {
             {list.discountAppliedCents > 0 && (
               <>
                 <tr className="muted">
-                  <td colSpan={3}>
+                  <td colSpan={4}>
                     Sconto{list.discountPercent ? ` ${Number(list.discountPercent)}%` : ''}
                   </td>
                   <td className="num" />
@@ -133,7 +171,7 @@ export default function PurchaseDetail() {
                   <td />
                 </tr>
                 <tr className="grand-total">
-                  <td colSpan={3}>Da pagare</td>
+                  <td colSpan={4}>Da pagare</td>
                   <td className="num" />
                   <td className="num">{formatCents(list.totalChfCents)}</td>
                   <td />
@@ -153,13 +191,6 @@ export default function PurchaseDetail() {
   )
 }
 
-function formatDate(iso: string): string {
-  const [year, month, day] = iso.split('-')
-  const months = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
-    'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
-  return `${Number(day)} ${months[Number(month) - 1]} ${year}`
-}
-
 /** Name and discount. Percentage and amount are mutually exclusive. */
 function ListSettings({ list, onSaved, onError }: {
   list: PurchaseList
@@ -167,6 +198,8 @@ function ListSettings({ list, onSaved, onError }: {
   onError: (message: string) => void
 }) {
   const [name, setName] = useState(list.name)
+  const [year, setYear] = useState(list.periodYear ? String(list.periodYear) : '')
+  const [month, setMonth] = useState(list.periodMonth ? String(list.periodMonth) : '')
   const [kind, setKind] = useState<'none' | 'percent' | 'amount'>(
     list.discountPercent != null ? 'percent'
       : list.discountCents != null ? 'amount' : 'none')
@@ -181,6 +214,10 @@ function ListSettings({ list, onSaved, onError }: {
     try {
       onSaved(await purchases.update(list.id, {
         name,
+        // Year and month travel together: sending one alone would trip the
+        // schema's constraint, so an incomplete period becomes no period.
+        periodYear: year && month ? Number(year) : null,
+        periodMonth: year && month ? Number(month) : null,
         discountPercent: kind === 'percent' && percent ? percent : null,
         discountCents: kind === 'amount' ? parseAmount(amount) : null,
       }))
@@ -197,6 +234,24 @@ function ListSettings({ list, onSaved, onError }: {
         <label htmlFor="listName">Nome</label>
         <input id="listName" value={name} required
                onChange={(e) => setName(e.target.value)} />
+      </div>
+
+      <div className="grid-2">
+        <div className="field">
+          <label htmlFor="listMonth">Mese</label>
+          <select id="listMonth" value={month} onChange={(e) => setMonth(e.target.value)}>
+            <option value="">Nessuno</option>
+            {MONTHS.map((label, index) => (
+              <option key={label} value={index + 1}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="listYear">Anno</label>
+          <input id="listYear" type="number" min={1900} max={2200} value={year}
+                 placeholder={String(new Date().getFullYear())}
+                 onChange={(e) => setYear(e.target.value)} />
+        </div>
       </div>
 
       <div className="grid-2">
