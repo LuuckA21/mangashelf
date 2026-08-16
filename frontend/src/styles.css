@@ -573,3 +573,8 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 /* An armed row is tinted so the pending deletion is visible even if the
    eye has moved away from the buttons. */
 .purchase-table tr.removing { background: #f7e9e7; }
+
+/* The statistics table reuses the purchase table's look but sizes itself to
+   its own content: eight narrow numeric columns, none of them fixed. */
+.stats-table { table-layout: auto; }
+.stats-table th, .stats-table td { padding: 8px 12px; }

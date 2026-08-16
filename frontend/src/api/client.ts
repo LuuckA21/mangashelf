@@ -303,7 +303,30 @@ export interface PurchaseSuggestion {
   lastBoughtIn: string
 }
 
+export interface YearStats {
+  year: number
+  listCount: number
+  volumeCount: number
+  fullChfCents: number
+  discountChfCents: number
+  netChfCents: number
+  averageFullChfCents: number
+  averageNetChfCents: number
+}
+
+export interface PurchaseStats {
+  years: YearStats[]
+  listCount: number
+  volumeCount: number
+  fullChfCents: number
+  discountChfCents: number
+  netChfCents: number
+  averageFullChfCents: number
+  averageNetChfCents: number
+}
+
 export const purchases = {
+  stats: () => api.get<PurchaseStats>('/api/purchases/stats'),
   suggestions: (id: number) =>
     api.get<PurchaseSuggestion[]>(`/api/purchases/${id}/suggestions`),
   listAll: () => api.get<PurchaseListSummary[]>('/api/purchases'),

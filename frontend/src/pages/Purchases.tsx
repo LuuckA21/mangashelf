@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { purchases, type PurchaseListSummary } from '../api/client'
+import {
+  purchases, type PurchaseListSummary, type PurchaseStats,
+} from '../api/client'
 import { formatCents, formatPeriod } from '../format'
 import Layout from '../components/Layout'
 
@@ -11,12 +13,14 @@ export default function Purchases() {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [stats, setStats] = useState<PurchaseStats | null>(null)
 
   useEffect(() => {
     purchases.listAll()
       .then(setLists)
       .catch(() => setError('Non riesco a caricare le liste.'))
       .finally(() => setLoading(false))
+    purchases.stats().then(setStats).catch(() => undefined)
   }, [])
 
   async function handleCreate(event: FormEvent) {
@@ -107,6 +111,74 @@ export default function Purchases() {
           ))}
         </ul>
       )}
+
+      {stats && stats.years.length > 0 && <Stats stats={stats} />}
     </Layout>
+  )
+}
+
+/**
+ * What the lists have cost, by year.
+ *
+ * <p>Full and discounted side by side rather than one or the other: the gap
+ * between them is what the shop's discount is worth over a year, which is
+ * the figure a spreadsheet of monthly lists never shows.
+ */
+function Stats({ stats }: { stats: PurchaseStats }) {
+  return (
+    <section style={{ marginTop: 48 }}>
+      <p className="eyebrow">Statistiche</p>
+
+      <table className="purchase-table stats-table">
+        <thead>
+          <tr>
+            <th>Anno</th>
+            <th className="num">Liste</th>
+            <th className="num">Volumi</th>
+            <th className="num">Pieno</th>
+            <th className="num">Sconto</th>
+            <th className="num">Speso</th>
+            <th className="num">Medio pieno</th>
+            <th className="num">Medio scontato</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.years.map((year) => (
+            <tr key={year.year}>
+              <td>{year.year}</td>
+              <td className="num">{year.listCount}</td>
+              <td className="num">{year.volumeCount}</td>
+              <td className="num">{formatCents(year.fullChfCents)}</td>
+              <td className="num">
+                {year.discountChfCents > 0 ? `−${formatCents(year.discountChfCents)}` : ''}
+              </td>
+              <td className="num">{formatCents(year.netChfCents)}</td>
+              <td className="num">{formatCents(year.averageFullChfCents)}</td>
+              <td className="num">{formatCents(year.averageNetChfCents)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="grand-total">
+            <td>Totale</td>
+            <td className="num">{stats.listCount}</td>
+            <td className="num">{stats.volumeCount}</td>
+            <td className="num">{formatCents(stats.fullChfCents)}</td>
+            <td className="num">
+              {stats.discountChfCents > 0 ? `−${formatCents(stats.discountChfCents)}` : ''}
+            </td>
+            <td className="num">{formatCents(stats.netChfCents)}</td>
+            <td className="num">{formatCents(stats.averageFullChfCents)}</td>
+            <td className="num">{formatCents(stats.averageNetChfCents)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <p className="muted" style={{ fontSize: 13 }}>
+        Importi in franchi. L'anno è quello del periodo della lista, o quello
+        di creazione se non è stato indicato. Le medie considerano solo i
+        volumi con un prezzo.
+      </p>
+    </section>
   )
 }

@@ -6,7 +6,9 @@ import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
+import me.luucka.mangashelf.purchase.dto.PurchaseStats;
 import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
+import me.luucka.mangashelf.purchase.dto.YearStats;
 import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AppUserRepository;
 import me.luucka.mangashelf.user.UserPrincipal;
@@ -14,8 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,6 +145,70 @@ public class PurchaseService {
             throw ApiException.notFound("item_not_found");
         }
         return PurchaseListResponse.from(list);
+    }
+
+    /**
+     * What the lists cost, grouped by year.
+     *
+     * <p>The year comes from the period a list declares, falling back to the
+     * year it was created: a list with no period would otherwise vanish from
+     * the figures, and a total that quietly omits rows is worse than none.
+     *
+     * <p>Only lines carrying a franc price count. Including priced and
+     * unpriced lines in the same denominator would make the averages read
+     * lower the more incomplete the data is.
+     */
+    @Transactional(readOnly = true)
+    public PurchaseStats stats(UserPrincipal principal) {
+        Map<Integer, int[]> byYear = new HashMap<>();   // [liste, volumi, pieno, sconto]
+
+        for (PurchaseList list : lists.findByUserIdOrderByCreatedAtDesc(principal.id())) {
+            int year = list.getPeriodYear() != null
+                    ? list.getPeriodYear()
+                    : list.getCreatedAt().atZone(ZoneId.systemDefault()).getYear();
+
+            int full = 0;
+            int priced = 0;
+            for (PurchaseItem item : list.getItems()) {
+                if (item.getPriceChfCents() != null) {
+                    full += item.getPriceChfCents();
+                    priced++;
+                }
+            }
+
+            int discount = list.discountOn(full);
+
+            int[] row = byYear.computeIfAbsent(year, y -> new int[4]);
+            row[0] += 1;
+            row[1] += priced;
+            row[2] += full;
+            row[3] += discount;
+        }
+
+        List<YearStats> years = byYear.entrySet().stream()
+                .sorted(Map.Entry.<Integer, int[]>comparingByKey().reversed())
+                .map(entry -> {
+                    int[] row = entry.getValue();
+                    int net = row[2] - row[3];
+                    return new YearStats(entry.getKey(), row[0], row[1],
+                            row[2], row[3], net,
+                            average(row[2], row[1]), average(net, row[1]));
+                })
+                .toList();
+
+        int listCount = years.stream().mapToInt(YearStats::listCount).sum();
+        int volumes = years.stream().mapToInt(YearStats::volumeCount).sum();
+        int full = years.stream().mapToInt(YearStats::fullChfCents).sum();
+        int discount = years.stream().mapToInt(YearStats::discountChfCents).sum();
+        int net = full - discount;
+
+        return new PurchaseStats(years, listCount, volumes, full, discount, net,
+                average(full, volumes), average(net, volumes));
+    }
+
+    /** Zero rather than a division by zero when a year has no priced line. */
+    private int average(int totalCents, int count) {
+        return count == 0 ? 0 : Math.round((float) totalCents / count);
     }
 
     /**

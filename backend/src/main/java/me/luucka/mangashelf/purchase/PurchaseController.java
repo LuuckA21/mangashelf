@@ -5,6 +5,7 @@ import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
+import me.luucka.mangashelf.purchase.dto.PurchaseStats;
 import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,12 @@ public class PurchaseController {
     @GetMapping
     public List<PurchaseListSummary> listAll(@AuthenticationPrincipal UserPrincipal principal) {
         return purchases.listAll(principal);
+    }
+
+    /** Totals and averages by year, across every list. */
+    @GetMapping("/stats")
+    public PurchaseStats stats(@AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.stats(principal);
     }
 
     @GetMapping("/{id}")

@@ -4,7 +4,6 @@ import me.luucka.mangashelf.purchase.PurchaseItem;
 import me.luucka.mangashelf.purchase.PurchaseList;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
@@ -45,21 +44,7 @@ public record PurchaseListResponse(
             if (item.isReserved()) reserved++;
         }
 
-        int discount = 0;
-        if (list.getDiscountPercent() != null) {
-            // HALF_UP on the whole subtotal, not per line: discounting each
-            // row separately and summing gives a different figure, and the
-            // shop discounts the order.
-            discount = BigDecimal.valueOf(chf)
-                    .multiply(list.getDiscountPercent())
-                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
-                    .intValue();
-        } else if (list.getDiscountCents() != null) {
-            discount = list.getDiscountCents();
-        }
-        // A flat discount larger than the list must not produce a negative
-        // total: the shop would not pay you.
-        discount = Math.min(discount, chf);
+        int discount = list.discountOn(chf);
 
         return new PurchaseListResponse(
                 list.getId(),

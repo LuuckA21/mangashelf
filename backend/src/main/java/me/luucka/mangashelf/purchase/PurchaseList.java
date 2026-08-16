@@ -16,6 +16,7 @@ import me.luucka.mangashelf.common.BaseEntity;
 import me.luucka.mangashelf.user.AppUser;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,5 +80,32 @@ public class PurchaseList extends BaseEntity {
     public void addItem(PurchaseItem item) {
         items.add(item);
         item.setList(this);
+    }
+
+    /**
+     * What this list's discount takes off a given subtotal, in cents.
+     *
+     * <p>Lives on the entity because it is the list's own rule, and because
+     * both the detail response and the statistics need it: two copies would
+     * eventually disagree, and the figure on screen would stop matching the
+     * one in the totals.
+     *
+     * <p>Rounds the whole subtotal rather than each line: discounting rows
+     * separately and adding them up gives a different number, and the shop
+     * discounts the order.
+     */
+    public int discountOn(int subtotalCents) {
+        int discount = 0;
+        if (discountPercent != null) {
+            discount = BigDecimal.valueOf(subtotalCents)
+                    .multiply(discountPercent)
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                    .intValue();
+        } else if (discountCents != null) {
+            discount = discountCents;
+        }
+        // A flat discount larger than the list must not produce a negative
+        // total: the shop would not pay you.
+        return Math.min(discount, subtotalCents);
     }
 }
