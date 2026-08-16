@@ -24,6 +24,7 @@ export default function SeriesDetail() {
   const [error, setError] = useState<string | null>(null)
 
   const [managing, setManaging] = useState(false)
+  const [nextCount, setNextCount] = useState('5')
   const [from, setFrom] = useState('1')
   const [to, setTo] = useState('10')
   const [working, setWorking] = useState(false)
@@ -41,6 +42,12 @@ export default function SeriesDetail() {
     catalog.getSeries(seriesId).then(setSeries).catch(() => setError('Edizione non trovata.'))
     reload().catch(() => setError('Non riesco a caricare i volumi.'))
   }, [seriesId, reload])
+
+  // The highest number, not the count: a run with gaps has fewer volumes
+  // catalogued than its top number.
+  const lastNumber = volumes.length
+    ? Math.max(...volumes.map((v) => v.number))
+    : 0
 
   /**
    * In management mode a click removes the volume from the catalogue for
@@ -87,6 +94,27 @@ export default function SeriesDetail() {
     setError(null)
     try {
       await catalog.createVolumes(seriesId, Number(from), Number(to))
+      await reload()
+    } catch {
+      setError('Non sono riuscito a creare i volumi.')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  /**
+   * Catalogues the volumes that follow the highest number already present.
+   *
+   * An ongoing series grows a volume every couple of months, and the tedious
+   * part is not the typing but remembering where the run stopped. Reading
+   * that from the catalogue removes the only step that needs thinking.
+   */
+  async function handleAddNext() {
+    setWorking(true)
+    setError(null)
+    try {
+      const count = Number(nextCount)
+      await catalog.createVolumes(seriesId, lastNumber + 1, lastNumber + count)
       await reload()
     } catch {
       setError('Non sono riuscito a creare i volumi.')
@@ -182,7 +210,36 @@ export default function SeriesDetail() {
         </p>
       )}
 
-      <div className="panel" style={{ marginTop: 32 }}>
+      {isAdmin && (
+        <div className="panel" style={{ marginTop: 32 }}>
+          <p className="eyebrow" style={{ marginTop: 0 }}>Nuove uscite</p>
+          <div className="row">
+            <span>
+              {lastNumber > 0
+                ? `Ultimo volume catalogato: ${lastNumber}.`
+                : 'Nessun volume catalogato.'}
+              {' '}Aggiungine altri
+            </span>
+            <input
+              type="number" min={1} max={50} value={nextCount}
+              onChange={(e) => setNextCount(e.target.value)}
+              style={{ width: 72 }}
+              aria-label="Quanti volumi aggiungere"
+            />
+            <button onClick={handleAddNext} disabled={working || !nextCount}>
+              {lastNumber > 0
+                ? `Aggiungi ${lastNumber + 1}–${lastNumber + Number(nextCount || 0)}`
+                : `Aggiungi 1–${nextCount}`}
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+            Continua dalla fine della collana, così non devi ricordare a che
+            numero eri arrivato.
+          </p>
+        </div>
+      )}
+
+      <div className="panel" style={{ marginTop: 16 }}>
         <p className="eyebrow" style={{ marginTop: 0 }}>Lavora su un intervallo</p>
         <div className="row" style={{ marginBottom: 16 }}>
           <div style={{ width: 90 }}>
