@@ -147,6 +147,7 @@ public class CollectionService {
                     series.getManga().displayTitle(),
                     series.getManga().getCoverUrl(),
                     series.getTotalVolumes(),
+                    series.isCompleted(),
                     progress.upTo(),
                     owned.size(),
                     owned,

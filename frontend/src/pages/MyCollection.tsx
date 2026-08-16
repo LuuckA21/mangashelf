@@ -3,12 +3,20 @@ import { Link } from 'react-router-dom'
 import { collection, type EditionSummary } from '../api/client'
 import Layout from '../components/Layout'
 
-type Filter = 'all' | 'incomplete' | 'complete'
+type Filter = 'all' | 'gaps' | 'ongoing' | 'done'
 
+/**
+ * Two different questions, kept apart on purpose.
+ *
+ * "Con buchi" is answered by the owned numbers alone: 1-45 and 47 says the
+ * 46 is missing. Whether more volumes exist past the last one owned cannot
+ * be known from the shelf, and is what the edition's own state is for.
+ */
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Tutte' },
-  { key: 'incomplete', label: 'Da completare' },
-  { key: 'complete', label: 'Complete' },
+  { key: 'gaps', label: 'Con buchi' },
+  { key: 'ongoing', label: 'In corso' },
+  { key: 'done', label: 'Complete' },
 ]
 
 /** Your shelf, grouped by edition, searchable and filterable. */
@@ -35,8 +43,10 @@ export default function MyCollection() {
 
     return editions
       .filter((e) => {
-        if (filter === 'incomplete' && e.missingNumbers.length === 0) return false
-        if (filter === 'complete' && e.missingNumbers.length > 0) return false
+        if (filter === 'gaps' && e.missingNumbers.length === 0) return false
+        if (filter === 'ongoing' && e.completed) return false
+        // Complete means the run is over and nothing is missing from it.
+        if (filter === 'done' && (!e.completed || e.missingNumbers.length > 0)) return false
         if (!needle) return true
         return e.mangaTitle.toLowerCase().includes(needle)
           || e.seriesName.toLowerCase().includes(needle)
@@ -46,14 +56,14 @@ export default function MyCollection() {
   }, [editions, query, filter])
 
   const ownedTotal = editions.reduce((sum, e) => sum + e.ownedCount, 0)
-  const missingTotal = editions.reduce((sum, e) => sum + e.missingNumbers.length, 0)
+  const gapTotal = editions.reduce((sum, e) => sum + e.missingNumbers.length, 0)
 
   return (
     <Layout>
       <div className="page-head">
         <p className="eyebrow">
           {ownedTotal} volumi · {editions.length} edizioni
-          {missingTotal > 0 && ` · ${missingTotal} da recuperare`}
+          {gapTotal > 0 && ` · ${gapTotal} buchi`}
         </p>
         <h1>La mia collezione</h1>
       </div>
@@ -101,11 +111,13 @@ export default function MyCollection() {
         </div>
       ) : shown.length === 0 ? (
         <div className="empty">
-          {filter === 'incomplete'
-            ? 'Nessuna edizione da completare: hai tutto quello che è catalogato.'
-            : filter === 'complete'
-              ? 'Nessuna edizione completa, per ora.'
-              : `Nessun risultato per “${query}”.`}
+          {filter === 'gaps'
+            ? 'Nessun buco: le collane che segui non hanno numeri mancanti.'
+            : filter === 'ongoing'
+              ? 'Nessuna edizione in corso.'
+              : filter === 'done'
+                ? 'Nessuna edizione conclusa e completa, per ora.'
+                : `Nessun risultato per “${query}”.`}
         </div>
       ) : (
         <ul className="edition-list">
@@ -120,6 +132,7 @@ export default function MyCollection() {
                   <div className="muted" style={{ fontSize: 14 }}>
                     {e.seriesName} · {e.publisher} · {e.ownedCount}
                     {e.declaredTotal != null ? ` di ${e.declaredTotal}` : ''} volumi
+                    {e.completed ? ' · conclusa' : ' · in corso'}
                   </div>
 
                   <div className="progress" style={{ margin: '8px 0' }}>

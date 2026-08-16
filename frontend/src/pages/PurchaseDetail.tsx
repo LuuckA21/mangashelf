@@ -149,7 +149,9 @@ export default function PurchaseDetail() {
                 <th colSpan={7}>{date ? formatDate(date) : 'Senza data'}</th>
               </tr>
               {rows.map((item) => (
-                editingItem === item.id ? (
+                // Guarded against a null id as well as a mismatch: with
+                // both null the loose comparison would open every new row.
+                editingItem !== null && editingItem === item.id ? (
                   <ItemRow
                     key={item.id}
                     listId={list.id}

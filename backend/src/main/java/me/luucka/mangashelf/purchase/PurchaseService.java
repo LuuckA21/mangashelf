@@ -125,6 +125,12 @@ public class PurchaseService {
         item.setPriceChfCents(request.priceChfCents());
 
         list.addItem(item);
+
+        // Flushed before the response is built: the insert would otherwise
+        // wait for the end of the transaction, and the new line would go
+        // back with a null id — which the client cannot then edit or delete.
+        lists.flush();
+
         return PurchaseListResponse.from(list);
     }
 

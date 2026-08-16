@@ -125,6 +125,7 @@ export interface EditionSummary {
   mangaTitle: string
   coverUrl: string | null
   declaredTotal: number | null
+  completed: boolean
   upTo: number
   ownedCount: number
   ownedNumbers: number[]
