@@ -323,6 +323,13 @@ export const purchases = {
     priceEurCents?: number | null
     priceChfCents?: number | null
   }) => api.post<PurchaseList>(`/api/purchases/${id}/items`, body),
+  updateItem: (id: number, itemId: number, body: {
+    seriesId: number
+    volumeNumber: number
+    releaseDate?: string | null
+    priceEurCents?: number | null
+    priceChfCents?: number | null
+  }) => api.put<PurchaseList>(`/api/purchases/${id}/items/${itemId}`, body),
   removeItem: (id: number, itemId: number) =>
     api.delete<PurchaseList>(`/api/purchases/${id}/items/${itemId}`),
 }

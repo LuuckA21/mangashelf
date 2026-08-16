@@ -145,7 +145,7 @@ label {
 .topbar nav { display: flex; gap: calc(var(--s) * 2); font-size: 14px; }
 .topbar nav a { color: var(--ash); text-decoration: none; }
 .topbar nav a:hover, .topbar nav a.active { color: var(--indigo); }
-.topbar .spacer { flex: 1; }
+.spacer { flex: 1; }
 
 .page { max-width: var(--shell); margin: 0 auto; padding: calc(var(--s) * 4) calc(var(--s) * 3) calc(var(--s) * 8); }
 .page-head { margin-bottom: calc(var(--s) * 3); }
@@ -538,3 +538,23 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 .suggestion-list .grow { flex: 1; min-width: 0; }
 
 .suggestion-title { font-family: var(--font-display); font-size: 16px; }
+
+/* Edit mode keeps the row's shape: inputs sized to their columns so the
+   table does not jump when a line is opened. */
+.purchase-table .editing-row { background: var(--paper); }
+.purchase-table .editing-row input {
+  padding: 4px 6px;
+  font-family: var(--font-data);
+  font-size: 14px;
+}
+.purchase-table .editing-row td:nth-child(4) input { width: 64px; text-align: right; }
+.purchase-table .editing-row td:nth-child(5) input,
+.purchase-table .editing-row td:nth-child(6) input { width: 78px; text-align: right; }
+
+.actions-cell { white-space: nowrap; }
+
+.purchase-table .editing-row .date-input {
+  display: block;
+  margin-top: 4px;
+  width: 150px;
+}

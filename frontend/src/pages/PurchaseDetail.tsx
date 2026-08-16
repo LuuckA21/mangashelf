@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   catalog, purchases,
-  type Manga, type PurchaseList, type PurchaseSuggestion, type Series,
+  type Manga, type PurchaseItem as PurchaseItemRow, type PurchaseList,
+  type PurchaseSuggestion, type Series,
 } from '../api/client'
 import { formatCents, formatDate, formatPeriod, MONTHS, parseAmount } from '../format'
 import ConfirmDelete from '../components/ConfirmDelete'
@@ -17,6 +18,7 @@ export default function PurchaseDetail() {
   const [list, setList] = useState<PurchaseList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [editingItem, setEditingItem] = useState<number | null>(null)
 
   useEffect(() => {
     purchases.get(listId)
@@ -27,6 +29,7 @@ export default function PurchaseDetail() {
   if (!list) {
     return (
       <Layout>
+        <p className="eyebrow"><Link to="/purchases">Acquisti</Link></p>
         {error ? <div className="error">{error}</div> : <p className="muted">Carico…</p>}
       </Layout>
     )
@@ -46,7 +49,9 @@ export default function PurchaseDetail() {
     <Layout>
       <div className="page-head">
         <p className="eyebrow">
-          {formatPeriod(list.periodYear, list.periodMonth) || 'Acquisti'}
+          <Link to="/purchases">Acquisti</Link>
+          {formatPeriod(list.periodYear, list.periodMonth)
+            && ` · ${formatPeriod(list.periodYear, list.periodMonth)}`}
           {list.items.length > 0 && ` · ${list.reservedCount} di ${list.items.length} riservati`}
         </p>
         <h1>
@@ -110,6 +115,16 @@ export default function PurchaseDetail() {
                 <th colSpan={7}>{date ? formatDate(date) : 'Senza data'}</th>
               </tr>
               {rows.map((item) => (
+                editingItem === item.id ? (
+                  <ItemRow
+                    key={item.id}
+                    listId={list.id}
+                    item={item}
+                    onSaved={(updated) => { setList(updated); setEditingItem(null) }}
+                    onCancel={() => setEditingItem(null)}
+                    onError={setError}
+                  />
+                ) : (
                 <tr key={item.id} className={item.reserved ? 'reserved' : ''}>
                   <td className="reserve-cell">
                     <button
@@ -135,7 +150,14 @@ export default function PurchaseDetail() {
                   <td className="num">{item.volumeNumber}</td>
                   <td className="num">{formatCents(item.priceEurCents)}</td>
                   <td className="num">{formatCents(item.priceChfCents)}</td>
-                  <td className="num">
+                  <td className="num actions-cell">
+                    <button
+                      className="link-button"
+                      title="Modifica la riga"
+                      onClick={() => setEditingItem(item.id)}
+                    >
+                      ✎
+                    </button>
                     <button
                       className="link-button"
                       title="Togli dalla lista"
@@ -151,6 +173,7 @@ export default function PurchaseDetail() {
                     </button>
                   </td>
                 </tr>
+                )
               ))}
             </tbody>
           ))}
@@ -300,6 +323,80 @@ function ListSettings({ list, onSaved, onError }: {
 }
 
 /**
+ * One line in edit mode, kept inside the table.
+ *
+ * <p>Editing in place rather than in a panel below: the fields stay in the
+ * columns they belong to, so a price is corrected where it was read, and
+ * the surrounding rows remain visible for comparison.
+ *
+ * <p>The edition is not editable here — two selects would not fit a table
+ * row, and a line filed under the wrong run is rare enough to be worth
+ * deleting and retyping.
+ */
+function ItemRow({ listId, item, onSaved, onCancel, onError }: {
+  listId: number
+  item: PurchaseItemRow
+  onSaved: (list: PurchaseList) => void
+  onCancel: () => void
+  onError: (message: string) => void
+}) {
+  const [number, setNumber] = useState(String(item.volumeNumber))
+  const [date, setDate] = useState(item.releaseDate ?? '')
+  const [eur, setEur] = useState(formatCents(item.priceEurCents))
+  const [chf, setChf] = useState(formatCents(item.priceChfCents))
+  const [busy, setBusy] = useState(false)
+
+  async function save() {
+    setBusy(true)
+    try {
+      onSaved(await purchases.updateItem(listId, item.id, {
+        seriesId: item.seriesId,
+        volumeNumber: Number(number),
+        releaseDate: date || null,
+        priceEurCents: parseAmount(eur),
+        priceChfCents: parseAmount(chf),
+      }))
+    } catch {
+      onError('Modifica non riuscita.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <tr className="editing-row">
+      <td />
+      <td>{item.mangaTitle}</td>
+      <td className="muted">
+        {item.seriesName}
+        {/* The date sits under the edition rather than in a column of its
+            own: in read mode it is the heading of the group the row belongs
+            to, so changing it here moves the line to another day. */}
+        <input type="date" value={date} className="date-input"
+               onChange={(e) => setDate(e.target.value)} />
+      </td>
+      <td className="num">
+        <input type="number" min={0} max={999} value={number}
+               onChange={(e) => setNumber(e.target.value)} />
+      </td>
+      <td className="num">
+        <input inputMode="decimal" value={eur} onChange={(e) => setEur(e.target.value)} />
+      </td>
+      <td className="num">
+        <input inputMode="decimal" value={chf} onChange={(e) => setChf(e.target.value)} />
+      </td>
+      <td className="num actions-cell">
+        <button className="link-button" title="Salva" disabled={busy} onClick={save}>✓</button>
+        <button className="link-button" title="Annulla" onClick={onCancel}>×</button>
+      </td>
+    </tr>
+  )
+}
+
+/** How many suggestions are shown before the panel has to be expanded. */
+const VISIBLE = 5
+
+/**
  * Next volumes of runs already bought, one click each.
  *
  * <p>Reloads after every addition because adding one changes the rest: the
@@ -312,6 +409,8 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
   onError: (message: string) => void
 }) {
   const [rows, setRows] = useState<PurchaseSuggestion[]>([])
+  const [query, setQuery] = useState('')
+  const [expanded, setExpanded] = useState(false)
   const [busy, setBusy] = useState<number | null>(null)
 
   useEffect(() => {
@@ -320,50 +419,97 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
 
   if (rows.length === 0) return null
 
+  const needle = query.trim().toLowerCase()
+  const matching = needle
+    ? rows.filter((row) =>
+        row.mangaTitle.toLowerCase().includes(needle) ||
+        row.seriesName.toLowerCase().includes(needle) ||
+        row.publisher.toLowerCase().includes(needle))
+    : rows
+
+  // Collapsed to a few lines unless asked otherwise: with thirty runs in
+  // progress this panel would push the list itself off the screen, and it
+  // is an aid to adding rows, not the point of the page.
+  const visible = expanded || needle ? matching : matching.slice(0, VISIBLE)
+  const hidden = matching.length - visible.length
+
   return (
     <div className="panel" style={{ marginTop: 32 }}>
-      <p className="eyebrow" style={{ marginTop: 0 }}>Continua una collana</p>
-      <ul className="suggestion-list">
-        {rows.map((row) => (
-          <li key={row.seriesId}>
-            <div className="grow">
-              <span className="suggestion-title">{row.mangaTitle}</span>
-              <span className="muted"> · {row.seriesName} · volume {row.volumeNumber}</span>
-              <div className="muted" style={{ fontSize: 13 }}>
-                {[
-                  row.priceChfCents != null ? `CHF ${formatCents(row.priceChfCents)}` : null,
-                  row.priceEurCents != null ? `EUR ${formatCents(row.priceEurCents)}` : null,
-                  `come in “${row.lastBoughtIn}”`,
-                ].filter(Boolean).join(' · ')}
-              </div>
-            </div>
-            <button
-              className="quiet"
-              disabled={busy !== null}
-              onClick={async () => {
-                setBusy(row.seriesId)
-                try {
-                  onAdded(await purchases.addItem(listId, {
-                    seriesId: row.seriesId,
-                    volumeNumber: row.volumeNumber,
-                    // Prices carry over, the date does not: a new volume
-                    // comes out on a new day, and inheriting the old one
-                    // would file it under the wrong week.
-                    priceEurCents: row.priceEurCents,
-                    priceChfCents: row.priceChfCents,
-                  }))
-                } catch {
-                  onError('Non sono riuscito ad aggiungere la riga.')
-                } finally {
-                  setBusy(null)
-                }
-              }}
-            >
-              {busy === row.seriesId ? 'Aggiungo…' : `Aggiungi vol. ${row.volumeNumber}`}
+      <div className="row" style={{ marginBottom: 12 }}>
+        <p className="eyebrow" style={{ margin: 0 }}>
+          Continua una collana · {rows.length}
+        </p>
+        <span className="spacer" />
+        <input
+          placeholder="Filtra"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: 220 }}
+        />
+      </div>
+
+      {matching.length === 0 ? (
+        <p className="muted" style={{ fontSize: 14, marginBottom: 0 }}>
+          Nessuna collana per “{query}”.
+        </p>
+      ) : (
+        <>
+          <ul className="suggestion-list">
+            {visible.map((row) => (
+              <li key={row.seriesId}>
+                <div className="grow">
+                  <span className="suggestion-title">{row.mangaTitle}</span>
+                  <span className="muted"> · {row.seriesName} · volume {row.volumeNumber}</span>
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    {[
+                      row.priceChfCents != null ? `CHF ${formatCents(row.priceChfCents)}` : null,
+                      row.priceEurCents != null ? `EUR ${formatCents(row.priceEurCents)}` : null,
+                      `come in “${row.lastBoughtIn}”`,
+                    ].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <button
+                  className="quiet"
+                  disabled={busy !== null}
+                  onClick={async () => {
+                    setBusy(row.seriesId)
+                    try {
+                      onAdded(await purchases.addItem(listId, {
+                        seriesId: row.seriesId,
+                        volumeNumber: row.volumeNumber,
+                        // Prices carry over, the date does not: a new volume
+                        // comes out on a new day, and inheriting the old one
+                        // would file it under the wrong week.
+                        priceEurCents: row.priceEurCents,
+                        priceChfCents: row.priceChfCents,
+                      }))
+                    } catch {
+                      onError('Non sono riuscito ad aggiungere la riga.')
+                    } finally {
+                      setBusy(null)
+                    }
+                  }}
+                >
+                  {busy === row.seriesId ? 'Aggiungo…' : `Aggiungi vol. ${row.volumeNumber}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {hidden > 0 && (
+            <button type="button" className="quiet" style={{ marginTop: 12 }}
+                    onClick={() => setExpanded(true)}>
+              Mostra le altre {hidden}
             </button>
-          </li>
-        ))}
-      </ul>
+          )}
+          {expanded && !needle && (
+            <button type="button" className="quiet" style={{ marginTop: 12 }}
+                    onClick={() => setExpanded(false)}>
+              Mostra meno
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 }

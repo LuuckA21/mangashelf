@@ -102,6 +102,14 @@ public class PurchaseController {
         return purchases.addItem(id, request, principal);
     }
 
+    @PutMapping("/{id}/items/{itemId}")
+    public PurchaseListResponse updateItem(@PathVariable Long id,
+                                           @PathVariable Long itemId,
+                                           @Valid @RequestBody PurchaseItemRequest request,
+                                           @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.updateItem(id, itemId, request, principal);
+    }
+
     @DeleteMapping("/{id}/items/{itemId}")
     public PurchaseListResponse removeItem(@PathVariable Long id,
                                            @PathVariable Long itemId,

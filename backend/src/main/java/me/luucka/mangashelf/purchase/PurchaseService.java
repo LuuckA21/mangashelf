@@ -108,6 +108,31 @@ public class PurchaseService {
         return PurchaseListResponse.from(list);
     }
 
+    /**
+     * Edits one line.
+     *
+     * <p>The edition can move too: a volume filed under the wrong run is a
+     * plausible mistake, and forcing a delete-and-retype to fix it would
+     * lose the date and prices already entered.
+     */
+    @Transactional
+    public PurchaseListResponse updateItem(Long listId, Long itemId,
+                                           PurchaseItemRequest request,
+                                           UserPrincipal principal) {
+        PurchaseList list = load(listId, principal);
+        PurchaseItem item = list.getItems().stream()
+                .filter(candidate -> candidate.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> ApiException.notFound("item_not_found"));
+
+        item.setSeries(catalog.getSeries(request.seriesId()));
+        item.setVolumeNumber(request.volumeNumber());
+        item.setReleaseDate(request.releaseDate());
+        item.setPriceEurCents(request.priceEurCents());
+        item.setPriceChfCents(request.priceChfCents());
+        return PurchaseListResponse.from(list);
+    }
+
     @Transactional
     public PurchaseListResponse removeItem(Long listId, Long itemId, UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
