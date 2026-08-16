@@ -8,6 +8,9 @@ COPY pom.xml .
 RUN mvn -B dependency:go-offline
 
 COPY src ./src
+# Tests are skipped here on purpose: they need a Docker daemon to bring up
+# Postgres, and this runs inside a build container that has none. CI runs
+# them instead.
 RUN mvn -B clean package -DskipTests
 
 # ---- runtime ----

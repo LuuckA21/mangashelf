@@ -19,7 +19,9 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
-      - run: mvn -B -f backend/pom.xml package
+      # Runs the integration tests too: the GitHub runners have Docker, which
+      # is all Testcontainers needs to bring up a real Postgres.
+      - run: mvn -B -f backend/pom.xml verify
 
   frontend:
     runs-on: ubuntu-latest

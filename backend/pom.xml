@@ -20,6 +20,18 @@
         <java.version>25</java.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>2.0.5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -76,6 +88,20 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            The tests run against a real Postgres in a container, not an
+            in-memory stand-in: half the bugs this suite exists to catch —
+            constraint cascades, checksums, native array columns — do not
+            exist on H2. Note the artifact name: Testcontainers 2.x renamed
+            the modules, so this is testcontainers-postgresql and not the
+            older bare "postgresql".
+        -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
