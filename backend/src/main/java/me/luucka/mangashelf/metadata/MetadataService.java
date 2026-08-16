@@ -19,10 +19,14 @@ public class MetadataService {
 
     private final AniListClient anilist;
     private final MangaRepository mangaRepository;
+    private final CoverStore covers;
 
-    public MetadataService(AniListClient anilist, MangaRepository mangaRepository) {
+    public MetadataService(AniListClient anilist,
+                           MangaRepository mangaRepository,
+                           CoverStore covers) {
         this.anilist = anilist;
         this.mangaRepository = mangaRepository;
+        this.covers = covers;
     }
 
     /**
@@ -74,9 +78,11 @@ public class MetadataService {
         }
         manga.setAuthors(authors(media));
         manga.setDescription(plainText(media.description()));
+        // Downloaded at import time rather than on first view: the import is
+        // already a slow, explicit action, while a page load is not.
         String cover = coverUrl(media);
         if (cover != null) {
-            manga.setCoverUrl(cover);
+            manga.setCoverUrl(covers.store(cover, "anilist-" + media.id()));
         }
         manga.setStatus(status(media.status()));
         if (media.genres() != null) {

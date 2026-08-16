@@ -39,6 +39,20 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
+    # Covers are content the backend downloaded once and never rewrites for
+    # the same id, so they can be cached for a long time. Served from disk
+    # rather than proxied: a catalogue page requests one per row.
+    location /covers/ {
+        alias /usr/share/nginx/covers/;
+        expires 30d;
+        add_header Cache-Control "public";
+        access_log off;
+        # A cover that failed to download leaves no file; answering 404
+        # quickly is better than letting the SPA fallback return index.html
+        # and have the browser try to decode HTML as an image.
+        try_files $uri =404;
+    }
+
     # Icons have fixed names, so a long cache would keep serving the old
     # logo for a year after it changed.
     location ~* ^/(favicon\.(svg|ico)|apple-touch-icon\.png)$ {

@@ -48,6 +48,11 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    volumes:
+      # The same volume the backend writes covers into, read-only here.
+      # nginx serves them straight off disk: routing static images through
+      # Spring would add a request to the application for every thumbnail.
+      - covers:/usr/share/nginx/covers:ro
     environment:
       # IP (or CIDR) of the host running Nginx Proxy Manager. nginx trusts
       # the X-Forwarded-* headers only when they arrive from here.

@@ -120,7 +120,7 @@ public class AniListClient {
             // The catalogue must stay usable when an external service is
             // down, so the failure is reported as such rather than as a
             // generic 500 that says nothing about whose fault it was.
-            log.warn("Chiamata ad AniList fallita: {}", e.getMessage());
+            log.warn("AniList call failed: {}", e.getMessage());
             throw new ApiException(org.springframework.http.HttpStatus.BAD_GATEWAY,
                     "anilist_unavailable");
         }
