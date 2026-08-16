@@ -4,6 +4,7 @@ import me.luucka.mangashelf.catalog.CatalogService;
 import me.luucka.mangashelf.catalog.Series;
 import me.luucka.mangashelf.catalog.Volume;
 import me.luucka.mangashelf.collection.dto.SeriesProgressResponse;
+import me.luucka.mangashelf.collection.dto.UserVolumeResponse;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AppUserRepository;
@@ -37,19 +38,31 @@ public class CollectionService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserVolume> listOwned(UserPrincipal principal) {
-        return userVolumes.findByIdUserIdOrderByAddedAtDesc(principal.id());
+    public List<UserVolumeResponse> listOwned(UserPrincipal principal) {
+        return userVolumes.findByIdUserIdOrderByAddedAtDesc(principal.id())
+                .stream().map(UserVolumeResponse::from).toList();
     }
 
+    /**
+     * Aggiunge una copia allo scaffale.
+     *
+     * <p>Restituisce il DTO e non l'entita': la risposta risale da volume a
+     * serie a opera, e con {@code open-in-view: false} quel percorso non e'
+     * piu' percorribile una volta usciti dal metodo. Costruirlo qui, dentro
+     * la transazione, e' l'unico punto in cui le associazioni sono ancora
+     * raggiungibili.
+     */
     @Transactional
-    public UserVolume add(Long volumeId, UserPrincipal principal) {
+    public UserVolumeResponse add(Long volumeId, UserPrincipal principal) {
         if (userVolumes.existsByIdUserIdAndIdVolumeId(principal.id(), volumeId)) {
             throw ApiException.conflict("already_owned");
         }
         Volume volume = catalog.getVolume(volumeId);
         AppUser user = users.findById(principal.id())
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
-        return userVolumes.save(new UserVolume(user, volume));
+
+        UserVolume saved = userVolumes.save(new UserVolume(user, volume));
+        return UserVolumeResponse.from(saved);
     }
 
     @Transactional

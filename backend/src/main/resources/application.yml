@@ -34,6 +34,11 @@ server:
         http-only: true
         secure: ${APP_COOKIE_SECURE:true}
         same-site: lax
+        # Senza max-age il browser tratta il cookie come "di sessione" e lo
+        # cancella alla chiusura, costringendo a rifare login ogni volta —
+        # fastidioso soprattutto da telefono. Il valore accompagna il
+        # timeout lato server, che da solo non basta.
+        max-age: 30d
 
 management:
   endpoints:

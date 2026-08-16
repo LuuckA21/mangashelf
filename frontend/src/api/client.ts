@@ -183,6 +183,7 @@ export const catalog = {
   createVolumes: (seriesId: number, from: number, to: number) =>
     api.post<Volume[]>(`/api/series/${seriesId}/volumes/bulk`, { from, to }),
   deleteVolume: (id: number) => api.delete<void>(`/api/volumes/${id}`),
+
 }
 
 export interface MangaSearchResult {

@@ -143,9 +143,23 @@ public class CatalogService {
     @Transactional
     public Series updateSeries(Long id, SeriesRequest request) {
         Series series = getSeries(id);
+        String language = request.language() == null ? series.getLanguage() : request.language();
+
+        // La stessa terna editore/lingua/nome sotto una stessa opera viola il
+        // vincolo di unicita': intercettarlo qui restituisce un messaggio
+        // comprensibile invece di lasciar arrivare l'errore dal database.
+        seriesRepository
+                .findByMangaIdAndPublisherIgnoreCaseAndLanguageAndNameIgnoreCase(
+                        series.getManga().getId(), request.publisher(), language, request.name())
+                .ifPresent(other -> {
+                    if (!other.getId().equals(id)) {
+                        throw ApiException.conflict("series_already_exists");
+                    }
+                });
+
         series.setPublisher(request.publisher());
         series.setName(request.name());
-        if (request.language() != null) series.setLanguage(request.language());
+        series.setLanguage(language);
         series.setTotalVolumes(request.totalVolumes());
         series.setCompleted(request.completed());
         return series;

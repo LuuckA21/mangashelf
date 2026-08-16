@@ -13,6 +13,4 @@ public interface VolumeRepository extends JpaRepository<Volume, Long> {
     List<Volume> findBySeriesIdOrderByNumberAsc(Long seriesId);
 
     Optional<Volume> findBySeriesIdAndNumber(Long seriesId, Short number);
-
-    Optional<Volume> findByIsbn13(String isbn13);
 }

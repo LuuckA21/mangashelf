@@ -13,8 +13,6 @@ public interface MangaRepository extends JpaRepository<Manga, Long> {
     /** Used by the import job to avoid inserting a work twice. */
     Optional<Manga> findByAnilistId(Integer anilistId);
 
-    Optional<Manga> findByMalId(Integer malId);
-
     /**
      * Searches across all three title variants, since a user may type the
      * English, romaji or native form interchangeably.

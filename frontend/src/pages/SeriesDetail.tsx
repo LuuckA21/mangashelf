@@ -70,8 +70,14 @@ export default function SeriesDetail() {
     try {
       if (owned) await collection.remove(volume.id)
       else await collection.add(volume.id)
-    } catch {
-      setError('Modifica non riuscita.')
+    } catch (e) {
+      // "già posseduto" e "non posseduto" significano che lo stato del
+      // server coincide già con quello richiesto: con l'aggiornamento
+      // ottimistico capita quando la vista era indietro, e mostrarlo come
+      // errore confonderebbe senza che ci sia nulla da correggere.
+      const benign = e instanceof ApiError
+        && (e.code === 'already_owned' || e.code === 'not_owned')
+      if (!benign) setError('Modifica non riuscita.')
     }
     await reload()
   }

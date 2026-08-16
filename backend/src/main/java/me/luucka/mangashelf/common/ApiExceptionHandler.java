@@ -3,6 +3,7 @@ package me.luucka.mangashelf.common;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -41,6 +42,23 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(Map.of("error", "malformed_request",
                         "detail", detail == null ? "" : detail));
+    }
+
+    /**
+     * Violazione di un vincolo del database.
+     *
+     * <p>I controlli applicativi che precedono una scrittura corrono contro
+     * le richieste concorrenti, e non tutti i vincoli hanno un controllo
+     * corrispondente: senza questo, quei casi arrivano al client come 500
+     * con uno stack trace, quando la risposta corretta e' un conflitto.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraint(DataIntegrityViolationException ex) {
+        String detail = ex.getMostSpecificCause().getMessage();
+        String code = detail != null && detail.contains("duplicate key")
+                ? "already_exists"
+                : "constraint_violation";
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", code));
     }
 
     /**

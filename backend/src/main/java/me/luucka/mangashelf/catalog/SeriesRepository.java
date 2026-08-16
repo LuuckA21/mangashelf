@@ -8,8 +8,6 @@ import java.util.Optional;
 
 public interface SeriesRepository extends JpaRepository<Series, Long> {
 
-    List<Series> findByPublisherIgnoreCase(String publisher);
-
     Optional<Series> findByMangaIdAndPublisherIgnoreCaseAndLanguageAndNameIgnoreCase(
             Long mangaId, String publisher, String language, String name);
 

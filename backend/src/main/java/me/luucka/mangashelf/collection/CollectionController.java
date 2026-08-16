@@ -30,17 +30,15 @@ public class CollectionController {
 
     @GetMapping("/volumes")
     public List<UserVolumeResponse> listOwned(@AuthenticationPrincipal UserPrincipal principal) {
-        return collection.listOwned(principal).stream()
-                .map(UserVolumeResponse::from).toList();
+        return collection.listOwned(principal);
     }
 
     @PostMapping("/volumes/{volumeId}")
     public ResponseEntity<UserVolumeResponse> add(
             @PathVariable Long volumeId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        UserVolume owned = collection.add(volumeId, principal);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(UserVolumeResponse.from(owned));
+                .body(collection.add(volumeId, principal));
     }
 
     @DeleteMapping("/volumes/{volumeId}")
