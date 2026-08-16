@@ -39,6 +39,9 @@ import java.util.stream.Collectors;
 @Service
 public class PurchaseService {
 
+    /** Matches the ceiling {@code PurchaseItemRequest} enforces. */
+    private static final int MAX_VOLUME_NUMBER = 999;
+
     private final PurchaseListRepository lists;
     private final PurchaseItemRepository items;
     private final AppUserRepository users;
@@ -264,7 +267,12 @@ public class PurchaseService {
 
         List<PurchaseSuggestion> result = new ArrayList<>();
         for (PurchaseItem last : latestPerSeries.values()) {
-            short next = (short) (last.getVolumeNumber() + 1);
+            int next = last.getVolumeNumber() + 1;
+            // Past the number a line may carry, so proposing it would only
+            // produce a suggestion the validator refuses.
+            if (next > MAX_VOLUME_NUMBER) {
+                continue;
+            }
             if (present.contains(last.getSeries().getId() + "#" + next)) {
                 continue;
             }
@@ -273,7 +281,7 @@ public class PurchaseService {
                     last.getSeries().getName(),
                     last.getSeries().getPublisher(),
                     last.getSeries().getManga().displayTitle(),
-                    next,
+                    (short) next,
                     last.getPriceEurCents(),
                     last.getPriceChfCents(),
                     last.getList().getName()));

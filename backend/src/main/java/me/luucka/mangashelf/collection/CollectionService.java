@@ -13,9 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
@@ -27,6 +29,9 @@ import java.util.TreeSet;
  */
 @Service
 public class CollectionService {
+
+    /** Matches the column's own limit and the one purchase lines accept. */
+    private static final int MAX_VOLUME_NUMBER = 999;
 
     private final UserVolumeRepository userVolumes;
     private final AppUserRepository users;
@@ -78,21 +83,28 @@ public class CollectionService {
      * @return how many were added
      */
     @Transactional
-    public int addRange(Long seriesId, short from, short to, UserPrincipal principal) {
-        if (to < from) {
+    public int addRange(Long seriesId, int from, int to, UserPrincipal principal) {
+        // Bounded on both sides, and counted in int rather than short. A
+        // short counter reaching 32767 overflows to -32768 on the next
+        // increment, and the loop never ends: a signed-in user could hang a
+        // thread and write forever with one request.
+        if (to < from || from < 0 || to > MAX_VOLUME_NUMBER) {
             throw ApiException.badRequest("invalid_range");
         }
+
         Series series = catalog.getSeries(seriesId);
         AppUser user = users.findById(principal.id())
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
 
+        // The numbers already owned are read once. Asking per number cost
+        // two queries a volume, which for a long run meant hundreds.
+        Set<Short> owned = new HashSet<>(userVolumes.findNumbers(principal.id(), seriesId));
+
         int added = 0;
-        for (short n = from; n <= to; n++) {
-            if (userVolumes.existsByIdUserIdAndIdSeriesIdAndIdNumber(
-                    principal.id(), seriesId, n)) {
-                continue;
-            }
-            userVolumes.save(new UserVolume(user, series, n));
+        for (int n = from; n <= to; n++) {
+            short number = (short) n;
+            if (owned.contains(number)) continue;
+            userVolumes.save(new UserVolume(user, series, number));
             added++;
         }
         return added;

@@ -67,8 +67,10 @@ export default function SeriesDetail() {
     try {
       await collection.addRange(seriesId, Number(from), Number(to))
       await reload()
-    } catch {
-      setError('Non sono riuscito a segnare l’intervallo.')
+    } catch (e) {
+      setError(e instanceof ApiError && e.code === 'invalid_range'
+        ? 'Intervallo non valido: usa numeri fra 0 e 999.'
+        : 'Non sono riuscito a segnare l’intervallo.')
     } finally {
       setWorking(false)
     }
@@ -139,12 +141,12 @@ export default function SeriesDetail() {
         <div className="row" style={{ marginBottom: 16 }}>
           <div style={{ width: 90 }}>
             <label htmlFor="from">Dal</label>
-            <input id="from" type="number" min={0} value={from}
+            <input id="from" type="number" min={0} max={999} value={from}
                    onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div style={{ width: 90 }}>
             <label htmlFor="to">Al</label>
-            <input id="to" type="number" min={0} value={to}
+            <input id="to" type="number" min={0} max={999} value={to}
                    onChange={(e) => setTo(e.target.value)} />
           </div>
           <button onClick={handleRange} disabled={working}>

@@ -1,6 +1,9 @@
 package me.luucka.mangashelf.collection.dto;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * How far along an edition is.
@@ -35,9 +38,14 @@ public record SeriesProgressResponse(
         int highestOwned = owned.isEmpty() ? 0 : owned.getLast();
         int upTo = declaredTotal != null ? Math.max(declaredTotal, highestOwned) : highestOwned;
 
-        List<Short> missing = new java.util.ArrayList<>();
-        for (short n = 1; n <= upTo; n++) {
-            if (!owned.contains(n)) missing.add(n);
+        // Counted in int: a short reaching 32767 overflows on the next
+        // increment and the loop never ends. A set rather than the list,
+        // because contains on a list makes this quadratic.
+        Set<Short> ownedSet = new HashSet<>(owned);
+        List<Short> missing = new ArrayList<>();
+        for (int n = 1; n <= upTo; n++) {
+            short number = (short) n;
+            if (!ownedSet.contains(number)) missing.add(number);
         }
 
         return new SeriesProgressResponse(seriesId, seriesName, mangaTitle,

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import me.luucka.mangashelf.common.ApiException;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/collection")
 public class CollectionController {
+
+    /** Matches the limit the range call and purchase lines already enforce. */
+    private static final short MAX_VOLUME_NUMBER = 999;
 
     private final CollectionService collection;
 
@@ -49,8 +53,18 @@ public class CollectionController {
     public ResponseEntity<Void> add(@PathVariable Long seriesId,
                                     @PathVariable Short number,
                                     @AuthenticationPrincipal UserPrincipal principal) {
+        // Bounded here as well as in the range call: the shelf is drawn from
+        // 1 to the highest owned number, so marking volume 30000 would have
+        // every later page build a list of thirty thousand gaps.
+        requireSaneNumber(number);
         collection.add(seriesId, number, principal);
         return ResponseEntity.noContent().build();
+    }
+
+    private void requireSaneNumber(Short number) {
+        if (number == null || number < 0 || number > MAX_VOLUME_NUMBER) {
+            throw ApiException.badRequest("invalid_volume_number");
+        }
     }
 
     @DeleteMapping("/series/{seriesId}/volumes/{number}")
@@ -64,8 +78,8 @@ public class CollectionController {
     /** Marks volumes {@code from}..{@code to} of an edition as owned. */
     @PostMapping("/series/{seriesId}/range")
     public Map<String, Integer> addRange(@PathVariable Long seriesId,
-                                         @RequestParam short from,
-                                         @RequestParam short to,
+                                         @RequestParam int from,
+                                         @RequestParam int to,
                                          @AuthenticationPrincipal UserPrincipal principal) {
         return Map.of("added", collection.addRange(seriesId, from, to, principal));
     }

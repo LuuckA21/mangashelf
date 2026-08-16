@@ -266,7 +266,7 @@ function SeriesForm({ series, onSaved, onCancel, onError }: {
         </div>
         <div className="field">
           <label htmlFor={`tot-${series.id}`}>Volumi totali</label>
-          <input id={`tot-${series.id}`} type="number" min={0} value={totalVolumes}
+          <input id={`tot-${series.id}`} type="number" min={0} max={999} value={totalVolumes}
                  placeholder="vuoto se in corso"
                  onChange={(e) => setTotalVolumes(e.target.value)} />
         </div>
