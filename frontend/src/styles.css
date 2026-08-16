@@ -217,6 +217,14 @@ label {
 }
 .tile.missing:hover { background: var(--indigo-wash); color: var(--indigo); }
 
+/* Past the last known volume: present enough to click, faint enough not to
+   read as a gap in the run. */
+.tile.future {
+  border-style: dotted;
+  color: var(--ash-line);
+}
+.tile.future:hover { color: var(--indigo); border-color: var(--indigo); }
+
 .tile:focus-visible { outline: 2px solid var(--vermilion); outline-offset: 2px; }
 .tile.busy { opacity: 0.4; pointer-events: none; }
 
@@ -353,13 +361,6 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 .edition-row a { text-decoration: none; color: inherit; }
 .edition-row .name { font-family: var(--font-display); font-size: 18px; }
 
-/* Volume management: the grid changes meaning, so it changes colour. */
-.shelf.managing .tile {
-  background: transparent;
-  color: var(--vermilion);
-  border: 1px solid var(--vermilion);
-}
-.shelf.managing .tile:hover { background: var(--vermilion); color: #fff; }
 
 /* ------------------------------------------------------------------ chips --
  * Filters read as a single row of switches rather than a dropdown: with

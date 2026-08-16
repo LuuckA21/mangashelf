@@ -1,10 +1,7 @@
 package me.luucka.mangashelf.collection;
 
 import me.luucka.mangashelf.catalog.CatalogService;
-import me.luucka.mangashelf.catalog.VolumeRepository;
-import me.luucka.mangashelf.catalog.dto.SeriesVolumeNumber;
 import me.luucka.mangashelf.catalog.Series;
-import me.luucka.mangashelf.catalog.Volume;
 import me.luucka.mangashelf.collection.dto.EditionSummary;
 import me.luucka.mangashelf.collection.dto.SeriesProgressResponse;
 import me.luucka.mangashelf.collection.dto.UserVolumeResponse;
@@ -19,11 +16,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Operations on one user's shelf.
+ * One user's shelf: which volume numbers they own of each edition.
  *
  * <p>Every method scopes its queries by the principal's id, so no call here
  * can read or write another account's rows even though the catalogue
@@ -35,16 +31,13 @@ public class CollectionService {
     private final UserVolumeRepository userVolumes;
     private final AppUserRepository users;
     private final CatalogService catalog;
-    private final VolumeRepository volumes;
 
     public CollectionService(UserVolumeRepository userVolumes,
                              AppUserRepository users,
-                             CatalogService catalog,
-                             VolumeRepository volumes) {
+                             CatalogService catalog) {
         this.userVolumes = userVolumes;
         this.users = users;
         this.catalog = catalog;
-        this.volumes = volumes;
     }
 
     @Transactional(readOnly = true)
@@ -53,48 +46,39 @@ public class CollectionService {
                 .stream().map(UserVolumeResponse::from).toList();
     }
 
-    /**
-     * Adds a copy to the shelf.
-     *
-     * <p>Returns the DTO rather than the entity: the response walks volume to
-     * series to manga, and with {@code open-in-view: false} that path is
-     * already closed once this method returns. Building it here, inside the
-     * transaction, is the only point where the associations are still
-     * reachable.
-     */
     @Transactional
-    public UserVolumeResponse add(Long volumeId, UserPrincipal principal) {
-        if (userVolumes.existsByIdUserIdAndIdVolumeId(principal.id(), volumeId)) {
+    public void add(Long seriesId, Short number, UserPrincipal principal) {
+        if (userVolumes.existsByIdUserIdAndIdSeriesIdAndIdNumber(
+                principal.id(), seriesId, number)) {
             throw ApiException.conflict("already_owned");
         }
-        Volume volume = catalog.getVolume(volumeId);
+        Series series = catalog.getSeries(seriesId);
         AppUser user = users.findById(principal.id())
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
-
-        UserVolume saved = userVolumes.save(new UserVolume(user, volume));
-        return UserVolumeResponse.from(saved);
+        userVolumes.save(new UserVolume(user, series, number));
     }
 
     @Transactional
-    public void remove(Long volumeId, UserPrincipal principal) {
-        UserVolume owned = userVolumes
-                .findByIdUserIdAndIdVolumeId(principal.id(), volumeId)
-                .orElseThrow(() -> ApiException.notFound("not_owned"));
-        userVolumes.delete(owned);
+    public void remove(Long seriesId, Short number, UserPrincipal principal) {
+        if (!userVolumes.existsByIdUserIdAndIdSeriesIdAndIdNumber(
+                principal.id(), seriesId, number)) {
+            throw ApiException.notFound("not_owned");
+        }
+        userVolumes.deleteByIdUserIdAndIdSeriesIdAndIdNumber(
+                principal.id(), seriesId, number);
     }
 
     /**
-     * Marks a whole range as owned in one call.
+     * Marks a whole range as owned.
      *
      * <p>Ticking off twenty volumes one request at a time is the friction
      * that stops a shelf from ever being recorded. Numbers already owned are
      * skipped rather than rejected, so the call is safe to repeat.
      *
-     * @return the volume ids actually added
+     * @return how many were added
      */
     @Transactional
-    public List<Long> addRange(Long seriesId, short from, short to,
-                               UserPrincipal principal) {
+    public int addRange(Long seriesId, short from, short to, UserPrincipal principal) {
         if (to < from) {
             throw ApiException.badRequest("invalid_range");
         }
@@ -102,63 +86,58 @@ public class CollectionService {
         AppUser user = users.findById(principal.id())
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
 
-        List<Long> added = new ArrayList<>();
-        for (Volume volume : series.getVolumes()) {
-            short n = volume.getNumber();
-            if (n < from || n > to) continue;
-            if (userVolumes.existsByIdUserIdAndIdVolumeId(principal.id(), volume.getId())) {
+        int added = 0;
+        for (short n = from; n <= to; n++) {
+            if (userVolumes.existsByIdUserIdAndIdSeriesIdAndIdNumber(
+                    principal.id(), seriesId, n)) {
                 continue;
             }
-            userVolumes.save(new UserVolume(user, volume));
-            added.add(volume.getId());
+            userVolumes.save(new UserVolume(user, series, n));
+            added++;
         }
         return added;
+    }
+
+    @Transactional(readOnly = true)
+    public SeriesProgressResponse progress(Long seriesId, UserPrincipal principal) {
+        // Checked rather than assumed: the two queries below filter by id and
+        // would answer with an empty, plausible-looking shelf for an edition
+        // that does not exist.
+        Series series = catalog.getSeries(seriesId);
+
+        return SeriesProgressResponse.of(
+                seriesId, series.getName(), series.getManga().displayTitle(),
+                series.getTotalVolumes(),
+                userVolumes.findNumbers(principal.id(), seriesId));
     }
 
     /**
      * The shelf grouped by edition, with what is owned and what is missing.
      *
-     * <p>Two queries regardless of how many editions are involved: one for
-     * the owned rows, one for every volume number of the editions they
-     * touch. Asking each edition separately would issue a round trip per row
-     * of the collection page.
+     * <p>One query: the owned rows carry their edition and work along, and
+     * the gaps are worked out from the numbers themselves.
      */
     @Transactional(readOnly = true)
     public List<EditionSummary> summary(UserPrincipal principal) {
-        List<UserVolume> owned = userVolumes.findByIdUserIdOrderByAddedAtDesc(principal.id());
-        if (owned.isEmpty()) {
-            return List.of();
-        }
+        Map<Long, TreeSet<Short>> numbersByEdition = new LinkedHashMap<>();
+        Map<Long, Series> editions = new LinkedHashMap<>();
 
-        // LinkedHashMap: keeps the newest-first order the query returned, so
-        // the caller can sort as it likes without the grouping shuffling it.
-        Map<Long, List<UserVolume>> byEdition = new LinkedHashMap<>();
-        for (UserVolume uv : owned) {
-            byEdition.computeIfAbsent(uv.getVolume().getSeries().getId(),
-                    id -> new ArrayList<>()).add(uv);
-        }
-
-        Map<Long, Set<Short>> catalogued = new LinkedHashMap<>();
-        for (SeriesVolumeNumber row : volumes.findNumbersBySeriesIds(
-                List.copyOf(byEdition.keySet()))) {
-            catalogued.computeIfAbsent(row.seriesId(), id -> new TreeSet<>())
-                    .add(row.number());
+        for (UserVolume uv : userVolumes.findByIdUserIdOrderByAddedAtDesc(principal.id())) {
+            Long seriesId = uv.getSeries().getId();
+            editions.putIfAbsent(seriesId, uv.getSeries());
+            numbersByEdition.computeIfAbsent(seriesId, id -> new TreeSet<>())
+                    .add(uv.getNumber());
         }
 
         List<EditionSummary> result = new ArrayList<>();
-        for (Map.Entry<Long, List<UserVolume>> entry : byEdition.entrySet()) {
-            List<UserVolume> items = entry.getValue();
-            Series series = items.getFirst().getVolume().getSeries();
+        for (Map.Entry<Long, Series> entry : editions.entrySet()) {
+            Series series = entry.getValue();
+            List<Short> owned = List.copyOf(numbersByEdition.get(entry.getKey()));
 
-            Set<Short> ownedNumbers = new TreeSet<>();
-            for (UserVolume uv : items) {
-                ownedNumbers.add(uv.getVolume().getNumber());
-            }
-
-            List<Short> missing = catalogued
-                    .getOrDefault(entry.getKey(), Set.of()).stream()
-                    .filter(n -> !ownedNumbers.contains(n))
-                    .toList();
+            SeriesProgressResponse progress = SeriesProgressResponse.of(
+                    series.getId(), series.getName(),
+                    series.getManga().displayTitle(),
+                    series.getTotalVolumes(), owned);
 
             result.add(new EditionSummary(
                     series.getId(),
@@ -167,32 +146,12 @@ public class CollectionService {
                     series.getManga().getId(),
                     series.getManga().displayTitle(),
                     series.getManga().getCoverUrl(),
-                    ownedNumbers.size() + missing.size(),
-                    ownedNumbers.size(),
-                    List.copyOf(ownedNumbers),
-                    missing));
+                    series.getTotalVolumes(),
+                    progress.upTo(),
+                    owned.size(),
+                    owned,
+                    progress.missingNumbers()));
         }
         return result;
-    }
-
-    @Transactional(readOnly = true)
-    public SeriesProgressResponse progress(Long seriesId, UserPrincipal principal) {
-        // Both queries below filter by series id and legitimately return
-        // empty lists, so without this check a mistyped id would answer 200
-        // with a plausible all-zero report for an edition that does not exist.
-        Series series = catalog.getSeries(seriesId);
-
-        List<Short> owned = userVolumes.findOwnedInSeries(principal.id(), seriesId)
-                .stream().map(uv -> uv.getVolume().getNumber()).toList();
-        List<Short> missing = userVolumes.findMissingNumbers(principal.id(), seriesId);
-
-        return new SeriesProgressResponse(
-                seriesId,
-                series.getName(),
-                series.getManga().displayTitle(),
-                owned.size() + missing.size(),
-                owned.size(),
-                owned,
-                missing);
     }
 }

@@ -18,9 +18,9 @@ import java.time.LocalDate;
 /**
  * One line of a purchase list.
  *
- * <p>Points at the edition but not at a {@code Volume} row: the list is
- * written before the release, when that row does not exist. The number is
- * kept as a plain value, so planning never waits on cataloguing.
+ * <p>Points at the edition and keeps the number as a plain value, the same
+ * shape ownership uses: nothing anywhere records that volume 47 exists, so
+ * a list can name a volume months before it is out.
  */
 @Entity
 @Table(name = "purchase_item")

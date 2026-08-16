@@ -167,7 +167,9 @@ export default function MangaDetail() {
                   <Link to={`/edition/${s.id}`} className="grow">
                     <div className="name">{s.name}</div>
                     <div className="muted" style={{ fontSize: 14 }}>
-                      {s.publisher} · {s.volumeCount} volumi catalogati
+                      {s.publisher}
+                      {s.totalVolumes != null && ` · ${s.totalVolumes} volumi`}
+                      {s.completed && ' · conclusa'}
                     </div>
                   </Link>
                   {isAdmin && (

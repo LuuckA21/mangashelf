@@ -1,79 +1,88 @@
 import { useState } from 'react'
-import type { Volume } from '../api/client'
 
 interface Props {
-  volumes: Volume[]
+  /** Where the shelf stops: the declared total, or the highest owned volume. */
+  upTo: number
   ownedNumbers: number[]
-  onToggle: (volume: Volume, owned: boolean) => Promise<void>
-  /** Whether the viewer may add volumes to the catalogue. */
-  canCreate: boolean
-  /** In management mode a click deletes the volume rather than owning it. */
-  managing?: boolean
+  onToggle: (number: number, owned: boolean) => Promise<void>
 }
 
+/** How many empty slots follow the last volume, so the next one is a click away. */
+const LOOKAHEAD = 3
+
 /**
- * The volumes of an edition, laid out as a numbered grid.
+ * The volumes of an edition, as a numbered grid.
  *
- * Owned volumes are solid; missing ones keep their place as outlines.
- * Reading a gap at a glance is the job of this screen, so absent volumes
- * are given the same footprint as the present ones rather than being left
- * out of the sequence.
+ * <p>Nothing anywhere records which volumes an edition contains, because
+ * nobody knows what a publisher has released. The grid is therefore drawn
+ * from what is owned: numbers up to the highest one held, so a gap in the
+ * middle shows itself, plus a few slots past the end for what comes next.
  */
-export default function Shelf({
-  volumes, ownedNumbers, onToggle, canCreate, managing = false,
-}: Props) {
+export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
   const owned = new Set(ownedNumbers)
   const [busy, setBusy] = useState<number | null>(null)
 
-  async function toggle(volume: Volume) {
-    setBusy(volume.id)
+  async function toggle(number: number) {
+    setBusy(number)
     try {
-      await onToggle(volume, owned.has(volume.number))
+      await onToggle(number, owned.has(number))
     } finally {
       setBusy(null)
     }
   }
 
-  if (volumes.length === 0) {
+  const last = upTo + LOOKAHEAD
+  const numbers = Array.from({ length: last }, (_, i) => i + 1)
+
+  if (upTo === 0) {
     return (
-      <div className="empty">
-        {canCreate
-          ? 'Nessun volume in questa edizione. Aggiungine un intervallo qui sotto.'
-          : 'Nessun volume catalogato in questa edizione.'}
-      </div>
+      <>
+        <div className="empty" style={{ marginBottom: 16 }}>
+          Nessun volume segnato. Clicca il primo qui sotto, o usa l’intervallo.
+        </div>
+        <div className="shelf">
+          {numbers.map((n) => (
+            <button key={n} className="tile missing future" onClick={() => toggle(n)}>
+              {n}
+            </button>
+          ))}
+        </div>
+      </>
     )
   }
 
   return (
     <>
-      <div className={`shelf${managing ? ' managing' : ''}`}>
-        {volumes.map((volume) => {
-          const isOwned = owned.has(volume.number)
+      <div className="shelf">
+        {numbers.map((n) => {
+          const isOwned = owned.has(n)
+          // Past the end the slot is drawn fainter: those numbers may not
+          // exist yet, and showing them as gaps would invent a shortfall.
+          const beyond = n > upTo
           return (
             <button
-              key={volume.id}
-              className={`tile${isOwned ? '' : ' missing'}${busy === volume.id ? ' busy' : ''}`}
-              onClick={() => toggle(volume)}
+              key={n}
+              className={`tile${isOwned ? '' : ' missing'}${beyond ? ' future' : ''}`
+                + (busy === n ? ' busy' : '')}
+              onClick={() => toggle(n)}
               aria-pressed={isOwned}
               title={
-                managing
-                  ? `Elimina il volume ${volume.number} dal catalogo`
-                  : isOwned
-                    ? `Volume ${volume.number} — ce l'hai. Clicca per toglierlo.`
-                    : `Volume ${volume.number} — ti manca. Clicca per aggiungerlo.`
+                isOwned
+                  ? `Volume ${n} — ce l'hai. Clicca per toglierlo.`
+                  : beyond
+                    ? `Volume ${n} — clicca se l'hai preso`
+                    : `Volume ${n} — ti manca. Clicca per aggiungerlo.`
               }
             >
-              {volume.number}
+              {n}
             </button>
           )
         })}
       </div>
-      {!managing && (
-        <div className="shelf-legend">
-          <span><i className="swatch owned" /> Posseduto</span>
-          <span><i className="swatch missing" /> Mancante</span>
-        </div>
-      )}
+      <div className="shelf-legend">
+        <span><i className="swatch owned" /> Posseduto</span>
+        <span><i className="swatch missing" /> Mancante</span>
+      </div>
     </>
   )
 }

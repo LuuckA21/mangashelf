@@ -102,25 +102,16 @@ export interface Series {
   name: string
   totalVolumes: number | null
   completed: boolean
-  volumeCount: number
-}
-
-export interface Volume {
-  id: number
-  seriesId: number
-  number: number
-  title: string | null
-  isbn13: string | null
-  releaseDate: string | null
-  coverUrl: string | null
-  upcoming: boolean
 }
 
 export interface SeriesProgress {
   seriesId: number
   seriesName: string
   mangaTitle: string
-  totalVolumes: number
+  /** Announced volume count, when the edition declares one. */
+  declaredTotal: number | null
+  /** Where the shelf stops: the declared total, or the highest volume owned. */
+  upTo: number
   ownedCount: number
   ownedNumbers: number[]
   missingNumbers: number[]
@@ -133,17 +124,16 @@ export interface EditionSummary {
   mangaId: number
   mangaTitle: string
   coverUrl: string | null
-  totalVolumes: number
+  declaredTotal: number | null
+  upTo: number
   ownedCount: number
   ownedNumbers: number[]
   missingNumbers: number[]
 }
 
 export interface OwnedVolume {
-  volumeId: number
-  number: number
-  volumeTitle: string | null
   seriesId: number
+  number: number
   seriesName: string
   publisher: string
   mangaId: number
@@ -216,10 +206,6 @@ export const catalog = {
     api.put<Series>(`/api/series/${id}`, body),
   deleteSeries: (id: number) => api.delete<void>(`/api/series/${id}`),
 
-  listVolumes: (seriesId: number) => api.get<Volume[]>(`/api/series/${seriesId}/volumes`),
-  createVolumes: (seriesId: number, from: number, to: number) =>
-    api.post<Volume[]>(`/api/series/${seriesId}/volumes/bulk`, { from, to }),
-  deleteVolume: (id: number) => api.delete<void>(`/api/volumes/${id}`),
 
 }
 
@@ -325,7 +311,14 @@ export interface PurchaseStats {
   averageNetChfCents: number
 }
 
+export interface TransferResult {
+  added: number
+  alreadyOwned: number
+}
+
 export const purchases = {
+  toCollection: (id: number) =>
+    api.post<TransferResult>(`/api/purchases/${id}/to-collection`),
   stats: () => api.get<PurchaseStats>('/api/purchases/stats'),
   suggestions: (id: number) =>
     api.get<PurchaseSuggestion[]>(`/api/purchases/${id}/suggestions`),
@@ -362,8 +355,10 @@ export const collection = {
   summary: () => api.get<EditionSummary[]>('/api/collection/summary'),
   progress: (seriesId: number) =>
     api.get<SeriesProgress>(`/api/collection/series/${seriesId}`),
-  add: (volumeId: number) => api.post<unknown>(`/api/collection/volumes/${volumeId}`),
-  remove: (volumeId: number) => api.delete<void>(`/api/collection/volumes/${volumeId}`),
+  add: (seriesId: number, number: number) =>
+    api.post<void>(`/api/collection/series/${seriesId}/volumes/${number}`),
+  remove: (seriesId: number, number: number) =>
+    api.delete<void>(`/api/collection/series/${seriesId}/volumes/${number}`),
   addRange: (seriesId: number, from: number, to: number) =>
     api.post<{ added: number }>(`/api/collection/series/${seriesId}/range?from=${from}&to=${to}`),
 }

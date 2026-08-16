@@ -10,11 +10,10 @@ import lombok.Setter;
 import java.io.Serializable;
 
 /**
- * Composite key of {@link UserVolume}.
+ * Composite key of {@link UserVolume}: user, edition and volume number.
  *
- * <p>There is no surrogate id because the pair is already the identity: a
- * user either owns a volume or does not, and there is no third state that
- * a separate key could distinguish.
+ * <p>No surrogate id, because the triple is already the identity — a user
+ * either owns volume 47 of a run or does not.
  */
 @Embeddable
 @Getter
@@ -26,11 +25,15 @@ public class UserVolumeId implements Serializable {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "volume_id")
-    private Long volumeId;
+    @Column(name = "series_id")
+    private Long seriesId;
 
-    public UserVolumeId(Long userId, Long volumeId) {
+    @Column(name = "number")
+    private Short number;
+
+    public UserVolumeId(Long userId, Long seriesId, Short number) {
         this.userId = userId;
-        this.volumeId = volumeId;
+        this.seriesId = seriesId;
+        this.number = number;
     }
 }

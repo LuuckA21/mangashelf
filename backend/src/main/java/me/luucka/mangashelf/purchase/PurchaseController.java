@@ -7,6 +7,7 @@ import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
 import me.luucka.mangashelf.purchase.dto.PurchaseStats;
 import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
+import me.luucka.mangashelf.purchase.dto.TransferResult;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -82,6 +83,13 @@ public class PurchaseController {
                                        @AuthenticationPrincipal UserPrincipal principal) {
         purchases.delete(id, principal);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Marks every volume of the list as owned. Repeatable. */
+    @PostMapping("/{id}/to-collection")
+    public TransferResult toCollection(@PathVariable Long id,
+                                       @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.toCollection(id, principal);
     }
 
     /** Marks the list paid, or reopens it. */

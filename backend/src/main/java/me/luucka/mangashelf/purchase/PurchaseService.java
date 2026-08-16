@@ -1,6 +1,8 @@
 package me.luucka.mangashelf.purchase;
 
 import me.luucka.mangashelf.catalog.CatalogService;
+import me.luucka.mangashelf.collection.UserVolume;
+import me.luucka.mangashelf.collection.UserVolumeRepository;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
@@ -8,6 +10,7 @@ import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
 import me.luucka.mangashelf.purchase.dto.PurchaseListSummary;
 import me.luucka.mangashelf.purchase.dto.PurchaseStats;
 import me.luucka.mangashelf.purchase.dto.PurchaseSuggestion;
+import me.luucka.mangashelf.purchase.dto.TransferResult;
 import me.luucka.mangashelf.purchase.dto.YearStats;
 import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AppUserRepository;
@@ -40,15 +43,18 @@ public class PurchaseService {
     private final PurchaseItemRepository items;
     private final AppUserRepository users;
     private final CatalogService catalog;
+    private final UserVolumeRepository userVolumes;
 
     public PurchaseService(PurchaseListRepository lists,
                            PurchaseItemRepository items,
                            AppUserRepository users,
-                           CatalogService catalog) {
+                           CatalogService catalog,
+                           UserVolumeRepository userVolumes) {
         this.lists = lists;
         this.items = items;
         this.users = users;
         this.catalog = catalog;
+        this.userVolumes = userVolumes;
     }
 
     @Transactional(readOnly = true)
@@ -270,6 +276,43 @@ public class PurchaseService {
         result.sort(Comparator.comparing(PurchaseSuggestion::mangaTitle,
                 String.CASE_INSENSITIVE_ORDER));
         return result;
+    }
+
+    /**
+     * Marks every volume of the list as owned.
+     *
+     * <p>Deliberately not tied to marking the list paid: paying and owning
+     * are different facts, and an action that silently triggers another
+     * makes it hard to tell what happened.
+     *
+     * <p>Nothing is created in the shared catalogue — ownership is a row of
+     * its own — so this works the same for every user, administrator or not.
+     *
+     * <p>Repeatable: lines already on the shelf are counted, not duplicated.
+     */
+    @Transactional
+    public TransferResult toCollection(Long listId, UserPrincipal principal) {
+        PurchaseList list = load(listId, principal);
+        AppUser user = users.findById(principal.id())
+                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+
+        int added = 0;
+        int alreadyOwned = 0;
+
+        for (PurchaseItem item : list.getItems()) {
+            Long seriesId = item.getSeries().getId();
+            Short number = item.getVolumeNumber();
+
+            if (userVolumes.existsByIdUserIdAndIdSeriesIdAndIdNumber(
+                    principal.id(), seriesId, number)) {
+                alreadyOwned++;
+                continue;
+            }
+            userVolumes.save(new UserVolume(user, item.getSeries(), number));
+            added++;
+        }
+
+        return new TransferResult(added, alreadyOwned);
     }
 
     /** Marks the list paid, or reopens it. */

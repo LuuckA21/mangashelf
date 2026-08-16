@@ -81,17 +81,17 @@ public class SecurityConfig {
                         // regardless of method.
                         .requestMatchers("/api/metadata/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST,
-                                "/api/manga", "/api/manga/**",
-                                "/api/series/**", "/api/volumes/**")
+                                "/api/manga", "/api/manga/**", "/api/series/**")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT,
-                                "/api/manga/**", "/api/series/**", "/api/volumes/**")
+                                "/api/manga/**", "/api/series/**")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE,
-                                "/api/manga/**", "/api/series/**", "/api/volumes/**")
+                                "/api/manga/**", "/api/series/**")
                         .hasRole("ADMIN")
-                        // Anything under /api/collection stays personal and
-                        // is open to any signed-in user.
+                        // /api/collection and /api/purchases stay personal
+                        // and are open to any signed-in user: recording that
+                        // you own volume 47 says nothing anybody else sees.
                         .anyRequest().authenticated())
                 // An API must answer 401 in JSON. The default entry point
                 // redirects to a login page, which a fetch() call would

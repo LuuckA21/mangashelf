@@ -12,25 +12,13 @@ public interface SeriesRepository extends JpaRepository<Series, Long> {
             Long mangaId, String publisher, String language, String name);
 
     /**
-     * Loads manga and volumes along with the series.
-     *
-     * <p>Both are needed by {@code SeriesResponse}, which is built in the
-     * controller — after the transaction has closed. With
-     * {@code open-in-view: false} an uninitialised proxy there throws
-     * {@code LazyInitializationException}, so the associations the DTO
-     * touches must be fetched here rather than on demand.
+     * The work is fetched because every response names it, and the DTO is
+     * built once the transaction has closed.
      */
-    @EntityGraph(attributePaths = {"manga", "volumes"})
-    Optional<Series> findWithVolumesById(Long id);
+    @EntityGraph(attributePaths = "manga")
+    Optional<Series> findWithMangaById(Long id);
 
-    /**
-     * Same reasoning as above, for the list of editions under one work.
-     *
-     * <p>The method name must remain a valid derived query: everything after
-     * "By" is parsed as a property path, so a suffix like "WithVolumes"
-     * would fail at startup. The eager loading is expressed by the
-     * annotation, not by the name.
-     */
-    @EntityGraph(attributePaths = {"manga", "volumes"})
+    /** Same reasoning, for the list of editions under one work. */
+    @EntityGraph(attributePaths = "manga")
     List<Series> findByMangaId(Long mangaId);
 }

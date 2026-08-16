@@ -2,13 +2,10 @@ package me.luucka.mangashelf.catalog;
 
 import jakarta.validation.Valid;
 import me.luucka.mangashelf.common.ApiException;
-import me.luucka.mangashelf.catalog.dto.BulkVolumeRequest;
 import me.luucka.mangashelf.catalog.dto.MangaRequest;
 import me.luucka.mangashelf.catalog.dto.MangaResponse;
 import me.luucka.mangashelf.catalog.dto.SeriesRequest;
 import me.luucka.mangashelf.catalog.dto.SeriesResponse;
-import me.luucka.mangashelf.catalog.dto.VolumeRequest;
-import me.luucka.mangashelf.catalog.dto.VolumeResponse;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,10 +30,10 @@ import java.util.List;
 /**
  * REST surface for the shared catalogue.
  *
- * <p>Routes are nested to mirror the ownership chain — volumes are reached
- * through their series, series through their manga — so a URL always states
- * which run a volume belongs to. Updates and deletes address a resource
- * directly by id, since at that point the parent is already fixed.
+ * <p>Routes are nested to mirror the ownership chain — editions are reached
+ * through their work — so a URL always states what an edition belongs to.
+ * Updates and deletes address a resource directly by id, since at that point
+ * the parent is already fixed.
  */
 @RestController
 @RequestMapping("/api")
@@ -140,41 +137,4 @@ public class CatalogController {
         return ResponseEntity.noContent().build();
     }
 
-    // --------------------------------------------------------------- volume
-
-    @GetMapping("/series/{seriesId}/volumes")
-    public List<VolumeResponse> listVolumes(@PathVariable Long seriesId) {
-        return catalog.listVolumes(seriesId).stream().map(VolumeResponse::from).toList();
-    }
-
-    @PostMapping("/series/{seriesId}/volumes")
-    public ResponseEntity<VolumeResponse> createVolume(
-            @PathVariable Long seriesId,
-            @Valid @RequestBody VolumeRequest request) {
-        Volume volume = catalog.createVolume(seriesId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(VolumeResponse.from(volume));
-    }
-
-    /** Creates a whole range at once; see {@link BulkVolumeRequest}. */
-    @PostMapping("/series/{seriesId}/volumes/bulk")
-    public ResponseEntity<List<VolumeResponse>> createVolumes(
-            @PathVariable Long seriesId,
-            @Valid @RequestBody BulkVolumeRequest request) {
-        List<VolumeResponse> created = catalog.createVolumes(seriesId, request)
-                .stream().map(VolumeResponse::from).toList();
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    @PutMapping("/volumes/{id}")
-    public VolumeResponse updateVolume(@PathVariable Long id,
-                                       @Valid @RequestBody VolumeRequest request) {
-        return VolumeResponse.from(catalog.updateVolume(id, request));
-    }
-
-    @DeleteMapping("/volumes/{id}")
-    public ResponseEntity<Void> deleteVolume(@PathVariable Long id,
-                                             @AuthenticationPrincipal UserPrincipal principal) {
-        catalog.deleteVolume(id, principal);
-        return ResponseEntity.noContent().build();
-    }
 }

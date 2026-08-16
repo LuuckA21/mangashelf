@@ -10,19 +10,17 @@ public record SeriesResponse(
         String language,
         String name,
         Short totalVolumes,
-        boolean completed,
-        int volumeCount
+        boolean completed
 ) {
 
     /**
-     * Reads {@code volumes.size()}, so callers must pass a series whose
-     * collection is already loaded — otherwise this triggers a lazy load per
-     * series and turns a list endpoint into an N+1 query.
+     * Touches the work, so callers must pass a series whose manga is loaded —
+     * otherwise this fires a query per row of a list endpoint.
      */
     public static SeriesResponse from(Series s) {
         return new SeriesResponse(
                 s.getId(), s.getManga().getId(), s.getManga().displayTitle(),
                 s.getPublisher(), s.getLanguage(), s.getName(),
-                s.getTotalVolumes(), s.isCompleted(), s.getVolumes().size());
+                s.getTotalVolumes(), s.isCompleted());
     }
 }

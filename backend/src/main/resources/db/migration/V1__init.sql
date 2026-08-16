@@ -3,11 +3,13 @@
 --
 --   manga   = the work itself (One Piece)
 --   series  = one published edition (Normale, New Edition, Gazzetta)
---   volume  = a single tome of an edition
---   user_volume = the volumes a user owns
+--   user_volume = the volumes a user owns, by number
 --
--- Score, wishlist, tags and purchase details are deliberately absent:
--- they can be added by a later migration once they are actually needed.
+-- There is deliberately no table of volumes. Cataloguing which volumes an
+-- edition contains would mean knowing how many the publisher has released,
+-- which nobody here does — and a gap inside a run is visible from the owned
+-- numbers alone. What lies beyond the highest owned number is the business
+-- of the purchase lists, not of a catalogue.
 -- ============================================================
 
 CREATE TABLE app_user (
@@ -37,7 +39,7 @@ CREATE TABLE manga (
     status         VARCHAR(32),          -- FINISHED, RELEASING, HIATUS, ...
     genres         TEXT[],
     start_year     SMALLINT,
-    total_volumes  SMALLINT,             -- volumi dell'edizione originale JP
+    total_volumes  SMALLINT,             -- volumes of the original Japanese run
     synced_at      TIMESTAMPTZ,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -50,7 +52,11 @@ CREATE TABLE series (
     publisher      VARCHAR(200) NOT NULL,   -- Star Comics, Planet Manga, ...
     language       VARCHAR(2)   NOT NULL DEFAULT 'it',
     name           VARCHAR(300) NOT NULL,   -- "Normale", "New Edition", "Gazzetta"
-    total_volumes  SMALLINT,                -- NULL se in corso e ignoto
+
+    -- Optional, and usually unknown: when it is set the shelf knows how far
+    -- the run goes, when it is not the shelf stops at the highest volume
+    -- owned.
+    total_volumes  SMALLINT,
     completed      BOOLEAN NOT NULL DEFAULT FALSE,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (manga_id, publisher, language, name)
@@ -58,32 +64,19 @@ CREATE TABLE series (
 
 CREATE INDEX idx_series_manga ON series (manga_id);
 
-CREATE TABLE volume (
-    id             BIGSERIAL PRIMARY KEY,
-    series_id      BIGINT NOT NULL REFERENCES series(id) ON DELETE CASCADE,
-    number         SMALLINT NOT NULL,
-    title          VARCHAR(300),
-    isbn13         VARCHAR(13),
-    release_date   DATE,
-    cover_url      VARCHAR(1000),
-    UNIQUE (series_id, number)
-);
-
-CREATE INDEX idx_volume_series ON volume (series_id);
-CREATE INDEX idx_volume_isbn ON volume (isbn13);
-
 -- ------------------------------------------------------------
 -- Personal collection
 -- ------------------------------------------------------------
 
--- Which volumes a user owns. The pair itself is the primary key: a user
--- either owns a volume or does not, and there is no third state a
--- surrogate key could distinguish.
+-- Which volume numbers a user owns of an edition. The triple is the whole
+-- fact: a user either owns volume 47 of this run or does not, and there is
+-- no third state a surrogate key could distinguish.
 CREATE TABLE user_volume (
-    user_id    BIGINT NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    volume_id  BIGINT NOT NULL REFERENCES volume(id) ON DELETE CASCADE,
+    user_id    BIGINT   NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    series_id  BIGINT   NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+    number     SMALLINT NOT NULL CHECK (number >= 0),
     added_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (user_id, volume_id)
+    PRIMARY KEY (user_id, series_id, number)
 );
 
-CREATE INDEX idx_user_volume_volume ON user_volume (volume_id);
+CREATE INDEX idx_user_volume_series ON user_volume (series_id);

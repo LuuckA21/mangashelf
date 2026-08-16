@@ -11,18 +11,17 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import me.luucka.mangashelf.catalog.Volume;
+import me.luucka.mangashelf.catalog.Series;
 import me.luucka.mangashelf.user.AppUser;
 
 import java.time.Instant;
 
 /**
- * A volume owned by a user: the join between the shared catalogue and one
- * person's shelf.
+ * A volume number a user owns of an edition.
  *
- * <p>Carries no attributes of its own beyond the timestamp — the row's
- * existence <em>is</em> the fact being recorded. Condition, price and
- * reading state can be added later without disturbing this shape.
+ * <p>Points at the edition and carries the number as a plain value: there is
+ * no row anywhere saying that volume 47 exists, because nobody knows which
+ * volumes a publisher has released. Ownership is the only record.
  */
 @Entity
 @Table(name = "user_volume")
@@ -45,16 +44,20 @@ public class UserVolume {
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId("volumeId")
-    @JoinColumn(name = "volume_id", nullable = false)
-    private Volume volume;
+    @MapsId("seriesId")
+    @JoinColumn(name = "series_id", nullable = false)
+    private Series series;
 
     @Column(name = "added_at", nullable = false, updatable = false)
     private Instant addedAt = Instant.now();
 
-    public UserVolume(AppUser user, Volume volume) {
+    public UserVolume(AppUser user, Series series, Short number) {
         this.user = user;
-        this.volume = volume;
-        this.id = new UserVolumeId(user.getId(), volume.getId());
+        this.series = series;
+        this.id = new UserVolumeId(user.getId(), series.getId(), number);
+    }
+
+    public Short getNumber() {
+        return id.getNumber();
     }
 }

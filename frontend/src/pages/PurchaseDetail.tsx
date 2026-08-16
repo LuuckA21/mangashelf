@@ -20,6 +20,7 @@ export default function PurchaseDetail() {
   const [editing, setEditing] = useState(false)
   const [editingItem, setEditingItem] = useState<number | null>(null)
   const [removingItem, setRemovingItem] = useState<number | null>(null)
+  const [transfer, setTransfer] = useState<string | null>(null)
 
   useEffect(() => {
     purchases.get(listId)
@@ -72,6 +73,25 @@ export default function PurchaseDetail() {
           >
             {list.paidAt ? 'Riapri la lista' : 'Segna come pagata'}
           </button>
+          <button
+            className="quiet"
+            disabled={list.items.length === 0}
+            onClick={async () => {
+              setTransfer('Aggiungo…')
+              try {
+                const r = await purchases.toCollection(list.id)
+                setTransfer([
+                  r.added > 0 ? `${r.added} volumi aggiunti alla collezione` : null,
+                  r.alreadyOwned > 0 ? `${r.alreadyOwned} già posseduti` : null,
+                ].filter(Boolean).join(' · ') || 'Nessuna modifica.')
+              } catch {
+                setTransfer(null)
+                setError('Non sono riuscito ad aggiungere i volumi.')
+              }
+            }}
+          >
+            Aggiungi alla collezione
+          </button>
           <button className="quiet" onClick={() => setEditing(!editing)}>
             {editing ? 'Chiudi' : 'Nome, periodo e sconto'}
           </button>
@@ -86,6 +106,7 @@ export default function PurchaseDetail() {
       </div>
 
       {error && <div className="error">{error}</div>}
+      {transfer && <p className="muted" style={{ fontSize: 14 }}>{transfer}</p>}
 
       {editing && (
         <ListSettings
