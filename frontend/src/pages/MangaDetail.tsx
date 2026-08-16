@@ -11,6 +11,10 @@ const DELETE_ERRORS: Record<string, string> = {
     'Non posso eliminare: qualcuno possiede volumi di quest’opera.',
   series_has_owned_volumes:
     'Non posso eliminare: qualcuno possiede volumi di questa edizione.',
+  manga_in_purchase_list:
+    'Non posso eliminare: quest’opera compare in una lista d’acquisto.',
+  series_in_purchase_list:
+    'Non posso eliminare: questa edizione compare in una lista d’acquisto.',
   admin_required: 'Serve un account amministratore.',
 }
 

@@ -5,6 +5,7 @@ import me.luucka.mangashelf.catalog.dto.MangaRequest;
 import me.luucka.mangashelf.catalog.dto.SeriesRequest;
 import me.luucka.mangashelf.catalog.dto.VolumeRequest;
 import me.luucka.mangashelf.collection.UserVolumeRepository;
+import me.luucka.mangashelf.purchase.PurchaseItemRepository;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.common.CoverStore;
 import me.luucka.mangashelf.user.Role;
@@ -34,17 +35,20 @@ public class CatalogService {
     private final SeriesRepository seriesRepository;
     private final VolumeRepository volumeRepository;
     private final UserVolumeRepository userVolumeRepository;
+    private final PurchaseItemRepository purchaseItemRepository;
     private final CoverStore covers;
 
     public CatalogService(MangaRepository mangaRepository,
                           SeriesRepository seriesRepository,
                           VolumeRepository volumeRepository,
                           UserVolumeRepository userVolumeRepository,
+                          PurchaseItemRepository purchaseItemRepository,
                           CoverStore covers) {
         this.mangaRepository = mangaRepository;
         this.seriesRepository = seriesRepository;
         this.volumeRepository = volumeRepository;
         this.userVolumeRepository = userVolumeRepository;
+        this.purchaseItemRepository = purchaseItemRepository;
         this.covers = covers;
     }
 
@@ -138,6 +142,11 @@ public class CatalogService {
                 throw ApiException.conflict("manga_has_owned_volumes");
             }
         }
+        // Purchase lines cascade from the edition too, so deleting a work
+        // would strip rows from lists that may not even be the caller's.
+        if (purchaseItemRepository.countByMangaId(id) > 0) {
+            throw ApiException.conflict("manga_in_purchase_list");
+        }
         mangaRepository.delete(manga);
     }
 
@@ -204,6 +213,9 @@ public class CatalogService {
         Series series = getSeries(id);
         if (userVolumeRepository.countOwnedInSeries(id) > 0) {
             throw ApiException.conflict("series_has_owned_volumes");
+        }
+        if (purchaseItemRepository.countBySeriesId(id) > 0) {
+            throw ApiException.conflict("series_in_purchase_list");
         }
         seriesRepository.delete(series);
     }

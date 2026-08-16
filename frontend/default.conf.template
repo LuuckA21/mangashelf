@@ -29,6 +29,20 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Spring adds these to its own responses, but the SPA and the static
+    # files are served by nginx and would otherwise go out bare.
+    #
+    # Note on inheritance: add_header at this level applies only to blocks
+    # that declare no add_header of their own, which is why the one location
+    # that needs its own Cache-Control repeats them.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Covers may still point at a remote host when a download failed, hence
+    # https: on images. Inline styles are allowed because React writes them
+    # as style attributes; scripts have no such exception.
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
@@ -36,7 +50,10 @@ server {
     # Vite asset names carry a content hash, so they can be cached hard.
     location /assets/ {
         expires 1y;
-        add_header Cache-Control "public, immutable";
+        add_header Cache-Control "public, immutable" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     }
 
     # Covers are content the backend downloaded once and never rewrites for
@@ -45,7 +62,6 @@ server {
     location /covers/ {
         alias /usr/share/nginx/covers/;
         expires 30d;
-        add_header Cache-Control "public";
         access_log off;
         # A cover that failed to download leaves no file; answering 404
         # quickly is better than letting the SPA fallback return index.html
@@ -57,7 +73,6 @@ server {
     # logo for a year after it changed.
     location ~* ^/(favicon\.(svg|ico)|apple-touch-icon\.png)$ {
         expires 7d;
-        add_header Cache-Control "public";
     }
 
     # The API is served from the same host: no CORS, and the session cookie

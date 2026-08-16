@@ -165,8 +165,14 @@ export default function SeriesDetail() {
                   await catalog.deleteSeries(series.id)
                   navigate(`/manga/${series.mangaId}`)
                 } catch (e) {
-                  setError(e instanceof ApiError && e.code === 'series_has_owned_volumes'
-                    ? 'Non posso eliminare: qualcuno possiede volumi di questa edizione.'
+                  const messages: Record<string, string> = {
+                    series_has_owned_volumes:
+                      'Non posso eliminare: qualcuno possiede volumi di questa edizione.',
+                    series_in_purchase_list:
+                      'Non posso eliminare: questa edizione compare in una lista d’acquisto.',
+                  }
+                  setError(e instanceof ApiError
+                    ? (messages[e.code] ?? 'Eliminazione non riuscita.')
                     : 'Eliminazione non riuscita.')
                 }
               }}

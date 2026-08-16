@@ -6,6 +6,7 @@ import { useSession } from '../api/session'
 const MESSAGES: Record<string, string> = {
   invalid_credentials: 'Credenziali non valide.',
   account_disabled: 'Questo account è disattivato.',
+  too_many_attempts: 'Troppi tentativi falliti. Riprova fra un quarto d’ora.',
 }
 
 export default function Login() {

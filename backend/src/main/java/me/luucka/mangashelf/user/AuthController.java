@@ -31,15 +31,18 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository contextRepository;
     private final AppUserRepository users;
+    private final LoginAttempts attempts;
 
     public AuthController(AuthService authService,
                           AuthenticationManager authenticationManager,
                           SecurityContextRepository contextRepository,
-                          AppUserRepository users) {
+                          AppUserRepository users,
+                          LoginAttempts attempts) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.contextRepository = contextRepository;
         this.users = users;
+        this.attempts = attempts;
     }
 
     @PostMapping("/register")
@@ -53,9 +56,21 @@ public class AuthController {
                               HttpServletRequest httpRequest,
                               HttpServletResponse httpResponse) {
 
-        Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(
-                        request.login(), request.password()));
+        if (attempts.isBlocked(request.login())) {
+            throw new ApiException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                    "too_many_attempts");
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(
+                            request.login(), request.password()));
+        } catch (RuntimeException e) {
+            attempts.recordFailure(request.login());
+            throw e;
+        }
+        attempts.recordSuccess(request.login());
 
         // Rotating the session id is what prevents session fixation: an id
         // an attacker planted before login stops being valid the moment the

@@ -12,8 +12,10 @@ public record MangaRequest(
 
         @Size(max = 500) String titleNative,
         @Size(max = 500) String titleEnglish,
-        String authors,
-        String description,
+        @Size(max = 500) String authors,
+        // Generous but bounded: a synopsis is long, an accidental paste of a
+        // whole page is not, and an unbounded text column invites the latter.
+        @Size(max = 20000) String description,
         @Size(max = 1000) String coverUrl,
         PublicationStatus status,
         String[] genres,

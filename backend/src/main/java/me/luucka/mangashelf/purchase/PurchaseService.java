@@ -55,13 +55,23 @@ public class PurchaseService {
     public List<PurchaseListSummary> listAll(UserPrincipal principal) {
         return lists.findByUserIdOrderByCreatedAtDesc(principal.id()).stream()
                 .map(list -> {
-                    PurchaseListResponse full = PurchaseListResponse.from(list);
+                    // Counted and summed straight off the entities. Building
+                    // the full response here would map every line into a DTO
+                    // that names its edition and work, and those are lazy:
+                    // a page of twenty lists would issue hundreds of queries
+                    // to produce three numbers.
+                    int chf = 0;
+                    int reserved = 0;
+                    for (PurchaseItem item : list.getItems()) {
+                        if (item.getPriceChfCents() != null) chf += item.getPriceChfCents();
+                        if (item.isReserved()) reserved++;
+                    }
                     return new PurchaseListSummary(
                             list.getId(), list.getName(),
                             list.getPeriodYear(), list.getPeriodMonth(),
                             list.getPaidAt(),
-                            full.items().size(), full.reservedCount(),
-                            full.totalChfCents());
+                            list.getItems().size(), reserved,
+                            chf - list.discountOn(chf));
                 })
                 .toList();
     }

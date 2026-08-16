@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -48,6 +51,10 @@ public class CoverStore {
      */
     public String store(String remoteUrl, String name) {
         if (remoteUrl == null || remoteUrl.isBlank()) return null;
+        if (!isFetchable(remoteUrl)) {
+            log.warn("Refused to fetch a cover from {}", remoteUrl);
+            return remoteUrl;
+        }
 
         try {
             byte[] bytes = http.get().uri(remoteUrl).retrieve().body(byte[].class);
@@ -113,6 +120,38 @@ public class CoverStore {
      */
     public boolean isRemote(String url) {
         return url != null && (url.startsWith("http://") || url.startsWith("https://"));
+    }
+
+    /**
+     * Whether the server should go and get this address.
+     *
+     * <p>The URL comes from a form, so without this the application would
+     * fetch whatever it is handed — including addresses only it can reach.
+     * On a self-hosted box that means the database, the proxy's admin panel
+     * and everything else on the LAN, turned into a probe by pasting a link.
+     * Covers live on the public internet, so nothing legitimate is lost by
+     * refusing the rest.
+     */
+    private boolean isFetchable(String url) {
+        try {
+            URI uri = URI.create(url);
+            String scheme = uri.getScheme();
+            if (scheme == null
+                    || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                return false;
+            }
+            if (uri.getHost() == null) return false;
+
+            InetAddress address = InetAddress.getByName(uri.getHost());
+            return !address.isLoopbackAddress()
+                    && !address.isSiteLocalAddress()
+                    && !address.isLinkLocalAddress()
+                    && !address.isAnyLocalAddress()
+                    && !address.isMulticastAddress();
+
+        } catch (IllegalArgumentException | UnknownHostException e) {
+            return false;
+        }
     }
 
     /** Keeps the original format; unknown extensions are treated as JPEG. */

@@ -25,4 +25,16 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
             ORDER BY i.volumeNumber ASC
             """)
     List<PurchaseItem> findAllByUser(@Param("userId") Long userId);
+
+    /**
+     * How many purchase lines name this edition, across every user.
+     *
+     * <p>Guards deletion of the edition: the foreign key cascades, so
+     * removing a run would silently strip lines from other people's lists.
+     */
+    long countBySeriesId(Long seriesId);
+
+    /** Same guard, widened to every edition of a work. */
+    @Query("SELECT COUNT(i) FROM PurchaseItem i WHERE i.series.manga.id = :mangaId")
+    long countByMangaId(@Param("mangaId") Long mangaId);
 }
