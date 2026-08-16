@@ -19,6 +19,7 @@ export default function PurchaseDetail() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editingItem, setEditingItem] = useState<number | null>(null)
+  const [removingItem, setRemovingItem] = useState<number | null>(null)
 
   useEffect(() => {
     purchases.get(listId)
@@ -98,6 +99,18 @@ export default function PurchaseDetail() {
         <div className="empty">Nessun volume in lista.</div>
       ) : (
         <table className="purchase-table">
+          {/* Widths declared once, so a cell holding an input lines up with
+              the same cell holding text: without this the columns size
+              themselves to their content and shift when a row is opened. */}
+          <colgroup>
+            <col className="col-reserve" />
+            <col />
+            <col className="col-edition" />
+            <col className="col-vol" />
+            <col className="col-price" />
+            <col className="col-price" />
+            <col className="col-actions" />
+          </colgroup>
           <thead>
             <tr>
               <th className="reserve-cell" title="Riservato in fumetteria">R</th>
@@ -125,7 +138,13 @@ export default function PurchaseDetail() {
                     onError={setError}
                   />
                 ) : (
-                <tr key={item.id} className={item.reserved ? 'reserved' : ''}>
+                <tr
+                  key={item.id}
+                  className={[
+                    item.reserved ? 'reserved' : '',
+                    removingItem === item.id ? 'removing' : '',
+                  ].filter(Boolean).join(' ')}
+                >
                   <td className="reserve-cell">
                     <button
                       className="reserve-toggle"
@@ -151,26 +170,53 @@ export default function PurchaseDetail() {
                   <td className="num">{formatCents(item.priceEurCents)}</td>
                   <td className="num">{formatCents(item.priceChfCents)}</td>
                   <td className="num actions-cell">
-                    <button
-                      className="link-button"
-                      title="Modifica la riga"
-                      onClick={() => setEditingItem(item.id)}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="link-button"
-                      title="Togli dalla lista"
-                      onClick={async () => {
-                        try {
-                          setList(await purchases.removeItem(list.id, item.id))
-                        } catch {
-                          setError('Non sono riuscito a togliere la riga.')
-                        }
-                      }}
-                    >
-                      ×
-                    </button>
+                    {removingItem === item.id ? (
+                      <>
+                        {/* Confirm takes the first slot and cancel the
+                            second, where the delete button just was: a
+                            stray double click therefore cancels rather
+                            than deleting. */}
+                        <button
+                          className="link-button danger-text"
+                          title="Conferma l’eliminazione"
+                          onClick={async () => {
+                            try {
+                              setList(await purchases.removeItem(list.id, item.id))
+                            } catch {
+                              setError('Non sono riuscito a togliere la riga.')
+                            } finally {
+                              setRemovingItem(null)
+                            }
+                          }}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          className="link-button"
+                          title="Annulla"
+                          onClick={() => setRemovingItem(null)}
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="link-button"
+                          title="Modifica la riga"
+                          onClick={() => { setRemovingItem(null); setEditingItem(item.id) }}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          className="link-button"
+                          title="Togli dalla lista"
+                          onClick={() => setRemovingItem(item.id)}
+                        >
+                          ×
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
                 )

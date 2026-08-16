@@ -490,7 +490,7 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
  */
 .purchase-table tr.reserved { background: var(--indigo-wash); }
 
-.reserve-cell { width: 34px; text-align: center; }
+.reserve-cell { text-align: center; }
 
 .reserve-toggle {
   width: 20px;
@@ -539,22 +539,37 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 
 .suggestion-title { font-family: var(--font-display); font-size: 16px; }
 
-/* Edit mode keeps the row's shape: inputs sized to their columns so the
-   table does not jump when a line is opened. */
+/* Column widths, shared by both modes. */
+.purchase-table { table-layout: fixed; }
+.purchase-table .col-reserve { width: 38px; }
+.purchase-table .col-edition { width: 26%; }
+.purchase-table .col-vol     { width: 72px; }
+.purchase-table .col-price   { width: 96px; }
+.purchase-table .col-actions { width: 62px; }
+
+/* Edit mode keeps the row's shape: every input fills its column, so the
+   figures stay under the headings they belong to. */
 .purchase-table .editing-row { background: var(--paper); }
 .purchase-table .editing-row input {
+  width: 100%;
   padding: 4px 6px;
   font-family: var(--font-data);
   font-size: 14px;
 }
-.purchase-table .editing-row td:nth-child(4) input { width: 64px; text-align: right; }
-.purchase-table .editing-row td:nth-child(5) input,
-.purchase-table .editing-row td:nth-child(6) input { width: 78px; text-align: right; }
+.purchase-table .editing-row .num input { text-align: right; }
 
 .actions-cell { white-space: nowrap; }
 
+/* The date sits under the edition name, filling the same column. */
 .purchase-table .editing-row .date-input {
   display: block;
   margin-top: 4px;
-  width: 150px;
 }
+
+/* The armed confirmation, in the colour the action deserves. */
+.link-button.danger-text { color: var(--vermilion); font-weight: 600; }
+.link-button.danger-text:hover { color: var(--vermilion-deep); }
+
+/* An armed row is tinted so the pending deletion is visible even if the
+   eye has moved away from the buttons. */
+.purchase-table tr.removing { background: #f7e9e7; }
