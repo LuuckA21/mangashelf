@@ -92,6 +92,18 @@
         </dependency>
 
         <!--
+            Spring Boot 4 split the test infrastructure the same way it split
+            the rest: @SpringBootTest no longer brings MockMvc with it, and
+            @AutoConfigureMockMvc moved out of spring-boot-test-autoconfigure
+            into this module. Without it the annotation simply does not exist.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
             The tests run against a real Postgres in a container, not an
             in-memory stand-in: half the bugs this suite exists to catch —
             constraint cascades, checksums, native array columns — do not
