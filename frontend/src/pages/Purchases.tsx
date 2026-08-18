@@ -43,6 +43,7 @@ export default function Purchases() {
           paidAt: null,
           itemCount: 0,
           reservedCount: 0,
+          purchasedCount: 0,
           totalChfCents: 0,
         },
         ...current,
@@ -102,6 +103,9 @@ export default function Purchases() {
                     `${list.itemCount} volumi`,
                     list.reservedCount > 0 && !list.paidAt
                       ? `${list.reservedCount} riservati`
+                      : null,
+                    list.purchasedCount > 0 && list.purchasedCount < list.itemCount
+                      ? `${list.purchasedCount} acquistati`
                       : null,
                     `CHF ${formatCents(list.totalChfCents)}`,
                   ].filter(Boolean).join(' · ')}

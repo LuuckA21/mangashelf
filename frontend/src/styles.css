@@ -579,3 +579,12 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
    its own content: eight narrow numeric columns, none of them fixed. */
 .stats-table { table-layout: auto; }
 .stats-table th, .stats-table td { padding: 8px 12px; }
+
+/* A bought line is settled: tinted more strongly than a reserved one, and
+   the reservation styling gives way to it. */
+.purchase-table tr.bought { background: #e6ece4; }
+
+.reserve-toggle.bought[aria-pressed="true"] {
+  background: #4a7c4e;
+  border-color: #4a7c4e;
+}

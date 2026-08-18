@@ -94,6 +94,11 @@ public class PurchaseList extends BaseEntity {
      * separately and adding them up gives a different number, and the shop
      * discounts the order.
      */
+    /** True once the month has been closed. */
+    public boolean isPaid() {
+        return paidAt != null;
+    }
+
     public int discountOn(int subtotalCents) {
         int discount = 0;
         if (discountPercent != null) {

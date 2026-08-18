@@ -71,15 +71,17 @@ public class PurchaseService {
                     // to produce three numbers.
                     int chf = 0;
                     int reserved = 0;
+                    int purchased = 0;
                     for (PurchaseItem item : list.getItems()) {
                         if (item.getPriceChfCents() != null) chf += item.getPriceChfCents();
                         if (item.isReserved()) reserved++;
+                        if (item.getPurchasedAt() != null) purchased++;
                     }
                     return new PurchaseListSummary(
                             list.getId(), list.getName(),
                             list.getPeriodYear(), list.getPeriodMonth(),
                             list.getPaidAt(),
-                            list.getItems().size(), reserved,
+                            list.getItems().size(), reserved, purchased,
                             chf - list.discountOn(chf));
                 })
                 .toList();
@@ -182,6 +184,10 @@ public class PurchaseService {
      * <p>Only lines carrying a franc price count. Including priced and
      * unpriced lines in the same denominator would make the averages read
      * lower the more incomplete the data is.
+     *
+     * <p>And only lines that were bought: a list is written ahead of the
+     * month, so counting everything on it would report as spent what was
+     * merely planned.
      */
     @Transactional(readOnly = true)
     public PurchaseStats stats(UserPrincipal principal) {
@@ -195,7 +201,7 @@ public class PurchaseService {
             int full = 0;
             int priced = 0;
             for (PurchaseItem item : list.getItems()) {
-                if (item.getPriceChfCents() != null) {
+                if (item.getPriceChfCents() != null && wasBought(item, list)) {
                     full += item.getPriceChfCents();
                     priced++;
                 }
@@ -229,6 +235,19 @@ public class PurchaseService {
 
         return new PurchaseStats(years, listCount, volumes, full, discount, net,
                 average(full, volumes), average(net, volumes));
+    }
+
+    /**
+     * Whether a line was bought.
+     *
+     * <p>Marked on the line, or implied by the list being closed: whoever
+     * settles a month has bought what is left on it, since anything not
+     * bought is carried into the next list before closing. Without the
+     * second half, an entire year recorded the old way — closing the list,
+     * never ticking the lines — would report nothing spent at all.
+     */
+    private boolean wasBought(PurchaseItem item, PurchaseList list) {
+        return item.getPurchasedAt() != null || list.isPaid();
     }
 
     /** Zero rather than a division by zero when a year has no priced line. */
@@ -344,16 +363,82 @@ public class PurchaseService {
         return PurchaseListResponse.from(list);
     }
 
+    /** Marks one line as bought, or takes the mark back. */
+    @Transactional
+    public PurchaseListResponse setPurchased(Long listId, Long itemId, boolean purchased,
+                                             UserPrincipal principal) {
+        PurchaseList list = load(listId, principal);
+        PurchaseItem item = itemOf(list, itemId);
+        // Re-marking keeps the original moment: what is interesting is when
+        // the volume was bought, not when the button was last pressed.
+        if (purchased && item.getPurchasedAt() == null) {
+            item.setPurchasedAt(Instant.now());
+        } else if (!purchased) {
+            item.setPurchasedAt(null);
+        }
+        return PurchaseListResponse.from(list);
+    }
+
+    /**
+     * Moves the lines that were not bought from one list into another.
+     *
+     * <p>They are moved rather than copied: what stays behind is then what
+     * the month actually cost, which is the only reading of an old list that
+     * is worth keeping.
+     *
+     * <p>Refused once the source has been closed. A paid list counts as
+     * bought in the statistics, so pulling lines out of it afterwards would
+     * quietly rewrite a figure already reported — carry first, close after.
+     *
+     * @return how many lines moved
+     */
+    @Transactional
+    public int carryOver(Long targetId, Long sourceId, UserPrincipal principal) {
+        if (targetId.equals(sourceId)) {
+            throw ApiException.badRequest("same_list");
+        }
+        PurchaseList target = load(targetId, principal);
+        PurchaseList source = load(sourceId, principal);
+
+        if (source.isPaid()) {
+            throw ApiException.conflict("source_list_paid");
+        }
+
+        List<PurchaseItem> pending = source.getItems().stream()
+                .filter(item -> item.getPurchasedAt() == null)
+                .toList();
+
+        for (PurchaseItem item : pending) {
+            source.getItems().remove(item);
+
+            // A fresh line rather than a reparented one: orphanRemoval would
+            // otherwise delete the row it has just seen leave the collection,
+            // and the reservation does not travel — the shop was holding it
+            // for a month that is over.
+            PurchaseItem moved = new PurchaseItem(item.getSeries(), item.getVolumeNumber());
+            moved.setReleaseDate(item.getReleaseDate());
+            moved.setPriceEurCents(item.getPriceEurCents());
+            moved.setPriceChfCents(item.getPriceChfCents());
+            target.addItem(moved);
+        }
+
+        lists.flush();
+        return pending.size();
+    }
+
+    private PurchaseItem itemOf(PurchaseList list, Long itemId) {
+        return list.getItems().stream()
+                .filter(candidate -> candidate.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> ApiException.notFound("item_not_found"));
+    }
+
     /** Marks one line as set aside at the shop, or clears it. */
     @Transactional
     public PurchaseListResponse setReserved(Long listId, Long itemId, boolean reserved,
                                             UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
-        PurchaseItem item = list.getItems().stream()
-                .filter(candidate -> candidate.getId().equals(itemId))
-                .findFirst()
-                .orElseThrow(() -> ApiException.notFound("item_not_found"));
-        item.setReserved(reserved);
+        itemOf(list, itemId).setReserved(reserved);
         return PurchaseListResponse.from(list);
     }
 

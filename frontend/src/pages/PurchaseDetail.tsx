@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   catalog, purchases,
   type Manga, type PurchaseItem as PurchaseItemRow, type PurchaseList,
-  type PurchaseSuggestion, type Series,
+  type PurchaseListSummary, type PurchaseSuggestion, type Series,
 } from '../api/client'
 import { formatCents, formatDate, formatPeriod, MONTHS, parseAmount } from '../format'
 import ConfirmDelete from '../components/ConfirmDelete'
@@ -54,7 +54,8 @@ export default function PurchaseDetail() {
           <Link to="/purchases">Acquisti</Link>
           {formatPeriod(list.periodYear, list.periodMonth)
             && ` · ${formatPeriod(list.periodYear, list.periodMonth)}`}
-          {list.items.length > 0 && ` · ${list.reservedCount} di ${list.items.length} riservati`}
+          {list.items.length > 0 && ` · ${list.reservedCount} riservati`}
+          {list.items.length > 0 && ` · ${list.purchasedCount} di ${list.items.length} acquistati`}
         </p>
         <h1>
           {list.name}
@@ -125,6 +126,7 @@ export default function PurchaseDetail() {
               themselves to their content and shift when a row is opened. */}
           <colgroup>
             <col className="col-reserve" />
+            <col className="col-reserve" />
             <col />
             <col className="col-edition" />
             <col className="col-vol" />
@@ -135,6 +137,7 @@ export default function PurchaseDetail() {
           <thead>
             <tr>
               <th className="reserve-cell" title="Riservato in fumetteria">R</th>
+              <th className="reserve-cell" title="Acquistato">A</th>
               <th>Manga</th>
               <th>Edizione</th>
               <th className="num">Vol.</th>
@@ -146,7 +149,7 @@ export default function PurchaseDetail() {
           {[...byDate.entries()].map(([date, rows]) => (
             <tbody key={date || 'senza-data'}>
               <tr className="date-row">
-                <th colSpan={7}>{date ? formatDate(date) : 'Senza data'}</th>
+                <th colSpan={8}>{date ? formatDate(date) : 'Senza data'}</th>
               </tr>
               {rows.map((item) => (
                 // Guarded against a null id as well as a mismatch: with
@@ -164,7 +167,7 @@ export default function PurchaseDetail() {
                 <tr
                   key={item.id}
                   className={[
-                    item.reserved ? 'reserved' : '',
+                    item.purchasedAt != null ? 'bought' : item.reserved ? 'reserved' : '',
                     removingItem === item.id ? 'removing' : '',
                   ].filter(Boolean).join(' ')}
                 >
@@ -185,6 +188,25 @@ export default function PurchaseDetail() {
                       }}
                     >
                       {item.reserved ? '✓' : ''}
+                    </button>
+                  </td>
+                  <td className="reserve-cell">
+                    <button
+                      className="reserve-toggle bought"
+                      aria-pressed={item.purchasedAt != null}
+                      title={item.purchasedAt != null
+                        ? 'Acquistato'
+                        : 'Segna come acquistato'}
+                      onClick={async () => {
+                        try {
+                          setList(await purchases.setPurchased(
+                            list.id, item.id, item.purchasedAt == null))
+                        } catch {
+                          setError('Non sono riuscito a cambiare lo stato.')
+                        }
+                      }}
+                    >
+                      {item.purchasedAt != null ? '✓' : ''}
                     </button>
                   </td>
                   <td>{item.mangaTitle}</td>
@@ -248,7 +270,7 @@ export default function PurchaseDetail() {
           ))}
           <tfoot>
             <tr>
-              <td colSpan={4}>Totale</td>
+              <td colSpan={5}>Totale</td>
               <td className="num">{formatCents(list.totalEurCents)}</td>
               <td className="num">{formatCents(list.subtotalChfCents)}</td>
               <td />
@@ -256,7 +278,7 @@ export default function PurchaseDetail() {
             {list.discountAppliedCents > 0 && (
               <>
                 <tr className="muted">
-                  <td colSpan={4}>
+                  <td colSpan={5}>
                     Sconto{list.discountPercent ? ` ${Number(list.discountPercent)}%` : ''}
                   </td>
                   <td className="num" />
@@ -264,7 +286,7 @@ export default function PurchaseDetail() {
                   <td />
                 </tr>
                 <tr className="grand-total">
-                  <td colSpan={4}>Da pagare</td>
+                  <td colSpan={5}>Da pagare</td>
                   <td className="num" />
                   <td className="num">{formatCents(list.totalChfCents)}</td>
                   <td />
@@ -274,6 +296,17 @@ export default function PurchaseDetail() {
           </tfoot>
         </table>
       )}
+
+      <CarryOver
+        list={list}
+        onMoved={async (moved) => {
+          setList(await purchases.get(list.id))
+          setTransfer(moved === 0
+            ? 'Nessun volume da riportare.'
+            : `${moved} volumi riportati in questa lista.`)
+        }}
+        onError={setError}
+      />
 
       <Suggestions
         listId={list.id}
@@ -435,6 +468,7 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
   return (
     <tr className="editing-row">
       <td />
+      <td />
       <td>{item.mangaTitle}</td>
       <td className="muted">
         {item.seriesName}
@@ -459,6 +493,70 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
         <button className="link-button" title="Annulla" onClick={onCancel}>×</button>
       </td>
     </tr>
+  )
+}
+
+/**
+ * Pulls the unbought lines of an earlier list into this one.
+ *
+ * <p>They move rather than copy: what stays on the old list is then what
+ * that month actually cost, which is the only reading of it worth keeping.
+ */
+function CarryOver({ list, onMoved, onError }: {
+  list: PurchaseList
+  onMoved: (moved: number) => Promise<void>
+  onError: (message: string) => void
+}) {
+  const [others, setOthers] = useState<PurchaseListSummary[]>([])
+  const [sourceId, setSourceId] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    purchases.listAll()
+      // Closed lists are left out: their lines already count as bought, and
+      // pulling one out afterwards would rewrite a figure already reported.
+      .then((all) => setOthers(all.filter((l) => l.id !== list.id && !l.paidAt)))
+      .catch(() => undefined)
+  }, [list.id, list.items.length])
+
+  if (others.length === 0) return null
+
+  return (
+    <div className="panel" style={{ marginTop: 32 }}>
+      <p className="eyebrow" style={{ marginTop: 0 }}>Riporta da un’altra lista</p>
+      <div className="row">
+        <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}
+                style={{ flex: 1, minWidth: 200 }}>
+          <option value="">Scegli la lista…</option>
+          {others.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name} — {l.itemCount - l.purchasedCount} non acquistati
+            </option>
+          ))}
+        </select>
+        <button
+          disabled={!sourceId || busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              const { moved } = await purchases.carryOver(list.id, Number(sourceId))
+              await onMoved(moved)
+              setSourceId('')
+            } catch {
+              onError('Non sono riuscito a riportare i volumi.')
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          {busy ? 'Riporto…' : 'Riporta i non acquistati'}
+        </button>
+      </div>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+        I volumi non acquistati passano qui e spariscono dalla lista di
+        origine, che resta così la spesa reale di quel mese.
+      </p>
+    </div>
   )
 }
 

@@ -100,6 +100,24 @@ public class PurchaseController {
         return purchases.setPaid(id, Boolean.TRUE.equals(body.get("paid")), principal);
     }
 
+    /** Marks one line as bought, or takes the mark back. */
+    @PutMapping("/{id}/items/{itemId}/purchased")
+    public PurchaseListResponse setPurchased(@PathVariable Long id,
+                                             @PathVariable Long itemId,
+                                             @RequestBody Map<String, Boolean> body,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        return purchases.setPurchased(id, itemId,
+                Boolean.TRUE.equals(body.get("purchased")), principal);
+    }
+
+    /** Moves the unbought lines of another list into this one. */
+    @PostMapping("/{id}/carry-over/{sourceId}")
+    public Map<String, Integer> carryOver(@PathVariable Long id,
+                                          @PathVariable Long sourceId,
+                                          @AuthenticationPrincipal UserPrincipal principal) {
+        return Map.of("moved", purchases.carryOver(id, sourceId, principal));
+    }
+
     /** Marks one line as set aside at the shop, or clears it. */
     @PutMapping("/{id}/items/{itemId}/reserved")
     public PurchaseListResponse setReserved(@PathVariable Long id,

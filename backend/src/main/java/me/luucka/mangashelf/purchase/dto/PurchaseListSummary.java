@@ -11,6 +11,7 @@ public record PurchaseListSummary(
         Instant paidAt,
         int itemCount,
         int reservedCount,
+        int purchasedCount,
         int totalChfCents
 ) {
 }

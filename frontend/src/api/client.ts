@@ -242,6 +242,7 @@ export interface PurchaseItem {
   priceEurCents: number | null
   priceChfCents: number | null
   reserved: boolean
+  purchasedAt: string | null
 }
 
 export interface PurchaseList {
@@ -254,6 +255,7 @@ export interface PurchaseList {
   discountCents: number | null
   items: PurchaseItem[]
   reservedCount: number
+  purchasedCount: number
   totalEurCents: number
   subtotalChfCents: number
   discountAppliedCents: number
@@ -268,6 +270,7 @@ export interface PurchaseListSummary {
   paidAt: string | null
   itemCount: number
   reservedCount: number
+  purchasedCount: number
   totalChfCents: number
 }
 
@@ -332,6 +335,10 @@ export const purchases = {
     api.put<PurchaseList>(`/api/purchases/${id}/paid`, { paid }),
   setReserved: (id: number, itemId: number, reserved: boolean) =>
     api.put<PurchaseList>(`/api/purchases/${id}/items/${itemId}/reserved`, { reserved }),
+  setPurchased: (id: number, itemId: number, purchased: boolean) =>
+    api.put<PurchaseList>(`/api/purchases/${id}/items/${itemId}/purchased`, { purchased }),
+  carryOver: (targetId: number, sourceId: number) =>
+    api.post<{ moved: number }>(`/api/purchases/${targetId}/carry-over/${sourceId}`),
   remove: (id: number) => api.delete<void>(`/api/purchases/${id}`),
   addItem: (id: number, body: {
     seriesId: number

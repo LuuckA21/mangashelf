@@ -2,6 +2,7 @@ package me.luucka.mangashelf.purchase.dto;
 
 import me.luucka.mangashelf.purchase.PurchaseItem;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 public record PurchaseItemResponse(
@@ -14,7 +15,8 @@ public record PurchaseItemResponse(
         LocalDate releaseDate,
         Integer priceEurCents,
         Integer priceChfCents,
-        boolean reserved
+        boolean reserved,
+        Instant purchasedAt
 ) {
 
     public static PurchaseItemResponse from(PurchaseItem item) {
@@ -29,6 +31,7 @@ public record PurchaseItemResponse(
                 item.getReleaseDate(),
                 item.getPriceEurCents(),
                 item.getPriceChfCents(),
-                item.isReserved());
+                item.isReserved(),
+                item.getPurchasedAt());
     }
 }

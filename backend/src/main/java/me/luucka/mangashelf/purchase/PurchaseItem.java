@@ -55,6 +55,14 @@ public class PurchaseItem extends BaseEntity {
     @Column(nullable = false)
     private boolean reserved = false;
 
+    /**
+     * When the volume was actually bought, or null while it is still only
+     * planned. A line that stays null when the month closes is the one that
+     * gets carried into the next list.
+     */
+    @Column(name = "purchased_at")
+    private Instant purchasedAt;
+
     @Column(name = "added_at", nullable = false, updatable = false)
     private Instant addedAt = Instant.now();
 

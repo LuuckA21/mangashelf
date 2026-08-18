@@ -1,6 +1,7 @@
 package me.luucka.mangashelf;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -150,23 +151,109 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(jsonPath("$.added").value(1));
     }
 
+    /**
+     * A list is written ahead of the month, so counting everything on it
+     * would report as spent what was only planned.
+     */
     @Test
-    void statisticsGroupByYear() throws Exception {
+    void statisticsCountOnlyWhatWasBought() throws Exception {
         long series = anEdition();
+        long list = aList("Luglio", 2026, 7);
 
-        long list = idOf(json(post("/api/purchases").with(user(member)).with(csrf())
-                .contentType("application/json")
-                .content("""
-                        {"name": "Luglio", "periodYear": 2026, "periodMonth": 7,
-                         "discountPercent": 10}
-                        """), 201));
-        mvc.perform(addLine(list, series, 1, 690, 1000));
+        String body = json(addLine(list, series, 1, 690, 1000), 200);
+        long bought = itemId(body, 0);
+        mvc.perform(addLine(list, series, 2, 690, 1000));
+
+        mvc.perform(get("/api/purchases/stats").with(user(member)))
+                .andExpect(jsonPath("$.netChfCents").value(0));
+
+        mvc.perform(put("/api/purchases/" + list + "/items/" + bought + "/purchased")
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"purchased": true}
+                                """))
+                .andExpect(status().isOk());
 
         mvc.perform(get("/api/purchases/stats").with(user(member)))
                 .andExpect(jsonPath("$.years[0].year").value(2026))
-                .andExpect(jsonPath("$.years[0].fullChfCents").value(1000))
-                .andExpect(jsonPath("$.years[0].netChfCents").value(900))
-                .andExpect(jsonPath("$.netChfCents").value(900));
+                .andExpect(jsonPath("$.years[0].volumeCount").value(1))
+                .andExpect(jsonPath("$.netChfCents").value(1000));
+    }
+
+    /**
+     * Closing a list means its lines were bought: anything that was not is
+     * carried into the next list before the month is settled. Without this,
+     * a year recorded the old way would report nothing spent at all.
+     */
+    @Test
+    void closingAListCountsItsLinesAsBought() throws Exception {
+        long series = anEdition();
+        long list = aList("Luglio", 2026, 7);
+        mvc.perform(addLine(list, series, 1, 690, 1000));
+
+        mvc.perform(put("/api/purchases/" + list + "/paid").with(user(member)).with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {"paid": true}
+                        """));
+
+        mvc.perform(get("/api/purchases/stats").with(user(member)))
+                .andExpect(jsonPath("$.netChfCents").value(1000));
+    }
+
+    /** What is not bought moves on; what is bought stays where it was paid. */
+    @Test
+    void unboughtLinesAreCarriedToTheNextList() throws Exception {
+        long series = anEdition();
+        long july = aList("Luglio");
+        String body = json(addLine(july, series, 1, 690, 830), 200);
+        long bought = itemId(body, 0);
+        mvc.perform(addLine(july, series, 2, 690, 830));
+
+        mvc.perform(put("/api/purchases/" + july + "/items/" + bought + "/purchased")
+                .with(user(member)).with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {"purchased": true}
+                        """));
+
+        long august = aList("Agosto");
+        mvc.perform(post("/api/purchases/" + august + "/carry-over/" + july)
+                        .with(user(member)).with(csrf()))
+                .andExpect(jsonPath("$.moved").value(1));
+
+        mvc.perform(get("/api/purchases/" + july).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].volumeNumber").value(1));
+
+        mvc.perform(get("/api/purchases/" + august).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].volumeNumber").value(2))
+                .andExpect(jsonPath("$.items[0].priceChfCents").value(830));
+    }
+
+    /**
+     * Pulling lines out of a closed list would rewrite a figure the
+     * statistics have already reported.
+     */
+    @Test
+    void aClosedListCannotBeCarriedFrom() throws Exception {
+        long series = anEdition();
+        long july = aList("Luglio");
+        mvc.perform(addLine(july, series, 1, 690, 830));
+
+        mvc.perform(put("/api/purchases/" + july + "/paid").with(user(member)).with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {"paid": true}
+                        """));
+
+        long august = aList("Agosto");
+        mvc.perform(post("/api/purchases/" + august + "/carry-over/" + july)
+                        .with(user(member)).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("source_list_paid"));
     }
 
     // ---------------------------------------------------------------- setup
@@ -181,7 +268,20 @@ class PurchaseIT extends IntegrationTest {
                 .content("{\"name\": \"" + name + "\"}"), 201));
     }
 
-    private org.springframework.test.web.servlet.RequestBuilder addLine(
+    private long aList(String name, int year, int month) throws Exception {
+        return idOf(json(post("/api/purchases").with(user(member)).with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {"name": "%s", "periodYear": %d, "periodMonth": %d}
+                        """.formatted(name, year, month)), 201));
+    }
+
+    private long itemId(String listBody, int index) {
+        return ((Number) com.jayway.jsonpath.JsonPath
+                .read(listBody, "$.items[" + index + "].id")).longValue();
+    }
+
+    private MockHttpServletRequestBuilder addLine(
             long list, long series, int number, int eur, int chf) {
         return post("/api/purchases/" + list + "/items").with(user(member)).with(csrf())
                 .contentType("application/json")
