@@ -31,6 +31,26 @@ class CollectionIT extends IntegrationTest {
                 .andExpect(jsonPath("$.ownedCount").value(0));
     }
 
+    /** Volume 0 is optional, but once owned it must remain visible and count. */
+    @Test
+    void volumeZeroIsRepresentedOnItsOwn() throws Exception {
+        long series = anEdition();
+
+        mvc.perform(post(url(series, 0)).with(user(member)).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/collection/series/" + series).with(user(member)))
+                .andExpect(jsonPath("$.upTo").value(0))
+                .andExpect(jsonPath("$.progressTotal").value(1))
+                .andExpect(jsonPath("$.ownedCount").value(1))
+                .andExpect(jsonPath("$.ownedNumbers[0]").value(0))
+                .andExpect(jsonPath("$.missingNumbers.length()").value(0));
+
+        mvc.perform(get("/api/collection/summary").with(user(member)))
+                .andExpect(jsonPath("$[0].progressTotal").value(1))
+                .andExpect(jsonPath("$[0].ownedNumbers[0]").value(0));
+    }
+
     /** One person's shelf is invisible to another's. */
     @Test
     void shelvesAreSeparate() throws Exception {

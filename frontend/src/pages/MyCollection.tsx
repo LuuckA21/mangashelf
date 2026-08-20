@@ -122,8 +122,8 @@ export default function MyCollection() {
       ) : (
         <ul className="edition-list">
           {shown.map((e) => {
-            const percent = e.upTo > 0
-              ? Math.round((e.ownedCount / e.upTo) * 100)
+            const percent = e.progressTotal > 0
+              ? Math.round((e.ownedCount / e.progressTotal) * 100)
               : 0
             return (
               <li key={e.seriesId}>
@@ -131,7 +131,7 @@ export default function MyCollection() {
                   <div className="name">{e.mangaTitle}</div>
                   <div className="muted" style={{ fontSize: 14 }}>
                     {e.seriesName} · {e.publisher} · {e.ownedCount}
-                    {e.declaredTotal != null ? ` di ${e.declaredTotal}` : ''} volumi
+                    {e.declaredTotal != null ? ` di ${e.progressTotal}` : ''} volumi
                     {e.completed ? ' · conclusa' : ' · in corso'}
                   </div>
 

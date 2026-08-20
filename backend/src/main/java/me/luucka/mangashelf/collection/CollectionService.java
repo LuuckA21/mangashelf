@@ -161,6 +161,7 @@ public class CollectionService {
                     series.getTotalVolumes(),
                     series.isCompleted(),
                     progress.upTo(),
+                    progress.progressTotal(),
                     owned.size(),
                     owned,
                     progress.missingNumbers()));
