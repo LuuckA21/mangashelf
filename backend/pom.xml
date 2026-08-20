@@ -120,6 +120,29 @@
 
     <build>
         <plugins>
+            <!--
+                Integration tests use the *IT naming convention. Surefire,
+                which runs during the test phase, does not include that
+                pattern by default; Failsafe owns it and binds the tests to
+                integration-test/verify. Failing when none are found keeps a
+                green CI job from silently validating zero tests.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <failIfNoTests>true</failIfNoTests>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
