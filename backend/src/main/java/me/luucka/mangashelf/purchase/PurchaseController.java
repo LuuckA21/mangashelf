@@ -85,7 +85,7 @@ public class PurchaseController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Marks every volume of the list as owned. Repeatable. */
+    /** Marks every purchased volume of the list as owned. Repeatable. */
     @PostMapping("/{id}/to-collection")
     public TransferResult toCollection(@PathVariable Long id,
                                        @AuthenticationPrincipal UserPrincipal principal) {

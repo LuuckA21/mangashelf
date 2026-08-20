@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  catalog, purchases,
+  ApiError, catalog, purchases,
   type Manga, type PurchaseItem as PurchaseItemRow, type PurchaseList,
   type PurchaseListSummary, type PurchaseSuggestion, type Series,
 } from '../api/client'
@@ -81,7 +81,10 @@ export default function PurchaseDetail() {
           </button>
           <button
             className="quiet"
-            disabled={list.items.length === 0}
+            disabled={list.purchasedCount === 0}
+            title={list.purchasedCount === 0
+              ? 'Segna prima almeno un volume come acquistato'
+              : 'Aggiungi alla collezione i volumi acquistati'}
             onClick={async () => {
               setTransfer('Aggiungo…')
               try {
@@ -89,6 +92,7 @@ export default function PurchaseDetail() {
                 setTransfer([
                   r.added > 0 ? `${r.added} volumi aggiunti alla collezione` : null,
                   r.alreadyOwned > 0 ? `${r.alreadyOwned} già posseduti` : null,
+                  r.notPurchased > 0 ? `${r.notPurchased} non acquistati ignorati` : null,
                 ].filter(Boolean).join(' · ') || 'Nessuna modifica.')
               } catch {
                 setTransfer(null)
@@ -105,9 +109,16 @@ export default function PurchaseDetail() {
           )}
           <ConfirmDelete
             what={`la lista “${list.name}”`}
+            disabled={closed}
             onConfirm={async () => {
-              await purchases.remove(list.id)
-              navigate('/purchases')
+              try {
+                await purchases.remove(list.id)
+                navigate('/purchases')
+              } catch (e) {
+                setError(e instanceof ApiError && e.code === 'list_is_paid'
+                  ? 'Riapri la lista prima di eliminarla.'
+                  : 'Eliminazione non riuscita.')
+              }
             }}
           />
         </div>
@@ -118,8 +129,8 @@ export default function PurchaseDetail() {
 
       {closed && (
         <p className="muted" style={{ fontSize: 14 }}>
-          Lista chiusa: per modificarla riaprila. I volumi non acquistati si
-          possono comunque riportare in un’altra lista.
+          Lista chiusa: per modificarla o eliminarla riaprila. I volumi non
+          acquistati si possono comunque riportare in un’altra lista.
         </p>
       )}
 
@@ -474,8 +485,10 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
         priceEurCents: parseAmount(eur),
         priceChfCents: parseAmount(chf),
       }))
-    } catch {
-      onError('Modifica non riuscita.')
+    } catch (e) {
+      onError(e instanceof ApiError && e.code === 'item_already_on_list'
+        ? 'Questo volume è già presente nella lista.'
+        : 'Modifica non riuscita.')
     } finally {
       setBusy(false)
     }
@@ -769,8 +782,10 @@ function AddItem({ listId, onAdded, onError }: {
       setNumber('')
       setEur('')
       setChf('')
-    } catch {
-      onError('Non sono riuscito ad aggiungere la riga.')
+    } catch (e) {
+      onError(e instanceof ApiError && e.code === 'item_already_on_list'
+        ? 'Questo volume è già presente nella lista.'
+        : 'Non sono riuscito ad aggiungere la riga.')
     } finally {
       setBusy(false)
     }

@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -23,7 +24,9 @@ import java.time.LocalDate;
  * a list can name a volume months before it is out.
  */
 @Entity
-@Table(name = "purchase_item")
+@Table(name = "purchase_item", uniqueConstraints = @UniqueConstraint(
+        name = "uq_purchase_item_list_series_volume",
+        columnNames = {"list_id", "series_id", "volume_number"}))
 @Getter
 @Setter
 @NoArgsConstructor

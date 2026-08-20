@@ -116,7 +116,9 @@ public class PurchaseService {
 
     @Transactional
     public void delete(Long id, UserPrincipal principal) {
-        lists.delete(load(id, principal));
+        PurchaseList list = load(id, principal);
+        requireOpen(list);
+        lists.delete(list);
     }
 
     @Transactional
@@ -124,6 +126,7 @@ public class PurchaseService {
                                         UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
         requireOpen(list);
+        requireItemAbsent(list, request.seriesId(), request.volumeNumber(), null);
 
         PurchaseItem item = new PurchaseItem(
                 catalog.getSeries(request.seriesId()), request.volumeNumber());
@@ -158,6 +161,7 @@ public class PurchaseService {
                 .filter(candidate -> candidate.getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> ApiException.notFound("item_not_found"));
+        requireItemAbsent(list, request.seriesId(), request.volumeNumber(), item.getId());
 
         item.setSeries(catalog.getSeries(request.seriesId()));
         item.setVolumeNumber(request.volumeNumber());
@@ -303,14 +307,16 @@ public class PurchaseService {
     }
 
     /**
-     * Marks every volume of the list as owned.
+     * Marks every purchased volume of the list as owned.
      *
      * <p>Deliberately not tied to marking the list paid: paying and owning
      * are different facts, and an action that silently triggers another
      * makes it hard to tell what happened.
      *
-     * <p>Nothing is created in the shared catalogue — ownership is a row of
-     * its own — so this works the same for every user, administrator or not.
+     * <p>Planned lines stay out: appearing on a shopping list is not evidence
+     * that the volume reached the shelf. Nothing is created in the shared
+     * catalogue — ownership is a row of its own — so this works the same for
+     * every user, administrator or not.
      *
      * <p>Repeatable: lines already on the shelf are counted, not duplicated.
      */
@@ -322,8 +328,13 @@ public class PurchaseService {
 
         int added = 0;
         int alreadyOwned = 0;
+        int notPurchased = 0;
 
         for (PurchaseItem item : list.getItems()) {
+            if (item.getPurchasedAt() == null) {
+                notPurchased++;
+                continue;
+            }
             Long seriesId = item.getSeries().getId();
             Short number = item.getVolumeNumber();
 
@@ -336,7 +347,7 @@ public class PurchaseService {
             added++;
         }
 
-        return new TransferResult(added, alreadyOwned);
+        return new TransferResult(added, alreadyOwned, notPurchased);
     }
 
     /** Marks the list paid, or reopens it. */
@@ -401,6 +412,24 @@ public class PurchaseService {
         for (PurchaseItem item : pending) {
             source.getItems().remove(item);
 
+            PurchaseItem existing = matchingItem(
+                    target, item.getSeries().getId(), item.getVolumeNumber(), null);
+            if (existing != null) {
+                // The destination is the deliberate, current copy. Keep its
+                // values, filling only blanks from the older leftover before
+                // the duplicate disappears from the source.
+                if (existing.getReleaseDate() == null) {
+                    existing.setReleaseDate(item.getReleaseDate());
+                }
+                if (existing.getPriceEurCents() == null) {
+                    existing.setPriceEurCents(item.getPriceEurCents());
+                }
+                if (existing.getPriceChfCents() == null) {
+                    existing.setPriceChfCents(item.getPriceChfCents());
+                }
+                continue;
+            }
+
             // A fresh line rather than a reparented one: orphanRemoval would
             // otherwise delete the row it has just seen leave the collection,
             // and the reservation does not travel — the shop was holding it
@@ -438,6 +467,24 @@ public class PurchaseService {
                 .filter(candidate -> candidate.getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> ApiException.notFound("item_not_found"));
+    }
+
+    /** A list cannot name the same volume of the same edition twice. */
+    private void requireItemAbsent(PurchaseList list, Long seriesId, Short volumeNumber,
+                                   Long ignoredItemId) {
+        if (matchingItem(list, seriesId, volumeNumber, ignoredItemId) != null) {
+            throw ApiException.conflict("item_already_on_list");
+        }
+    }
+
+    private PurchaseItem matchingItem(PurchaseList list, Long seriesId, Short volumeNumber,
+                                      Long ignoredItemId) {
+        return list.getItems().stream()
+                .filter(item -> ignoredItemId == null || !item.getId().equals(ignoredItemId))
+                .filter(item -> item.getSeries().getId().equals(seriesId))
+                .filter(item -> item.getVolumeNumber().equals(volumeNumber))
+                .findFirst()
+                .orElse(null);
     }
 
     /** Marks one line as set aside at the shop, or clears it. */
