@@ -55,9 +55,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConstraint(DataIntegrityViolationException ex) {
         String detail = ex.getMostSpecificCause().getMessage();
-        String code = detail != null && detail.contains("duplicate key")
-                ? "already_exists"
-                : "constraint_violation";
+        String code;
+        if (detail != null && detail.contains("uq_purchase_item_list_series_volume")) {
+            // Also covers two concurrent requests that both pass the
+            // service-level duplicate check before either one commits.
+            code = "item_already_on_list";
+        } else if (detail != null && detail.contains("duplicate key")) {
+            code = "already_exists";
+        } else {
+            code = "constraint_violation";
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", code));
     }
 

@@ -342,6 +342,7 @@ export interface PurchaseStats {
 export interface TransferResult {
   added: number
   alreadyOwned: number
+  notPurchased: number
 }
 
 export const purchases = {

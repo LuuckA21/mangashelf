@@ -1,10 +1,12 @@
 package me.luucka.mangashelf;
 
+import me.luucka.mangashelf.user.UserPrincipal;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -27,6 +29,34 @@ class PurchaseIT extends IntegrationTest {
         mvc.perform(addLine(list, series, 114, 690, 830))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].id").isNumber());
+    }
+
+    @Test
+    void duplicateLinesAreRejectedWhenAddedOrEdited() throws Exception {
+        long series = anEdition();
+        long list = aList("Luglio");
+        mvc.perform(addLine(list, series, 1, 690, 830))
+                .andExpect(status().isOk());
+
+        mvc.perform(addLine(list, series, 1, 700, 900))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("item_already_on_list"));
+
+        String body = json(addLine(list, series, 2, 700, 900), 200);
+        long second = itemId(body, 1);
+        mvc.perform(put("/api/purchases/" + list + "/items/" + second)
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"seriesId": %d, "volumeNumber": 1,
+                                 "priceEurCents": 700, "priceChfCents": 900}
+                                """.formatted(series)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("item_already_on_list"));
+
+        mvc.perform(get("/api/purchases/" + list).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[1].volumeNumber").value(2));
     }
 
     @Test
@@ -133,8 +163,12 @@ class PurchaseIT extends IntegrationTest {
     void movingAListOntoTheShelfIsRepeatable() throws Exception {
         long series = anEdition();
         long list = aList("Luglio");
-        mvc.perform(addLine(list, series, 1, 690, 830));
-        mvc.perform(addLine(list, series, 2, 690, 830));
+        String body = json(addLine(list, series, 1, 690, 830), 200);
+        long first = itemId(body, 0);
+        body = json(addLine(list, series, 2, 690, 830), 200);
+        long second = itemId(body, 1);
+        markPurchased(list, first);
+        markPurchased(list, second);
 
         mvc.perform(post("/api/purchases/" + list + "/to-collection")
                         .with(user(member)).with(csrf()))
@@ -150,6 +184,25 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(jsonPath("$.ownedCount").value(2));
     }
 
+    @Test
+    void onlyPurchasedLinesMoveOntoTheShelf() throws Exception {
+        long series = anEdition();
+        long list = aList("Luglio");
+        String body = json(addLine(list, series, 1, 690, 830), 200);
+        markPurchased(list, itemId(body, 0));
+        mvc.perform(addLine(list, series, 2, 690, 830));
+
+        mvc.perform(post("/api/purchases/" + list + "/to-collection")
+                        .with(user(member)).with(csrf()))
+                .andExpect(jsonPath("$.added").value(1))
+                .andExpect(jsonPath("$.alreadyOwned").value(0))
+                .andExpect(jsonPath("$.notPurchased").value(1));
+
+        mvc.perform(get("/api/collection/series/" + series).with(user(member)))
+                .andExpect(jsonPath("$.ownedCount").value(1))
+                .andExpect(jsonPath("$.ownedNumbers[0]").value(1));
+    }
+
     /** Ordinary members move their own lists: nothing shared is written. */
     @Test
     void movingAListNeedsNoAdministrator() throws Exception {
@@ -160,11 +213,13 @@ class PurchaseIT extends IntegrationTest {
                         {"name": "Luglio"}
                         """), 201));
 
-        mvc.perform(post("/api/purchases/" + list + "/items").with(user(other)).with(csrf())
+        String body = json(post("/api/purchases/" + list + "/items")
+                .with(user(other)).with(csrf())
                 .contentType("application/json")
                 .content("""
                         {"seriesId": %d, "volumeNumber": 7}
-                        """.formatted(series)));
+                        """.formatted(series)), 200);
+        markPurchasedAs(list, itemId(body, 0), other);
 
         mvc.perform(post("/api/purchases/" + list + "/to-collection")
                         .with(user(other)).with(csrf()))
@@ -258,6 +313,32 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(jsonPath("$.error").value("list_is_paid"));
     }
 
+    @Test
+    void aClosedListMustBeReopenedBeforeDeletion() throws Exception {
+        long list = aList("Luglio");
+        mvc.perform(put("/api/purchases/" + list + "/paid")
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"paid": true}
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(delete("/api/purchases/" + list).with(user(member)).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("list_is_paid"));
+
+        mvc.perform(put("/api/purchases/" + list + "/paid")
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"paid": false}
+                                """))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/purchases/" + list).with(user(member)).with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
     /** What is not bought moves on; what is bought stays where it was paid. */
     @Test
     void unboughtLinesAreCarriedToTheNextList() throws Exception {
@@ -314,6 +395,33 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(jsonPath("$.items.length()").value(0));
     }
 
+    @Test
+    void carryOverConsolidatesALineAlreadyInTheTarget() throws Exception {
+        long series = anEdition();
+        long july = aList("Luglio");
+        mvc.perform(addLine(july, series, 2, 690, 830));
+
+        long august = aList("Agosto");
+        mvc.perform(post("/api/purchases/" + august + "/items")
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"seriesId": %d, "volumeNumber": 2}
+                                """.formatted(series)))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/purchases/" + august + "/carry-over/" + july)
+                        .with(user(member)).with(csrf()))
+                .andExpect(jsonPath("$.moved").value(1));
+
+        mvc.perform(get("/api/purchases/" + july).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(0));
+        mvc.perform(get("/api/purchases/" + august).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].volumeNumber").value(2))
+                .andExpect(jsonPath("$.items[0].priceChfCents").value(830));
+    }
+
     // ---------------------------------------------------------------- setup
 
     private long anEdition() throws Exception {
@@ -340,8 +448,12 @@ class PurchaseIT extends IntegrationTest {
     }
 
     private void markPurchased(long list, long item) throws Exception {
+        markPurchasedAs(list, item, member);
+    }
+
+    private void markPurchasedAs(long list, long item, UserPrincipal principal) throws Exception {
         mvc.perform(put("/api/purchases/" + list + "/items/" + item + "/purchased")
-                        .with(user(member)).with(csrf())
+                        .with(user(principal)).with(csrf())
                         .contentType("application/json")
                         .content("""
                                 {"purchased": true}
