@@ -107,7 +107,7 @@ export default function MangaDetail() {
         </div>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       {editingManga && manga && (
         <MangaForm

@@ -43,7 +43,7 @@ export default function Register() {
         <h1>Crea un account</h1>
         <p className="subtitle">Il primo account registrato amministra l’istanza.</p>
 
-        {error && <div className="error">{error}</div>}
+        {error && <div className="error" role="alert">{error}</div>}
 
         <div className="field">
           <label htmlFor="username">Username</label>

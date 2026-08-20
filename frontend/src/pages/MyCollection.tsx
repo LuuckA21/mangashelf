@@ -68,12 +68,13 @@ export default function MyCollection() {
         <h1>La mia collezione</h1>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       {editions.length > 0 && (
         <>
           <div className="row" style={{ marginBottom: 12 }}>
             <input
+              aria-label="Filtra la collezione"
               placeholder="Filtra per opera, edizione o editore"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

@@ -65,7 +65,7 @@ export default function Purchases() {
         <h1>Acquisti</h1>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       <div className="row" style={{ marginBottom: 24 }}>
         <button onClick={() => setAdding(!adding)}>

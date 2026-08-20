@@ -54,10 +54,11 @@ export default function Library() {
         <h1>Opere</h1>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       <form className="row" onSubmit={handleSearch} style={{ marginBottom: 24 }}>
         <input
+          aria-label="Cerca nel catalogo"
           placeholder="Cerca per titolo"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

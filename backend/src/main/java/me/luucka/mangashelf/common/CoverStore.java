@@ -34,10 +34,16 @@ public class CoverStore {
     private static final String PUBLIC_PREFIX = "/covers/";
 
     private final Path directory;
-    private final RestClient http = RestClient.create();
+    private final RestClient http;
 
     public CoverStore(@Value("${app.covers-dir}") String coversDir) {
+        this(coversDir, RestClient.create());
+    }
+
+    /** Test seam for downloads backed by Spring's mock HTTP server. */
+    CoverStore(String coversDir, RestClient http) {
         this.directory = Path.of(coversDir);
+        this.http = http;
     }
 
     /**

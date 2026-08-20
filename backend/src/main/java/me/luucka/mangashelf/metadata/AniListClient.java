@@ -83,8 +83,13 @@ public class AniListClient {
      */
     public AniListClient(@Value("${app.metadata.anilist-url}") String url,
                          @Value("${app.metadata.anilist-requests-per-minute}") int perMinute) {
-        this.http = RestClient.create(url);
-        this.limiter = new RateLimiter(perMinute);
+        this(RestClient.create(url), new RateLimiter(perMinute));
+    }
+
+    /** Test seam for a client backed by Spring's mock HTTP server. */
+    AniListClient(RestClient http, RateLimiter limiter) {
+        this.http = http;
+        this.limiter = limiter;
     }
 
     public List<AniListResponse.Media> search(String term, int limit) {

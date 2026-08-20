@@ -109,7 +109,7 @@ export default function SeriesDetail() {
         )}
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       {progress && progress.progressTotal > 0 && (
         <>

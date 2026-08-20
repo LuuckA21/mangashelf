@@ -48,6 +48,9 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
               key={n}
               className={`tile missing future${busy === n ? ' busy' : ''}`}
               onClick={() => toggle(n)}
+              disabled={busy !== null}
+              aria-pressed="false"
+              aria-label={`Volume ${n} non posseduto: aggiungi alla collezione`}
               title={n === 0
                 ? 'Volume 0 — clicca se questa edizione lo include e ce l’hai'
                 : `Volume ${n} — clicca se l'hai preso`}
@@ -75,7 +78,11 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
               className={`tile${isOwned ? '' : ' missing'}${beyond ? ' future' : ''}`
                 + (busy === n ? ' busy' : '')}
               onClick={() => toggle(n)}
+              disabled={busy !== null}
               aria-pressed={isOwned}
+              aria-label={isOwned
+                ? `Volume ${n} posseduto: rimuovi dalla collezione`
+                : `Volume ${n} ${beyond ? 'non posseduto' : 'mancante'}: aggiungi alla collezione`}
               title={
                 isOwned
                   ? `Volume ${n} — ce l'hai. Clicca per toglierlo.`

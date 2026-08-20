@@ -153,7 +153,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
       </div>
 
       <div className="field">
-        <label>Copertina</label>
+        <label htmlFor="coverUrl">Copertina</label>
         <div className="cover-picker">
           {coverUrl
             ? <img src={coverUrl} alt="" className="cover-preview" />
@@ -161,6 +161,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
 
           <div className="cover-controls">
             <input
+              id="coverUrl"
               placeholder="Incolla l’indirizzo di un’immagine"
               value={coverUrl}
               onChange={(e) => setCoverUrl(e.target.value)}

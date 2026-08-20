@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="topbar">
         <div className="topbar-inner">
           <Link to="/" className="brand">MangaShelf</Link>
-          <nav>
+          <nav aria-label="Navigazione principale">
             <NavLink to="/" end>Catalogo</NavLink>
             <NavLink to="/collection">La mia collezione</NavLink>
             <NavLink to="/purchases">Acquisti</NavLink>
