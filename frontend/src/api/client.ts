@@ -146,12 +146,32 @@ export interface OwnedVolume {
  * Spring Data's paged wrapper.
  *
  * With pageSerializationMode VIA_DTO the metadata sits under "page", while
- * the list stays in "content" in both shapes — and "content" is the only
- * field this client actually needs.
+ * the list stays in "content". Keep Spring's wire shape private and expose a
+ * flat result to pages and pickers, so callers cannot accidentally discard
+ * the information needed to request the next page.
  */
-interface Page<T> {
+interface SpringPage<T> {
   content: T[]
   page?: { size: number; number: number; totalElements: number; totalPages: number }
+}
+
+export interface PageResult<T> {
+  content: T[]
+  size: number
+  number: number
+  totalElements: number
+  totalPages: number
+}
+
+function pageResult<T>(response: SpringPage<T>): PageResult<T> {
+  const content = response.content ?? []
+  const metadata = response.page ?? {
+    size: content.length,
+    number: 0,
+    totalElements: content.length,
+    totalPages: content.length === 0 ? 0 : 1,
+  }
+  return { content, ...metadata }
 }
 
 // --------------------------------------------------------------- endpoints
@@ -166,9 +186,13 @@ export const auth = {
 }
 
 export const catalog = {
-  listManga: (q?: string) =>
-    api.get<Page<Manga>>(`/api/manga${q ? `?q=${encodeURIComponent(q)}` : ''}`)
-      .then((page) => page.content ?? []),
+  listManga: (q = '', page = 0, size = 24) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    const query = q.trim()
+    if (query) params.set('q', query)
+    return api.get<SpringPage<Manga>>(`/api/manga?${params}`)
+      .then(pageResult)
+  },
   getManga: (id: number) => api.get<Manga>(`/api/manga/${id}`),
   createManga: (body: Partial<Manga>) => api.post<Manga>('/api/manga', body),
   updateManga: (id: number, body: Partial<Manga>) =>

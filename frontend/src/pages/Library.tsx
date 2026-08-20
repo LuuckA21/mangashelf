@@ -13,15 +13,26 @@ export default function Library() {
 
   const [manga, setManga] = useState<Manga[]>([])
   const [query, setQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function load(q?: string) {
+  async function load(q = '', targetPage = 0, append = false) {
     setLoading(true)
+    setError(null)
+    if (!append) setManga([])
     try {
-      setManga(await catalog.listManga(q))
+      const result = await catalog.listManga(q, targetPage)
+      setManga((current) => append
+        ? [...new Map([...current, ...result.content].map((item) => [item.id, item])).values()]
+        : result.content)
+      setActiveQuery(q.trim())
+      setPage(result.number)
+      setTotalPages(result.totalPages)
     } catch {
       setError('Non riesco a caricare il catalogo.')
     } finally {
@@ -33,7 +44,7 @@ export default function Library() {
 
   function handleSearch(event: FormEvent) {
     event.preventDefault()
-    load(query)
+    void load(query)
   }
 
   return (
@@ -67,9 +78,9 @@ export default function Library() {
 
       {importing && (
         <AniListSearch
-          onImported={(created) => {
-            setManga((current) => [created, ...current.filter((m) => m.id !== created.id)])
+          onImported={() => {
             setImporting(false)
+            void load(activeQuery)
           }}
         />
       )}
@@ -77,22 +88,24 @@ export default function Library() {
       {adding && (
         <MangaForm
           manga={null}
-          onSaved={(created) => {
-            setManga((current) => [created, ...current])
+          onSaved={() => {
             setAdding(false)
+            void load(activeQuery)
           }}
           onCancel={() => setAdding(false)}
           onError={setError}
         />
       )}
 
-      {loading ? (
+      {loading && manga.length === 0 ? (
         <p className="muted">Carico…</p>
       ) : manga.length === 0 ? (
         <div className="empty">
-          {isAdmin
-            ? 'Il catalogo è vuoto. Aggiungi la prima opera per iniziare.'
-            : 'Il catalogo è vuoto. Chiedi a un amministratore di aggiungere le opere.'}
+          {activeQuery
+            ? `Nessun risultato per “${activeQuery}”.`
+            : isAdmin
+              ? 'Il catalogo è vuoto. Aggiungi la prima opera per iniziare.'
+              : 'Il catalogo è vuoto. Chiedi a un amministratore di aggiungere le opere.'}
         </div>
       ) : (
         <ul className="manga-list">
@@ -108,6 +121,19 @@ export default function Library() {
             </li>
           ))}
         </ul>
+      )}
+
+      {manga.length > 0 && page + 1 < totalPages && (
+        <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <button
+            type="button"
+            className="quiet"
+            disabled={loading}
+            onClick={() => void load(activeQuery, page + 1, true)}
+          >
+            {loading ? 'Carico…' : 'Carica altri'}
+          </button>
+        </div>
       )}
     </Layout>
   )
