@@ -2,10 +2,15 @@ package me.luucka.mangashelf;
 
 import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AuthService;
+import me.luucka.mangashelf.user.LoginAttempts;
 import me.luucka.mangashelf.user.Role;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -14,12 +19,128 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Registration rules that depend on real transaction boundaries. */
+/** Authentication through the real HTTP, security, session and database layers. */
 class AuthIT extends IntegrationTest {
+
+    private static final String PASSWORD = "a sufficiently long password";
 
     @Autowired
     private AuthService auth;
+
+    @Autowired
+    private LoginAttempts attempts;
+
+    @Test
+    void registrationAssignsRolesAndReportsDuplicates() throws Exception {
+        users.deleteAll();
+        users.flush();
+
+        mvc.perform(register("owner", "owner@example.test"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("owner"))
+                .andExpect(jsonPath("$.email").value("owner@example.test"))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+        mvc.perform(register("reader", "reader@example.test"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("USER"));
+
+        mvc.perform(register("OWNER", "another@example.test"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("username_taken"));
+        mvc.perform(register("another", "READER@EXAMPLE.TEST"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("email_taken"));
+    }
+
+    @Test
+    void invalidRegistrationHasFieldErrors() throws Exception {
+        mvc.perform(post("/api/auth/register").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "?", "email": "not-an-email",
+                                 "password": "short"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation_failed"))
+                .andExpect(jsonPath("$.fields.username").exists())
+                .andExpect(jsonPath("$.fields.email").exists())
+                .andExpect(jsonPath("$.fields.password").exists());
+    }
+
+    @Test
+    void loginRotatesAndPersistsTheSessionUntilLogout() throws Exception {
+        mvc.perform(register("session-user", "session@example.test"))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"));
+
+        MockHttpSession anonymous = new MockHttpSession();
+        String anonymousId = anonymous.getId();
+        MvcResult loggedIn = mvc.perform(login("session-user", PASSWORD)
+                        .session(anonymous))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("session-user"))
+                .andReturn();
+
+        MockHttpSession authenticated =
+                (MockHttpSession) loggedIn.getRequest().getSession(false);
+        assertThat(authenticated).isNotNull();
+        assertThat(authenticated.getId()).isNotEqualTo(anonymousId);
+
+        mvc.perform(get("/api/auth/me").session(authenticated))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("session-user"));
+        mvc.perform(post("/api/auth/logout").session(authenticated).with(csrf()))
+                .andExpect(status().isNoContent());
+        assertThat(authenticated.isInvalid()).isTrue();
+        mvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+
+        mvc.perform(login("SESSION@EXAMPLE.TEST", PASSWORD))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("session-user"));
+    }
+
+    @Test
+    void loginErrorsDoNotLeakAccountsAndRepeatedFailuresAreBlocked() throws Exception {
+        mvc.perform(register("locked", "locked@example.test"))
+                .andExpect(status().isCreated());
+        mvc.perform(register("disabled", "disabled@example.test"))
+                .andExpect(status().isCreated());
+
+        AppUser disabled = users.findByUsernameIgnoreCase("disabled").orElseThrow();
+        disabled.setEnabled(false);
+        users.saveAndFlush(disabled);
+
+        try {
+            mvc.perform(login("does-not-exist", "wrong password"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("invalid_credentials"));
+            mvc.perform(login("disabled", PASSWORD))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error").value("account_disabled"));
+
+            for (int failure = 0; failure < 5; failure++) {
+                mvc.perform(login("locked", "wrong password"))
+                        .andExpect(status().isUnauthorized())
+                        .andExpect(jsonPath("$.error").value("invalid_credentials"));
+            }
+            mvc.perform(login("locked", PASSWORD))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.error").value("too_many_attempts"));
+        } finally {
+            attempts.recordSuccess("does-not-exist");
+            attempts.recordSuccess("disabled");
+            attempts.recordSuccess("locked");
+        }
+    }
 
     @Test
     void simultaneousFirstRegistrationsElectExactlyOneAdministrator() throws Exception {
@@ -54,6 +175,22 @@ class AuthIT extends IntegrationTest {
         return new RegisterRequest(
                 username,
                 username + "@example.test",
-                "a sufficiently long password");
+                PASSWORD);
+    }
+
+    private MockHttpServletRequestBuilder register(String username, String email) {
+        return post("/api/auth/register").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username": "%s", "email": "%s", "password": "%s"}
+                        """.formatted(username, email, PASSWORD));
+    }
+
+    private MockHttpServletRequestBuilder login(String login, String password) {
+        return post("/api/auth/login").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"login": "%s", "password": "%s"}
+                        """.formatted(login, password));
     }
 }
