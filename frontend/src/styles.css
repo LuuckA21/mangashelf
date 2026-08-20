@@ -274,6 +274,12 @@ label {
   color: var(--ash);
 }
 
+/* Narrow numeric fields, sized by class so a media query can widen them.
+   Inline widths could not be overridden. */
+.field-narrow { width: 90px; }
+.field-medium { width: 110px; }
+.field-date   { width: 170px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
@@ -587,4 +593,159 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 .reserve-toggle.bought[aria-pressed="true"] {
   background: #4a7c4e;
   border-color: #4a7c4e;
+}
+
+/* =========================================================================
+   Mobile
+   =========================================================================
+   The purchase list is the screen actually used on a phone — standing in a
+   shop, ticking off what the counter hands over. So it stops being a table
+   there and becomes a stack of rows, with the two toggles big enough for a
+   thumb. Everything else just gives back the space it was wasting.
+   ====================================================================== */
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 700px) {
+
+  /* ------------------------------------------------------------- layout */
+
+  .page { padding: calc(var(--s) * 3) calc(var(--s) * 2) calc(var(--s) * 6); }
+  .page-head h1 { font-size: 26px; }
+  .panel { padding: calc(var(--s) * 2); }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: var(--s) calc(var(--s) * 2);
+    padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  }
+  /* The spacer would push the account onto a line of its own; on a phone the
+     nav wrapping under the brand reads better. */
+  .topbar .spacer { display: none; }
+  .topbar nav { order: 3; width: 100%; gap: calc(var(--s) * 2); }
+  /* The account keeps to the right of the brand, where it sits on a wide
+     screen, instead of crowding it. */
+  .topbar-inner > .muted { margin-left: auto; }
+
+  .field-narrow, .field-medium, .field-date, .filter-input { width: 100%; }
+  .row > .field-narrow, .row > .field-medium { flex: 1 1 100px; width: auto; }
+  .row > .field-date { flex: 1 1 100%; width: auto; }
+  .filter-input { flex: 1 1 100%; }
+
+  /* Room for a thumb: 20px was a mouse target. */
+  .reserve-toggle { width: 32px; height: 32px; font-size: 16px; }
+  .link-button { font-size: 22px; padding: 4px 8px; }
+  .tile { font-size: 16px; }
+
+  .cover-picker { flex-direction: column; }
+  .detail-cover { width: 88px; height: 132px; }
+
+  /* --------------------------------------------------- the purchase list */
+
+  .purchase-table,
+  .purchase-table tbody,
+  .purchase-table tfoot,
+  .purchase-table tr,
+  .purchase-table td,
+  .purchase-table th { display: block; }
+
+  /* The header names columns that no longer exist; each cell labels itself
+     below instead. */
+  .purchase-table thead { display: none; }
+  .purchase-table colgroup { display: none; }
+
+  .purchase-table tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px calc(var(--s) * 1.5);
+    padding: calc(var(--s) * 1.5) var(--s);
+    border-bottom: 1px solid var(--ash-line);
+  }
+
+  .purchase-table td { border: none; padding: 0; }
+
+  /* Order rebuilt for a card: toggles and title first, then the edition,
+     then the money. */
+  .purchase-table td:nth-child(1),
+  .purchase-table td:nth-child(2) { order: 1; width: auto; }
+  .purchase-table td:nth-child(3) { order: 2; flex: 1 1 40%; font-size: 16px; }
+  .purchase-table td:nth-child(4) { order: 4; flex: 1 1 100%; font-size: 13px; }
+  .purchase-table td:nth-child(5) { order: 3; }
+  .purchase-table td:nth-child(6) { order: 5; }
+  .purchase-table td:nth-child(7) { order: 6; }
+  .purchase-table td:nth-child(8) { order: 7; margin-left: auto; }
+
+  /* A bare number means nothing without its heading. */
+  .purchase-table tbody td:nth-child(5)::before { content: "vol."; color: var(--ash); }
+  .purchase-table tbody td:nth-child(6):not(:empty)::before { content: "EUR"; color: var(--ash); }
+  .purchase-table tbody td:nth-child(7):not(:empty)::before { content: "CHF"; color: var(--ash); }
+  .purchase-table tbody td:nth-child(5)::before,
+  .purchase-table tbody td:nth-child(6)::before,
+  .purchase-table tbody td:nth-child(7)::before { margin-right: 4px; font-size: 12px; }
+
+  .purchase-table .date-row { padding-bottom: 0; border-bottom: none; }
+  .purchase-table .date-row th {
+    padding: calc(var(--s) * 2) var(--s) var(--s);
+    border-bottom: 1px solid var(--ash-line);
+  }
+
+  /* The rule belongs to the row here, not to each cell: as flex items the
+     cells would draw it in separate segments with the gaps showing through. */
+  .purchase-table tfoot tr { border-bottom: none; padding: 6px var(--s); }
+  .purchase-table tfoot tr:first-child {
+    border-top: 2px solid var(--indigo-deep);
+    margin-top: var(--s);
+  }
+  .purchase-table tfoot tr:first-child td { border-top: none; }
+  .purchase-table tfoot td { order: 1; padding: 0; }
+  .purchase-table tfoot td:first-child { flex: 1 1 auto; order: 0; }
+  /* A total has one figure, so the columns it does not use are empty cells
+     that would otherwise hold open a gap. */
+  .purchase-table tfoot td:empty { display: none; }
+  /* colSpan collapses under display:block, so the totals are the second and
+     third cells here. nth-child still counts the hidden ones, which keeps
+     the currency on the right figure when a row uses only one. */
+  .purchase-table tfoot td:nth-child(2)::before { content: "EUR "; color: var(--ash); }
+  .purchase-table tfoot td:nth-child(3)::before { content: "CHF "; color: var(--ash); }
+
+  /* Editing keeps the card shape, each field labelled by its own column. */
+  .purchase-table .editing-row td:nth-child(3) { flex: 1 1 100%; }
+  .purchase-table .editing-row input { width: 100%; }
+  .purchase-table .editing-row td:nth-child(5) { flex: 0 0 96px; }
+  .purchase-table .editing-row td:nth-child(6),
+  .purchase-table .editing-row td:nth-child(7) { flex: 1 1 96px; }
+  .purchase-table .editing-row td:nth-child(5),
+  .purchase-table .editing-row td:nth-child(6),
+  .purchase-table .editing-row td:nth-child(7) {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Rows that pair text with a button: at this width the two fight over
+     the same 300px and the text loses, wrapping to four lines beside a
+     button that needs one. The button drops to its own line instead. */
+  .suggestion-list li,
+  .edition-row,
+  .result-list li { flex-wrap: wrap; }
+
+  .suggestion-list .grow,
+  .edition-row .grow { flex: 1 1 100%; }
+
+  .suggestion-list li > button { width: 100%; }
+  .edition-row .inline-actions { width: 100%; }
+  .edition-row .inline-actions button { flex: 1; }
+
+  .result-list .result-body { flex: 1 1 55%; }
+  .result-list li > button { flex: 1 1 100%; }
+
+  /* The statistics table keeps its shape and scrolls instead. */
+  .stats-table, .stats-table thead, .stats-table tbody, .stats-table tfoot,
+  .stats-table tr, .stats-table td, .stats-table th { display: revert; }
+  .stats-table { display: table; min-width: 640px; }
+  .stats-table thead { display: table-header-group; }
+  .stats-table tr { display: table-row; padding: 0; }
+  .stats-table td, .stats-table th { display: table-cell; padding: 8px 10px; }
+  .stats-table td::before { content: none; }
 }

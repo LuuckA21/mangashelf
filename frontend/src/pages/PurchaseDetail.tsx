@@ -629,7 +629,7 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
           placeholder="Filtra"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ width: 220 }}
+          className="filter-input"
         />
       </div>
 
@@ -772,22 +772,22 @@ function AddItem({ listId, onAdded, onError }: {
       </div>
 
       <div className="row" style={{ alignItems: 'flex-end' }}>
-        <div style={{ width: 100 }}>
+        <div className="field-narrow">
           <label htmlFor="pi-number">Volume</label>
           <input id="pi-number" type="number" min={0} max={999} value={number} required
                  onChange={(e) => setNumber(e.target.value)} />
         </div>
-        <div style={{ width: 170 }}>
+        <div className="field-date">
           <label htmlFor="pi-date">Uscita</label>
           <input id="pi-date" type="date" value={date}
                  onChange={(e) => setDate(e.target.value)} />
         </div>
-        <div style={{ width: 110 }}>
+        <div className="field-medium">
           <label htmlFor="pi-eur">Prezzo EUR</label>
           <input id="pi-eur" inputMode="decimal" placeholder="6.90"
                  value={eur} onChange={(e) => setEur(e.target.value)} />
         </div>
-        <div style={{ width: 110 }}>
+        <div className="field-medium">
           <label htmlFor="pi-chf">Prezzo CHF</label>
           <input id="pi-chf" inputMode="decimal" placeholder="8.30"
                  value={chf} onChange={(e) => setChf(e.target.value)} />

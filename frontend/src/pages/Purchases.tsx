@@ -153,6 +153,10 @@ function Stats({ stats }: { stats: PurchaseStats }) {
     <section style={{ marginTop: 48 }}>
       <p className="eyebrow">Statistiche</p>
 
+      {/* Eight numeric columns meant to be read across: on a narrow screen
+          this scrolls sideways rather than stacking, because comparing years
+          is the whole point of it. */}
+      <div className="table-scroll">
       <table className="purchase-table stats-table">
         <thead>
           <tr>
@@ -197,6 +201,7 @@ function Stats({ stats }: { stats: PurchaseStats }) {
           </tr>
         </tfoot>
       </table>
+      </div>
 
       <p className="muted" style={{ fontSize: 13 }}>
         Importi in franchi. L'anno è quello del periodo della lista, o quello

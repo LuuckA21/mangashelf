@@ -139,12 +139,12 @@ export default function SeriesDetail() {
       <div className="panel" style={{ marginTop: 32 }}>
         <p className="eyebrow" style={{ marginTop: 0 }}>Segna un intervallo</p>
         <div className="row" style={{ marginBottom: 16 }}>
-          <div style={{ width: 90 }}>
+          <div className="field-narrow">
             <label htmlFor="from">Dal</label>
             <input id="from" type="number" min={0} max={999} value={from}
                    onChange={(e) => setFrom(e.target.value)} />
           </div>
-          <div style={{ width: 90 }}>
+          <div className="field-narrow">
             <label htmlFor="to">Al</label>
             <input id="to" type="number" min={0} max={999} value={to}
                    onChange={(e) => setTo(e.target.value)} />
