@@ -706,6 +706,12 @@ function AddItem({ listId, onAdded, onError }: {
   onError: (message: string) => void
 }) {
   const [manga, setManga] = useState<Manga[]>([])
+  const [mangaQuery, setMangaQuery] = useState('')
+  const [activeMangaQuery, setActiveMangaQuery] = useState('')
+  const [mangaPage, setMangaPage] = useState(0)
+  const [mangaTotalPages, setMangaTotalPages] = useState(0)
+  const [mangaTotalElements, setMangaTotalElements] = useState(0)
+  const [mangaLoading, setMangaLoading] = useState(true)
   const [series, setSeries] = useState<Series[]>([])
   const [mangaId, setMangaId] = useState('')
   const [seriesId, setSeriesId] = useState('')
@@ -715,7 +721,31 @@ function AddItem({ listId, onAdded, onError }: {
   const [chf, setChf] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { catalog.listManga().then(setManga).catch(() => undefined) }, [])
+  async function loadManga(query = '', targetPage = 0, append = false) {
+    setMangaLoading(true)
+    if (!append) {
+      setManga([])
+      setMangaPage(0)
+      setMangaTotalPages(0)
+      setMangaTotalElements(0)
+    }
+    try {
+      const result = await catalog.listManga(query, targetPage)
+      setManga((current) => append
+        ? [...new Map([...current, ...result.content].map((item) => [item.id, item])).values()]
+        : result.content)
+      setActiveMangaQuery(query.trim())
+      setMangaPage(result.number)
+      setMangaTotalPages(result.totalPages)
+      setMangaTotalElements(result.totalElements)
+    } catch {
+      onError('Non riesco a caricare il catalogo manga.')
+    } finally {
+      setMangaLoading(false)
+    }
+  }
+
+  useEffect(() => { void loadManga() }, [])
 
   useEffect(() => {
     setSeries([]); setSeriesId('')
@@ -746,18 +776,65 @@ function AddItem({ listId, onAdded, onError }: {
     }
   }
 
+  function searchManga() {
+    setMangaId('')
+    void loadManga(mangaQuery)
+  }
+
   return (
     <form className="panel" onSubmit={handleSubmit} style={{ marginTop: 32 }}>
       <p className="eyebrow" style={{ marginTop: 0 }}>Aggiungi un volume</p>
 
+      <div className="field" style={{ marginBottom: 16 }}>
+        <label htmlFor="pi-manga-search">Cerca nel catalogo</label>
+        <div className="row">
+          <input
+            id="pi-manga-search"
+            placeholder="Titolo del manga"
+            value={mangaQuery}
+            onChange={(e) => setMangaQuery(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                searchManga()
+              }
+            }}
+            style={{ flex: 1, minWidth: 200 }}
+          />
+          <button type="button" className="quiet" disabled={mangaLoading}
+                  onClick={searchManga}>
+            Cerca
+          </button>
+        </div>
+      </div>
+
       <div className="grid-2">
         <div className="field">
           <label htmlFor="pi-manga">Manga</label>
-          <select id="pi-manga" value={mangaId} required
+          <select id="pi-manga" value={mangaId} required disabled={mangaLoading && manga.length === 0}
                   onChange={(e) => setMangaId(e.target.value)}>
             <option value="">Scegli…</option>
             {manga.map((m) => <option key={m.id} value={m.id}>{m.displayTitle}</option>)}
           </select>
+          <div className="row" style={{ marginTop: 8 }}>
+            <span className="muted" style={{ fontSize: 13 }}>
+              {mangaLoading && manga.length === 0
+                ? 'Carico…'
+                : mangaTotalElements === 0
+                  ? 'Nessun manga trovato.'
+                  : `${manga.length} di ${mangaTotalElements}`}
+            </span>
+            {mangaPage + 1 < mangaTotalPages && (
+              <button
+                type="button"
+                className="link-button"
+                disabled={mangaLoading}
+                onClick={() => void loadManga(activeMangaQuery, mangaPage + 1, true)}
+              >
+                {mangaLoading ? 'Carico…' : 'Carica altri'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="field">
           <label htmlFor="pi-series">Edizione</label>

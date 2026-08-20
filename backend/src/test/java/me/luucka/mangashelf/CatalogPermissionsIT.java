@@ -26,6 +26,27 @@ class CatalogPermissionsIT extends IntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /** The client needs both the next slice and stable page metadata. */
+    @Test
+    void catalogueCanBeReadPastTheFirstPage() throws Exception {
+        for (int n = 0; n < 26; n++) {
+            createManga(admin, "Manga %02d".formatted(n));
+        }
+
+        mvc.perform(get("/api/manga?size=24&page=0").with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(24))
+                .andExpect(jsonPath("$.page.number").value(0))
+                .andExpect(jsonPath("$.page.totalElements").value(26))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
+
+        mvc.perform(get("/api/manga?size=24&page=1").with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].titleRomaji").value("Manga 24"))
+                .andExpect(jsonPath("$.page.number").value(1));
+    }
+
     @Test
     void signedOutRequestsAreRefused() throws Exception {
         mvc.perform(get("/api/manga"))
