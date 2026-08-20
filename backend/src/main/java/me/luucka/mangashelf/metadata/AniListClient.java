@@ -4,6 +4,7 @@ import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.metadata.dto.AniListResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -81,6 +82,7 @@ public class AniListClient {
      * itself and needs nothing else — and this client wants no shared
      * interceptors anyway.
      */
+    @Autowired
     public AniListClient(@Value("${app.metadata.anilist-url}") String url,
                          @Value("${app.metadata.anilist-requests-per-minute}") int perMinute) {
         this(RestClient.create(url), new RateLimiter(perMinute));
