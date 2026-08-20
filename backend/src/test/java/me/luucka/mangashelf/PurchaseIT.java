@@ -84,10 +84,12 @@ class PurchaseIT extends IntegrationTest {
     void theNextVolumeIsSuggestedWithTheLastPrices() throws Exception {
         long series = anEdition();
         long may = aList("Maggio");
-        mvc.perform(addLine(may, series, 111, 650, 780));
+        String mayBody = json(addLine(may, series, 111, 650, 780), 200);
+        markPurchased(may, itemId(mayBody, 0));
 
         long july = aList("Luglio");
-        mvc.perform(addLine(july, series, 113, 690, 890));
+        String julyBody = json(addLine(july, series, 113, 690, 890), 200);
+        markPurchased(july, itemId(julyBody, 0));
 
         long august = aList("Agosto");
         mvc.perform(get("/api/purchases/" + august + "/suggestions").with(user(member)))
@@ -96,11 +98,29 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(jsonPath("$[0].priceChfCents").value(890));
     }
 
+    /** A planned volume is still missing, so it must remain the next suggestion. */
+    @Test
+    void anUnboughtVolumeDoesNotAdvanceTheSuggestion() throws Exception {
+        long series = anEdition();
+        long july = aList("Luglio");
+
+        String boughtBody = json(addLine(july, series, 10, 650, 780), 200);
+        markPurchased(july, itemId(boughtBody, 0));
+        mvc.perform(addLine(july, series, 11, 690, 890));
+
+        long august = aList("Agosto");
+        mvc.perform(get("/api/purchases/" + august + "/suggestions").with(user(member)))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].volumeNumber").value(11))
+                .andExpect(jsonPath("$[0].priceChfCents").value(780));
+    }
+
     @Test
     void aSuggestionAlreadyOnTheListIsNotRepeated() throws Exception {
         long series = anEdition();
         long july = aList("Luglio");
-        mvc.perform(addLine(july, series, 113, 690, 890));
+        String julyBody = json(addLine(july, series, 113, 690, 890), 200);
+        markPurchased(july, itemId(julyBody, 0));
 
         long august = aList("Agosto");
         mvc.perform(addLine(august, series, 114, 690, 890));
@@ -207,7 +227,8 @@ class PurchaseIT extends IntegrationTest {
     void aClosedListCannotBeEdited() throws Exception {
         long series = anEdition();
         long list = aList("Luglio");
-        mvc.perform(addLine(list, series, 1, 690, 830));
+        String body = json(addLine(list, series, 1, 690, 830), 200);
+        long item = itemId(body, 0);
 
         mvc.perform(put("/api/purchases/" + list + "/paid").with(user(member)).with(csrf())
                 .contentType("application/json")
@@ -225,6 +246,16 @@ class PurchaseIT extends IntegrationTest {
                                 {"name": "Rinominata"}
                                 """))
                 .andExpect(status().isConflict());
+
+        mvc.perform(put("/api/purchases/" + list + "/items/" + item)
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"seriesId": %d, "volumeNumber": 2,
+                                 "priceEurCents": 700, "priceChfCents": 900}
+                                """.formatted(series)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("list_is_paid"));
     }
 
     /** What is not bought moves on; what is bought stays where it was paid. */
@@ -306,6 +337,16 @@ class PurchaseIT extends IntegrationTest {
     private long itemId(String listBody, int index) {
         return ((Number) com.jayway.jsonpath.JsonPath
                 .read(listBody, "$.items[" + index + "].id")).longValue();
+    }
+
+    private void markPurchased(long list, long item) throws Exception {
+        mvc.perform(put("/api/purchases/" + list + "/items/" + item + "/purchased")
+                        .with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"purchased": true}
+                                """))
+                .andExpect(status().isOk());
     }
 
     private MockHttpServletRequestBuilder addLine(

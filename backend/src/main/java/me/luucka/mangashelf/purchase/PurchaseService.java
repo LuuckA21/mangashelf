@@ -153,6 +153,7 @@ public class PurchaseService {
                                            PurchaseItemRequest request,
                                            UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
+        requireOpen(list);
         PurchaseItem item = list.getItems().stream()
                 .filter(candidate -> candidate.getId().equals(itemId))
                 .findFirst()
@@ -270,7 +271,7 @@ public class PurchaseService {
         // Ordered by number ascending, so the last write per series wins and
         // holds both the highest number and the prices that went with it.
         Map<Long, PurchaseItem> latestPerSeries = new LinkedHashMap<>();
-        for (PurchaseItem item : items.findAllByUser(principal.id())) {
+        for (PurchaseItem item : items.findPurchasedByUser(principal.id())) {
             latestPerSeries.put(item.getSeries().getId(), item);
         }
 

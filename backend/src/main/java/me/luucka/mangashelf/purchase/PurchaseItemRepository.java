@@ -9,10 +9,11 @@ import java.util.List;
 public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long> {
 
     /**
-     * Every line this user has ever written, newest number last.
+     * Every line this user has bought, highest and latest purchase last.
      *
      * <p>Feeds the suggestions: what to buy next is read from what was
-     * bought before, so the whole history is needed rather than one list.
+     * bought before, so planned lines must not advance the proposed number.
+     * The whole purchase history is needed rather than one list.
      * Edition, work and list are fetched along, because each suggestion
      * names all three — left lazy they would cost three queries per row.
      */
@@ -22,9 +23,10 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
             JOIN FETCH s.manga
             JOIN FETCH i.list l
             WHERE l.user.id = :userId
-            ORDER BY i.volumeNumber ASC
+              AND i.purchasedAt IS NOT NULL
+            ORDER BY i.volumeNumber ASC, i.purchasedAt ASC, i.id ASC
             """)
-    List<PurchaseItem> findAllByUser(@Param("userId") Long userId);
+    List<PurchaseItem> findPurchasedByUser(@Param("userId") Long userId);
 
     /**
      * How many purchase lines name this edition, across every user.
