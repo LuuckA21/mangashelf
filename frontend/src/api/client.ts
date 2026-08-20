@@ -112,6 +112,8 @@ export interface SeriesProgress {
   declaredTotal: number | null
   /** Where the shelf stops: the declared total, or the highest volume owned. */
   upTo: number
+  /** Progress denominator, including volume 0 only when it is owned. */
+  progressTotal: number
   ownedCount: number
   ownedNumbers: number[]
   missingNumbers: number[]
@@ -127,6 +129,7 @@ export interface EditionSummary {
   declaredTotal: number | null
   completed: boolean
   upTo: number
+  progressTotal: number
   ownedCount: number
   ownedNumbers: number[]
   missingNumbers: number[]

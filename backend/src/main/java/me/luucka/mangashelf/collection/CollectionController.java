@@ -53,9 +53,9 @@ public class CollectionController {
     public ResponseEntity<Void> add(@PathVariable Long seriesId,
                                     @PathVariable Short number,
                                     @AuthenticationPrincipal UserPrincipal principal) {
-        // Bounded here as well as in the range call: the shelf is drawn from
-        // 1 to the highest owned number, so marking volume 30000 would have
-        // every later page build a list of thirty thousand gaps.
+        // Bounded here as well as in the range call: the shelf draws positive
+        // numbers to the highest one owned, plus the optional volume 0. Marking
+        // volume 30000 would make every later page build thirty thousand gaps.
         requireSaneNumber(number);
         collection.add(seriesId, number, principal);
         return ResponseEntity.noContent().build();

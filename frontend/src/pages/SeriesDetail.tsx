@@ -76,8 +76,8 @@ export default function SeriesDetail() {
     }
   }
 
-  const percent = progress && progress.upTo > 0
-    ? Math.round((progress.ownedCount / progress.upTo) * 100)
+  const percent = progress && progress.progressTotal > 0
+    ? Math.round((progress.ownedCount / progress.progressTotal) * 100)
     : 0
 
   return (
@@ -111,11 +111,11 @@ export default function SeriesDetail() {
 
       {error && <div className="error">{error}</div>}
 
-      {progress && progress.upTo > 0 && (
+      {progress && progress.progressTotal > 0 && (
         <>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="eyebrow">
-              {progress.ownedCount} di {progress.upTo} volumi
+              {progress.ownedCount} di {progress.progressTotal} volumi
               {progress.declaredTotal == null && ' segnati'}
             </span>
             <span className="eyebrow">{percent}%</span>

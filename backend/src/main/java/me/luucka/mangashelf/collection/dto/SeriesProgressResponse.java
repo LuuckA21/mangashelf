@@ -12,6 +12,9 @@ import java.util.Set;
  *                       declared total when it has one, otherwise the highest
  *                       volume owned — nobody knows what a publisher has
  *                       released, so the shelf stops where the evidence does
+ * @param progressTotal  number of known slots used as the progress denominator;
+ *                       includes volume 0 only when the user owns it, because
+ *                       its existence cannot be inferred for every edition
  * @param missingNumbers gaps below {@code upTo}
  */
 public record SeriesProgressResponse(
@@ -20,6 +23,7 @@ public record SeriesProgressResponse(
         String mangaTitle,
         Short declaredTotal,
         int upTo,
+        int progressTotal,
         int ownedCount,
         List<Short> ownedNumbers,
         List<Short> missingNumbers
@@ -42,6 +46,7 @@ public record SeriesProgressResponse(
         // increment and the loop never ends. A set rather than the list,
         // because contains on a list makes this quadratic.
         Set<Short> ownedSet = new HashSet<>(owned);
+        int progressTotal = upTo + (ownedSet.contains((short) 0) ? 1 : 0);
         List<Short> missing = new ArrayList<>();
         for (int n = 1; n <= upTo; n++) {
             short number = (short) n;
@@ -49,6 +54,6 @@ public record SeriesProgressResponse(
         }
 
         return new SeriesProgressResponse(seriesId, seriesName, mangaTitle,
-                declaredTotal, upTo, owned.size(), owned, missing);
+                declaredTotal, upTo, progressTotal, owned.size(), owned, missing);
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
  *
  * @param upTo           where the shelf stops: the declared total when the
  *                       edition has one, otherwise the highest owned volume
+ * @param progressTotal  progress denominator, including an owned volume 0
  * @param missingNumbers the gaps — what is left to find. Says nothing about
  *                       what comes after the last owned volume, which is
  *                       what {@code completed} is for
@@ -22,6 +23,7 @@ public record EditionSummary(
         /** Whether the edition has finished publishing, as the catalogue says. */
         boolean completed,
         int upTo,
+        int progressTotal,
         int ownedCount,
         List<Short> ownedNumbers,
         List<Short> missingNumbers
