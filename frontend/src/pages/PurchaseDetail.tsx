@@ -37,6 +37,11 @@ export default function PurchaseDetail() {
     )
   }
 
+  // A settled list is a record, not a working document: the controls that
+  // would change it are taken away rather than left to fail against the
+  // server, so the page says what it allows.
+  const closed = list.paidAt != null
+
   // Rows arrive ordered by date; grouping here keeps the page reading like
   // the calendar it replaces, one block per release day.
   const byDate = new Map<string, typeof list.items>()
@@ -93,9 +98,11 @@ export default function PurchaseDetail() {
           >
             Aggiungi alla collezione
           </button>
-          <button className="quiet" onClick={() => setEditing(!editing)}>
-            {editing ? 'Chiudi' : 'Nome, periodo e sconto'}
-          </button>
+          {!closed && (
+            <button className="quiet" onClick={() => setEditing(!editing)}>
+              {editing ? 'Chiudi' : 'Nome, periodo e sconto'}
+            </button>
+          )}
           <ConfirmDelete
             what={`la lista “${list.name}”`}
             onConfirm={async () => {
@@ -109,7 +116,14 @@ export default function PurchaseDetail() {
       {error && <div className="error">{error}</div>}
       {transfer && <p className="muted" style={{ fontSize: 14 }}>{transfer}</p>}
 
-      {editing && (
+      {closed && (
+        <p className="muted" style={{ fontSize: 14 }}>
+          Lista chiusa: per modificarla riaprila. I volumi non acquistati si
+          possono comunque riportare in un’altra lista.
+        </p>
+      )}
+
+      {editing && !closed && (
         <ListSettings
           list={list}
           onSaved={(updated) => { setList(updated); setEditing(false) }}
@@ -174,6 +188,7 @@ export default function PurchaseDetail() {
                   <td className="reserve-cell">
                     <button
                       className="reserve-toggle"
+                      disabled={closed}
                       aria-pressed={item.reserved}
                       title={item.reserved
                         ? 'Riservato in fumetteria'
@@ -193,6 +208,7 @@ export default function PurchaseDetail() {
                   <td className="reserve-cell">
                     <button
                       className="reserve-toggle bought"
+                      disabled={closed}
                       aria-pressed={item.purchasedAt != null}
                       title={item.purchasedAt != null
                         ? 'Acquistato'
@@ -215,7 +231,7 @@ export default function PurchaseDetail() {
                   <td className="num">{formatCents(item.priceEurCents)}</td>
                   <td className="num">{formatCents(item.priceChfCents)}</td>
                   <td className="num actions-cell">
-                    {removingItem === item.id ? (
+                    {closed ? null : removingItem === item.id ? (
                       <>
                         {/* Confirm takes the first slot and cancel the
                             second, where the delete button just was: a
@@ -297,7 +313,7 @@ export default function PurchaseDetail() {
         </table>
       )}
 
-      <CarryOver
+      {!closed && <CarryOver
         list={list}
         onMoved={async (moved) => {
           setList(await purchases.get(list.id))
@@ -306,20 +322,20 @@ export default function PurchaseDetail() {
             : `${moved} volumi riportati in questa lista.`)
         }}
         onError={setError}
-      />
+      />}
 
-      <Suggestions
+      {!closed && <Suggestions
         listId={list.id}
         itemCount={list.items.length}
         onAdded={setList}
         onError={setError}
-      />
+      />}
 
-      <AddItem
+      {!closed && <AddItem
         listId={list.id}
         onAdded={setList}
         onError={setError}
-      />
+      />}
     </Layout>
   )
 }
@@ -513,9 +529,11 @@ function CarryOver({ list, onMoved, onError }: {
 
   useEffect(() => {
     purchases.listAll()
-      // Closed lists are left out: their lines already count as bought, and
-      // pulling one out afterwards would rewrite a figure already reported.
-      .then((all) => setOthers(all.filter((l) => l.id !== list.id && !l.paidAt)))
+      // Closed lists included, and in fact the usual case: the month gets
+      // settled, then the next list is written and the leftovers follow.
+      // Only lists with something left to move are offered.
+      .then((all) => setOthers(all.filter((l) =>
+        l.id !== list.id && l.itemCount > l.purchasedCount)))
       .catch(() => undefined)
   }, [list.id, list.items.length])
 

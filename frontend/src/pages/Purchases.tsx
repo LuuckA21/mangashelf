@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   purchases, type PurchaseListSummary, type PurchaseStats,
 } from '../api/client'
-import { formatCents, formatPeriod } from '../format'
+import { formatCents, formatPeriod, MONTHS } from '../format'
 import Layout from '../components/Layout'
 
 /** Index of the purchase lists, newest first. */
@@ -12,6 +12,10 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
+  // Defaults to the month being planned, which is the one being written
+  // almost every time — and a wrong guess is one field away from right.
+  const [month, setMonth] = useState(String(new Date().getMonth() + 1))
+  const [year, setYear] = useState(String(new Date().getFullYear()))
   const [adding, setAdding] = useState(false)
   const [stats, setStats] = useState<PurchaseStats | null>(null)
 
@@ -26,13 +30,12 @@ export default function Purchases() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
     try {
-      // A new list defaults to the current month: that is what it is for,
-      // and correcting it is one field away.
-      const now = new Date()
       const created = await purchases.create({
         name,
-        periodYear: now.getFullYear(),
-        periodMonth: now.getMonth() + 1,
+        // Sent together or not at all: the schema rejects one without the
+        // other, since a month with no year identifies nothing.
+        periodYear: year && month ? Number(year) : null,
+        periodMonth: year && month ? Number(month) : null,
       })
       setLists((current) => [
         {
@@ -40,7 +43,7 @@ export default function Purchases() {
           name: created.name,
           periodYear: created.periodYear,
           periodMonth: created.periodMonth,
-          paidAt: null,
+          paidAt: created.paidAt,
           itemCount: 0,
           reservedCount: 0,
           purchasedCount: 0,
@@ -77,6 +80,23 @@ export default function Purchases() {
             <input id="listName" value={name} required autoFocus
                    placeholder="Manga luglio 2026"
                    onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="grid-2">
+            <div className="field">
+              <label htmlFor="listMonth">Mese</label>
+              <select id="listMonth" value={month}
+                      onChange={(e) => setMonth(e.target.value)}>
+                <option value="">Nessuno</option>
+                {MONTHS.map((label, index) => (
+                  <option key={label} value={index + 1}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="listYear">Anno</label>
+              <input id="listYear" type="number" min={1900} max={2200} value={year}
+                     onChange={(e) => setYear(e.target.value)} />
+            </div>
           </div>
           <button type="submit">Crea</button>
         </form>

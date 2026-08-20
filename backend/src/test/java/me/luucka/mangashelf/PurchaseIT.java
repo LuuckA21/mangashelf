@@ -182,12 +182,12 @@ class PurchaseIT extends IntegrationTest {
     }
 
     /**
-     * Closing a list means its lines were bought: anything that was not is
-     * carried into the next list before the month is settled. Without this,
-     * a year recorded the old way would report nothing spent at all.
+     * Closing a list says the month is over, not that everything on it was
+     * taken: what was not bought is carried into the next one, and until it
+     * is bought it was not spent.
      */
     @Test
-    void closingAListCountsItsLinesAsBought() throws Exception {
+    void closingAListDoesNotCountItsLinesAsBought() throws Exception {
         long series = anEdition();
         long list = aList("Luglio", 2026, 7);
         mvc.perform(addLine(list, series, 1, 690, 1000));
@@ -199,7 +199,32 @@ class PurchaseIT extends IntegrationTest {
                         """));
 
         mvc.perform(get("/api/purchases/stats").with(user(member)))
-                .andExpect(jsonPath("$.netChfCents").value(1000));
+                .andExpect(jsonPath("$.netChfCents").value(0));
+    }
+
+    /** A settled list is a record: the figures stop moving. */
+    @Test
+    void aClosedListCannotBeEdited() throws Exception {
+        long series = anEdition();
+        long list = aList("Luglio");
+        mvc.perform(addLine(list, series, 1, 690, 830));
+
+        mvc.perform(put("/api/purchases/" + list + "/paid").with(user(member)).with(csrf())
+                .contentType("application/json")
+                .content("""
+                        {"paid": true}
+                        """));
+
+        mvc.perform(addLine(list, series, 2, 690, 830))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("list_is_paid"));
+
+        mvc.perform(put("/api/purchases/" + list).with(user(member)).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"name": "Rinominata"}
+                                """))
+                .andExpect(status().isConflict());
     }
 
     /** What is not bought moves on; what is bought stays where it was paid. */
@@ -234,11 +259,11 @@ class PurchaseIT extends IntegrationTest {
     }
 
     /**
-     * Pulling lines out of a closed list would rewrite a figure the
-     * statistics have already reported.
+     * Carrying from a closed list is the usual case, not an error: the month
+     * gets settled, then the next list is written and the leftovers follow.
      */
     @Test
-    void aClosedListCannotBeCarriedFrom() throws Exception {
+    void leftoversCanBeCarriedOutOfAClosedList() throws Exception {
         long series = anEdition();
         long july = aList("Luglio");
         mvc.perform(addLine(july, series, 1, 690, 830));
@@ -252,8 +277,10 @@ class PurchaseIT extends IntegrationTest {
         long august = aList("Agosto");
         mvc.perform(post("/api/purchases/" + august + "/carry-over/" + july)
                         .with(user(member)).with(csrf()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("source_list_paid"));
+                .andExpect(jsonPath("$.moved").value(1));
+
+        mvc.perform(get("/api/purchases/" + july).with(user(member)))
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 
     // ---------------------------------------------------------------- setup

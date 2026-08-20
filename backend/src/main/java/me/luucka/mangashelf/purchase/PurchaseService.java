@@ -107,6 +107,7 @@ public class PurchaseService {
     public PurchaseListResponse update(Long id, PurchaseListRequest request,
                                        UserPrincipal principal) {
         PurchaseList list = load(id, principal);
+        requireOpen(list);
         list.setName(request.name());
         applyPeriod(list, request);
         applyDiscount(list, request);
@@ -122,6 +123,7 @@ public class PurchaseService {
     public PurchaseListResponse addItem(Long listId, PurchaseItemRequest request,
                                         UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
+        requireOpen(list);
 
         PurchaseItem item = new PurchaseItem(
                 catalog.getSeries(request.seriesId()), request.volumeNumber());
@@ -167,6 +169,7 @@ public class PurchaseService {
     @Transactional
     public PurchaseListResponse removeItem(Long listId, Long itemId, UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
+        requireOpen(list);
         boolean removed = list.getItems().removeIf(item -> item.getId().equals(itemId));
         if (!removed) {
             throw ApiException.notFound("item_not_found");
@@ -185,9 +188,9 @@ public class PurchaseService {
      * unpriced lines in the same denominator would make the averages read
      * lower the more incomplete the data is.
      *
-     * <p>And only lines that were bought: a list is written ahead of the
-     * month, so counting everything on it would report as spent what was
-     * merely planned.
+     * <p>And only lines marked as bought. Closing a list says the month is
+     * over, not that everything on it was taken: what was not bought is
+     * carried into the next one, and until it is bought it was not spent.
      */
     @Transactional(readOnly = true)
     public PurchaseStats stats(UserPrincipal principal) {
@@ -201,7 +204,7 @@ public class PurchaseService {
             int full = 0;
             int priced = 0;
             for (PurchaseItem item : list.getItems()) {
-                if (item.getPriceChfCents() != null && wasBought(item, list)) {
+                if (item.getPriceChfCents() != null && item.getPurchasedAt() != null) {
                     full += item.getPriceChfCents();
                     priced++;
                 }
@@ -235,19 +238,6 @@ public class PurchaseService {
 
         return new PurchaseStats(years, listCount, volumes, full, discount, net,
                 average(full, volumes), average(net, volumes));
-    }
-
-    /**
-     * Whether a line was bought.
-     *
-     * <p>Marked on the line, or implied by the list being closed: whoever
-     * settles a month has bought what is left on it, since anything not
-     * bought is carried into the next list before closing. Without the
-     * second half, an entire year recorded the old way — closing the list,
-     * never ticking the lines — would report nothing spent at all.
-     */
-    private boolean wasBought(PurchaseItem item, PurchaseList list) {
-        return item.getPurchasedAt() != null || list.isPaid();
     }
 
     /** Zero rather than a division by zero when a year has no priced line. */
@@ -368,6 +358,7 @@ public class PurchaseService {
     public PurchaseListResponse setPurchased(Long listId, Long itemId, boolean purchased,
                                              UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
+        requireOpen(list);
         PurchaseItem item = itemOf(list, itemId);
         // Re-marking keeps the original moment: what is interesting is when
         // the volume was bought, not when the button was last pressed.
@@ -386,9 +377,10 @@ public class PurchaseService {
      * the month actually cost, which is the only reading of an old list that
      * is worth keeping.
      *
-     * <p>Refused once the source has been closed. A paid list counts as
-     * bought in the statistics, so pulling lines out of it afterwards would
-     * quietly rewrite a figure already reported — carry first, close after.
+     * <p>Works on a closed list too, which is where the leftovers usually
+     * are: the month gets settled, then the next list is written. Moving a
+     * line that was never bought changes nothing about what that month cost,
+     * so the lock on a paid list does not apply here.
      *
      * @return how many lines moved
      */
@@ -398,11 +390,8 @@ public class PurchaseService {
             throw ApiException.badRequest("same_list");
         }
         PurchaseList target = load(targetId, principal);
+        requireOpen(target);
         PurchaseList source = load(sourceId, principal);
-
-        if (source.isPaid()) {
-            throw ApiException.conflict("source_list_paid");
-        }
 
         List<PurchaseItem> pending = source.getItems().stream()
                 .filter(item -> item.getPurchasedAt() == null)
@@ -426,6 +415,23 @@ public class PurchaseService {
         return pending.size();
     }
 
+    /**
+     * Refuses to touch a list that has been settled.
+     *
+     * <p>Closing a month is a statement about what happened, and a figure
+     * that keeps moving afterwards is not a record of anything. Reopening
+     * the list is the way back — an explicit act, unlike an edit that would
+     * quietly change a settled total.
+     *
+     * <p>Carrying unbought lines out is the one exception: those were never
+     * part of what the month cost.
+     */
+    private void requireOpen(PurchaseList list) {
+        if (list.isPaid()) {
+            throw ApiException.conflict("list_is_paid");
+        }
+    }
+
     private PurchaseItem itemOf(PurchaseList list, Long itemId) {
         return list.getItems().stream()
                 .filter(candidate -> candidate.getId().equals(itemId))
@@ -438,6 +444,7 @@ public class PurchaseService {
     public PurchaseListResponse setReserved(Long listId, Long itemId, boolean reserved,
                                             UserPrincipal principal) {
         PurchaseList list = load(listId, principal);
+        requireOpen(list);
         itemOf(list, itemId).setReserved(reserved);
         return PurchaseListResponse.from(list);
     }
