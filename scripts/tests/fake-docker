@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+: "${FAKE_DOCKER_LOG:?FAKE_DOCKER_LOG must be set}"
+printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
+
+COMMAND="$*"
+case "$COMMAND" in
+  *pg_dump*)
+    printf 'fake-postgresql-custom-dump'
+    ;;
+  *'tar -C /app/data/covers -czf - .'*)
+    ARCHIVE_ROOT="$(mktemp -d)"
+    trap 'rm -rf -- "$ARCHIVE_ROOT"' EXIT
+    touch "$ARCHIVE_ROOT/cover.webp"
+    tar -C "$ARCHIVE_ROOT" -czf - .
+    ;;
+  *'tar -tzf - >/dev/null'*)
+    tar -tzf - >/dev/null
+    ;;
+  *'tar -tzf -'*)
+    tar -tzf -
+    ;;
+  *'tar -xzf - -C /app/data/covers'*)
+    tar -tzf - >/dev/null
+    ;;
+  *)
+    ;;
+esac
