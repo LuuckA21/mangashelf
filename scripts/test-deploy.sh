@@ -42,6 +42,18 @@ case "$*" in
         printf '{"status":"UP"}\n'
         ;;
     "compose exec -T frontend "*)
+        failures="${FAKE_FRONTEND_FAILURES:-0}"
+        counter_file="${FAKE_FRONTEND_COUNTER:-}"
+        if [[ -n "$counter_file" && "$failures" =~ ^[0-9]+$ ]]; then
+            counter=0
+            if [[ -f "$counter_file" ]]; then
+                counter="$(< "$counter_file")"
+            fi
+            if (( counter < failures )); then
+                printf '%s\n' "$((counter + 1))" > "$counter_file"
+                exit 1
+            fi
+        fi
         printf '<html>ok</html>\n'
         ;;
 esac
@@ -51,7 +63,12 @@ cat > "$TEST_ROOT/bin/loginctl" <<'FAKE_LOGINCTL'
 #!/usr/bin/env bash
 printf 'yes\n'
 FAKE_LOGINCTL
-chmod +x -- "$TEST_ROOT/bin/docker" "$TEST_ROOT/bin/loginctl"
+
+cat > "$TEST_ROOT/bin/sleep" <<'FAKE_SLEEP'
+#!/usr/bin/env bash
+printf 'sleep %s\n' "$*" >> "$FAKE_DEPLOY_LOG"
+FAKE_SLEEP
+chmod +x -- "$TEST_ROOT/bin/docker" "$TEST_ROOT/bin/loginctl" "$TEST_ROOT/bin/sleep"
 
 git init --bare --initial-branch=master "$TEST_ROOT/origin.git" >/dev/null
 git -C "$TEST_ROOT/seed" init --initial-branch=master >/dev/null
@@ -87,6 +104,8 @@ SECOND_COMMIT="$(git -C "$TEST_ROOT/seed" rev-parse HEAD)"
 export PATH="$TEST_ROOT/bin:$PATH"
 export FAKE_DEPLOY_LOG="$TEST_ROOT/deploy.log"
 export MANGASHELF_ROOT="$TEST_ROOT/host"
+export FAKE_FRONTEND_FAILURES=2
+export FAKE_FRONTEND_COUNTER="$TEST_ROOT/frontend-attempts"
 
 "$DEPLOY_SCRIPT" master > "$TEST_ROOT/deploy.out" 2>&1
 
@@ -95,7 +114,11 @@ export MANGASHELF_ROOT="$TEST_ROOT/host"
 assert_file_contains "$FAKE_DEPLOY_LOG" "backup $INITIAL_COMMIT"
 assert_file_contains "$FAKE_DEPLOY_LOG" 'docker compose up -d --build --remove-orphans --wait --wait-timeout 180'
 assert_file_contains "$FAKE_DEPLOY_LOG" 'docker compose exec -T backend wget -qO- http://localhost:8080/actuator/health'
-assert_file_contains "$FAKE_DEPLOY_LOG" 'docker compose exec -T frontend wget -qO- http://localhost/'
+assert_file_contains "$FAKE_DEPLOY_LOG" 'docker compose exec -T frontend wget -qO- http://127.0.0.1/'
+[[ "$(< "$FAKE_FRONTEND_COUNTER")" == 2 ]] ||
+    fail 'frontend verification did not retry temporary failures'
+[[ "$(grep -Fc -- 'sleep 2' "$FAKE_DEPLOY_LOG")" -ge 2 ]] ||
+    fail 'frontend verification did not wait between retries'
 assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" 'status=successful'
 assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" "previous_commit=$INITIAL_COMMIT"
 assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" "deployed_commit=$SECOND_COMMIT"

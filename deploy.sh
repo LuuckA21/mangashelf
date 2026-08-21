@@ -208,13 +208,43 @@ write_state() {
     mv -- "$state_tmp" "$STATE_FILE"
 }
 
+retry_check() {
+    local description=$1
+    shift
+    local attempt
+
+    for (( attempt = 1; attempt <= 10; attempt++ )); do
+        if "$@"; then
+            return 0
+        fi
+        if (( attempt < 10 )); then
+            sleep 2
+        fi
+    done
+
+    red "$description did not respond after 10 attempts."
+    return 1
+}
+
+backend_is_ready() {
+    local response
+    response="$(
+        compose exec -T backend \
+            wget -qO- http://localhost:8080/actuator/health 2>/dev/null
+    )" || return 1
+    grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' <<< "$response"
+}
+
+frontend_is_ready() {
+    compose exec -T frontend wget -qO- http://127.0.0.1/ >/dev/null 2>&1
+}
+
 verify_services() {
     info "Checking backend health"
-    compose exec -T backend wget -qO- http://localhost:8080/actuator/health |
-        grep -q '"status"[[:space:]]*:[[:space:]]*"UP"'
+    retry_check "Backend" backend_is_ready
 
     info "Checking frontend response"
-    compose exec -T frontend wget -qO- http://localhost/ >/dev/null
+    retry_check "Frontend" frontend_is_ready
 }
 
 rebuild_and_verify() {
