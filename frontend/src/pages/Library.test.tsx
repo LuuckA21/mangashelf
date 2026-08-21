@@ -89,4 +89,15 @@ describe('Library', () => {
     expect(screen.queryByText('Berserk')).not.toBeInTheDocument()
     await waitFor(() => expect(listManga).toHaveBeenLastCalledWith('  Vagabond  ', 0))
   })
+
+  it('keeps the admin actions in their own responsive control group', async () => {
+    listManga.mockResolvedValue(page([], 0, 0))
+    renderLibrary()
+
+    await screen.findByRole('button', { name: 'Importa da AniList' })
+    expect(screen.getByRole('button', { name: 'Importa da AniList' }).parentElement)
+      .toHaveClass('catalog-actions')
+    expect(screen.getByRole('button', { name: 'Cerca' }).closest('form'))
+      .toHaveClass('catalog-search')
+  })
 })

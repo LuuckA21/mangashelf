@@ -156,6 +156,13 @@ label {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--s) * 2); }
 @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
 
+/* Search and administration actions share a line on a wide screen, while
+   staying as two deliberate full-width rows on a phone. */
+.catalog-controls { display: flex; flex-wrap: wrap; gap: var(--s); margin-bottom: 24px; }
+.catalog-search { display: flex; flex: 1 1 380px; gap: var(--s); align-items: center; }
+.catalog-search input { flex: 1; min-width: 200px; }
+.catalog-actions { display: flex; gap: var(--s); flex-wrap: wrap; }
+
 .panel {
   background: var(--paper-raised);
   border: 1px solid var(--ash-line);
@@ -587,6 +594,30 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
 .stats-table { table-layout: auto; }
 .stats-table th, .stats-table td { padding: 8px 12px; }
 
+/* Cards expose the same figures as the comparison table, but do not make
+   readers pan horizontally through eight columns on a small screen. */
+.stats-cards { display: none; }
+.stats-card {
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  padding: calc(var(--s) * 2);
+}
+.stats-card h2 { font-size: 20px; margin-bottom: var(--s); }
+.stats-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.stats-values > div {
+  padding: calc(var(--s) * 0.75) 0;
+  border-top: 1px solid var(--ash-line);
+}
+.stats-values > div:nth-child(odd) { padding-right: var(--s); }
+.stats-values > div:nth-child(even) { padding-left: var(--s); }
+.stats-values dt { color: var(--ash); font-size: 12px; }
+.stats-values dd { margin: 0; font-family: var(--font-data); font-size: 14px; white-space: nowrap; }
+
 /* A bought line is settled: tinted more strongly than a reserved one, and
    the reservation styling gives way to it. */
 .purchase-table tr.bought { background: #e6ece4; }
@@ -642,6 +673,11 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   .row > .field-narrow, .row > .field-medium { flex: 1 1 100px; width: auto; }
   .row > .field-date { flex: 1 1 100%; width: auto; }
   .filter-input { flex: 1 1 100%; }
+
+  /* Each row now has the same usable width as the search controls. */
+  .catalog-search, .catalog-actions { flex: 1 1 100%; }
+  .catalog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .catalog-actions button, .new-purchase-list { width: 100%; }
 
   /* A 44px minimum keeps every control usable with a thumb. */
   button, input, select { min-height: 44px; }
@@ -760,12 +796,8 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   .result-list .result-body { flex: 1 1 55%; }
   .result-list li > button { flex: 1 1 100%; }
 
-  /* The statistics table keeps its shape and scrolls instead. */
-  .stats-table, .stats-table thead, .stats-table tbody, .stats-table tfoot,
-  .stats-table tr, .stats-table td, .stats-table th { display: revert; }
-  .stats-table { display: table; min-width: 640px; }
-  .stats-table thead { display: table-header-group; }
-  .stats-table tr { display: table-row; padding: 0; }
-  .stats-table td, .stats-table th { display: table-cell; padding: 8px 10px; }
-  .stats-table td::before { content: none; }
+  /* Statistics are cards on a phone: one year at a time, with no horizontal
+     panning and no headers that disappear out of view. */
+  .stats-table-scroll { display: none; }
+  .stats-cards { display: grid; gap: calc(var(--s) * 1.5); }
 }

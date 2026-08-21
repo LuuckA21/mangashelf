@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  purchases, type PurchaseListSummary, type PurchaseStats,
+  purchases, type PurchaseListSummary, type PurchaseStats, type YearStats,
 } from '../api/client'
 import { formatCents, formatPeriod, MONTHS } from '../format'
 import Layout from '../components/Layout'
@@ -67,8 +67,8 @@ export default function Purchases() {
 
       {error && <div className="error" role="alert">{error}</div>}
 
-      <div className="row" style={{ marginBottom: 24 }}>
-        <button onClick={() => setAdding(!adding)}>
+      <div className="row purchase-create-actions" style={{ marginBottom: 24 }}>
+        <button className="new-purchase-list" onClick={() => setAdding(!adding)}>
           {adding ? 'Annulla' : 'Nuova lista'}
         </button>
       </div>
@@ -153,10 +153,10 @@ function Stats({ stats }: { stats: PurchaseStats }) {
     <section style={{ marginTop: 48 }}>
       <p className="eyebrow">Statistiche</p>
 
-      {/* Eight numeric columns meant to be read across: on a narrow screen
-          this scrolls sideways rather than stacking, because comparing years
-          is the whole point of it. */}
-      <div className="table-scroll">
+      {/* On a wide screen the years remain side by side for direct comparison.
+          The matching mobile cards below show the same figures without a
+          horizontal table. */}
+      <div className="table-scroll stats-table-scroll">
       <table className="purchase-table stats-table">
         <thead>
           <tr>
@@ -203,11 +203,36 @@ function Stats({ stats }: { stats: PurchaseStats }) {
       </table>
       </div>
 
+      <div className="stats-cards" role="region" aria-label="Statistiche per anno">
+        {stats.years.map((year) => (
+          <StatsCard key={year.year} title={String(year.year)} values={year} />
+        ))}
+        <StatsCard title="Totale" values={stats} />
+      </div>
+
       <p className="muted" style={{ fontSize: 13 }}>
         Importi in franchi. L'anno è quello del periodo della lista, o quello
         di creazione se non è stato indicato. Le medie considerano solo i
         volumi con un prezzo.
       </p>
     </section>
+  )
+}
+
+/** A compact equivalent of the comparison table, shown only on small screens. */
+function StatsCard({ title, values }: { title: string, values: YearStats | PurchaseStats }) {
+  return (
+    <article className="stats-card">
+      <h2>{title}</h2>
+      <dl className="stats-values">
+        <div><dt>Liste</dt><dd>{values.listCount}</dd></div>
+        <div><dt>Volumi</dt><dd>{values.volumeCount}</dd></div>
+        <div><dt>Pieno</dt><dd>CHF {formatCents(values.fullChfCents)}</dd></div>
+        <div><dt>Risparmio</dt><dd>{values.discountChfCents > 0 ? `−CHF ${formatCents(values.discountChfCents)}` : '—'}</dd></div>
+        <div><dt>Speso</dt><dd>CHF {formatCents(values.netChfCents)}</dd></div>
+        <div><dt>Medio pieno</dt><dd>CHF {formatCents(values.averageFullChfCents)}</dd></div>
+        <div><dt>Medio scontato</dt><dd>CHF {formatCents(values.averageNetChfCents)}</dd></div>
+      </dl>
+    </article>
   )
 }
