@@ -49,27 +49,45 @@ Il reverse proxy deve inoltrare il traffico HTTPS verso `BIND_ADDRESS:HTTP_PORT`
 
 ## Aggiornamento e deploy
 
-Prima di aggiornare crea sempre un backup:
+Lo script di deploy accetta il branch da pubblicare in modo esplicito:
 
 ```bash
-./scripts/backup.sh
+./deploy.sh master
 ```
 
-Poi aggiorna il branch desiderato e ricostruisci i servizi:
+Senza argomenti aggiorna il branch corrente:
 
 ```bash
-git pull --ff-only
-docker compose up -d --build --remove-orphans --wait
-docker compose ps
+./deploy.sh
 ```
 
-Verifica infine lo stato del backend:
+Prima di modificare il codice, lo script:
+
+- verifica che il branch esista su `origin`;
+- rifiuta modifiche locali tracciate e aggiornamenti non fast-forward;
+- crea un backup verificato di database e copertine;
+- ricostruisce i container e attende gli health check;
+- controlla direttamente backend e frontend;
+- salva commit precedente, commit pubblicato e percorso del backup in
+  `../.mangashelf-last-deploy`.
+
+Se il deploy fallisce senza aver introdotto migrazioni Flyway, ripristina il
+codice precedente con:
 
 ```bash
-docker compose exec -T backend wget -qO- http://localhost:8080/actuator/health
+./deploy.sh --rollback
 ```
 
-La risposta deve contenere `"status":"UP"`.
+Il rollback automatico viene bloccato quando il deploy modifica una migrazione
+SQL: tornare al vecchio codice dopo un cambiamento del database può essere
+pericoloso. In questo caso lo script mostra il backup pre-deploy da conservare e
+verificare prima su un'istanza separata.
+
+Per cambiare il tempo massimo di attesa degli health check, espresso in secondi:
+
+```bash
+MANGASHELF_HEALTH_TIMEOUT=300 ./deploy.sh master
+```
 
 ## Backup
 
@@ -152,6 +170,7 @@ Script operativi, senza modificare Docker o dati reali:
 
 ```bash
 ./scripts/test-backup-restore.sh
+./scripts/test-deploy.sh
 ```
 
 GitHub Actions esegue automaticamente tutte queste verifiche sulle pull request.
