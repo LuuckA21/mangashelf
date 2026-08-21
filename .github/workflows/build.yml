@@ -14,9 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n deploy.sh scripts/backup.sh scripts/restore.sh scripts/test-backup-restore.sh scripts/test-deploy.sh scripts/tests/fake-docker
+      - run: >-
+          bash -n deploy.sh
+          scripts/backup.sh
+          scripts/backup-scheduled.sh
+          scripts/restore.sh
+          scripts/test-backup-restore.sh
+          scripts/test-deploy.sh
+          scripts/test-scheduled-backup.sh
+          scripts/tests/fake-docker
+      - run: systemd-analyze verify ops/systemd/mangashelf-backup.service ops/systemd/mangashelf-backup.timer
       - run: ./scripts/test-backup-restore.sh
       - run: ./scripts/test-deploy.sh
+      - run: ./scripts/test-scheduled-backup.sh
 
   backend:
     runs-on: ubuntu-latest
