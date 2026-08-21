@@ -4,6 +4,10 @@ MangaShelf è un'applicazione self-hosted multiutente per gestire un catalogo ma
 
 Il progetto usa Spring Boot, PostgreSQL, React/Vite, Nginx e Docker Compose. I metadati generali delle opere possono essere importati da AniList; collezioni e acquisti restano separati per utente.
 
+L'interfaccia è disponibile in italiano e inglese. Ogni account può scegliere
+la propria lingua dalle impostazioni; la preferenza viene conservata sul server
+e quindi segue l'utente anche su altri dispositivi.
+
 ## Requisiti
 
 - Docker Engine con il plugin `docker compose`;

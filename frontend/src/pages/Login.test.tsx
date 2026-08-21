@@ -51,6 +51,7 @@ describe('Login', () => {
       username: 'luca',
       email: 'luca@example.test',
       role: 'USER',
+      language: 'it',
     }
     login.mockResolvedValue(authenticated)
     renderLogin()

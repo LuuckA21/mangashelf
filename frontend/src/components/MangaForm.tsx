@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { catalog, type Manga } from '../api/client'
+import { useI18n } from '../i18n'
 
 interface Props {
   /** The work being edited, or null when creating a new one. */
@@ -18,6 +19,7 @@ interface Props {
  * update payload is written back as null.
  */
 export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) {
+  const { t } = useI18n()
   const [titleRomaji, setTitleRomaji] = useState(manga?.titleRomaji ?? '')
   const [titleEnglish, setTitleEnglish] = useState(manga?.titleEnglish ?? '')
   const [titleNative, setTitleNative] = useState(manga?.titleNative ?? '')
@@ -57,7 +59,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
         ? await catalog.updateManga(manga.id, body)
         : await catalog.createManga(body))
     } catch {
-      onError('Salvataggio non riuscito.')
+      onError(t('common.saveFailed'))
     } finally {
       setBusy(false)
     }
@@ -69,7 +71,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
    */
   async function handleFile(file: File) {
     if (!manga) {
-      onError('Salva prima l’opera, poi potrai caricare la copertina.')
+      onError(t('mangaForm.saveBeforeUpload'))
       return
     }
     setUploading(true)
@@ -78,7 +80,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
       setCoverUrl(updated.coverUrl ?? '')
       onSaved(updated)
     } catch {
-      onError('Caricamento della copertina non riuscito.')
+      onError(t('mangaForm.uploadFailed'))
     } finally {
       setUploading(false)
       if (fileInput.current) fileInput.current.value = ''
@@ -89,12 +91,12 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
     <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="titleRomaji">Titolo</label>
+          <label htmlFor="titleRomaji">{t('mangaForm.title')}</label>
           <input id="titleRomaji" value={titleRomaji} required autoFocus
                  onChange={(e) => setTitleRomaji(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="authorsEdit">Autore</label>
+          <label htmlFor="authorsEdit">{t('mangaForm.author')}</label>
           <input id="authorsEdit" value={authors}
                  onChange={(e) => setAuthors(e.target.value)} />
         </div>
@@ -102,67 +104,67 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
 
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="titleEnglishEdit">Titolo inglese</label>
+          <label htmlFor="titleEnglishEdit">{t('mangaForm.english')}</label>
           <input id="titleEnglishEdit" value={titleEnglish}
                  onChange={(e) => setTitleEnglish(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="titleNative">Titolo originale</label>
+          <label htmlFor="titleNative">{t('mangaForm.native')}</label>
           <input id="titleNative" value={titleNative}
                  onChange={(e) => setTitleNative(e.target.value)} />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="descriptionEdit">Trama</label>
+        <label htmlFor="descriptionEdit">{t('mangaForm.plot')}</label>
         <textarea id="descriptionEdit" rows={5} value={description}
                   onChange={(e) => setDescription(e.target.value)} />
       </div>
 
       <div className="field">
-        <label htmlFor="genresEdit">Generi (separati da virgola)</label>
+        <label htmlFor="genresEdit">{t('mangaForm.genresSeparated')}</label>
         <input id="genresEdit" value={genres} placeholder="Action, Adventure"
                onChange={(e) => setGenres(e.target.value)} />
       </div>
 
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="statusEdit">Stato pubblicazione</label>
+          <label htmlFor="statusEdit">{t('mangaForm.publicationStatus')}</label>
           <select id="statusEdit" value={status}
                   onChange={(e) => setStatus(e.target.value)}>
-            <option value="">Non indicato</option>
-            <option value="RELEASING">In corso</option>
-            <option value="FINISHED">Conclusa</option>
-            <option value="HIATUS">In pausa</option>
-            <option value="NOT_YET_RELEASED">Non ancora uscita</option>
-            <option value="CANCELLED">Cancellata</option>
+            <option value="">{t('mangaForm.notSpecified')}</option>
+            <option value="RELEASING">{t('status.releasing')}</option>
+            <option value="FINISHED">{t('status.finished')}</option>
+            <option value="HIATUS">{t('status.hiatus')}</option>
+            <option value="NOT_YET_RELEASED">{t('status.notYetReleased')}</option>
+            <option value="CANCELLED">{t('status.cancelled')}</option>
           </select>
         </div>
         <div className="field">
-          <label htmlFor="yearEdit">Anno di inizio</label>
+          <label htmlFor="yearEdit">{t('mangaForm.startYear')}</label>
           <input id="yearEdit" type="number" min={1900} max={2200} value={startYear}
                  onChange={(e) => setStartYear(e.target.value)} />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="volsEdit">Volumi originali (edizione giapponese)</label>
+        <label htmlFor="volsEdit">{t('mangaForm.originalVolumes')}</label>
         <input id="volsEdit" type="number" min={0} value={totalVolumes}
-               placeholder="vuoto se ancora in corso"
+               placeholder={t('mangaForm.blankIfOngoing')}
                onChange={(e) => setTotalVolumes(e.target.value)} />
       </div>
 
       <div className="field">
-        <label htmlFor="coverUrl">Copertina</label>
+        <label htmlFor="coverUrl">{t('mangaForm.cover')}</label>
         <div className="cover-picker">
           {coverUrl
             ? <img src={coverUrl} alt="" className="cover-preview" />
-            : <div className="cover-preview empty-cover">nessuna</div>}
+            : <div className="cover-preview empty-cover">{t('mangaForm.noCover')}</div>}
 
           <div className="cover-controls">
             <input
               id="coverUrl"
-              placeholder="Incolla l’indirizzo di un’immagine"
+              placeholder={t('mangaForm.coverUrlPlaceholder')}
               value={coverUrl}
               onChange={(e) => setCoverUrl(e.target.value)}
             />
@@ -170,7 +172,7 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0]
@@ -183,18 +185,21 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
                 disabled={uploading}
                 onClick={() => fileInput.current?.click()}
               >
-                {uploading ? 'Carico…' : 'Carica un file'}
+                {uploading ? t('mangaForm.uploading') : t('mangaForm.upload')}
               </button>
               {coverUrl && (
                 <button type="button" className="quiet" onClick={() => setCoverUrl('')}>
-                  Togli
+                  {t('mangaForm.removeCover')}
                 </button>
               )}
             </div>
             <p className="muted" style={{ fontSize: 13, margin: 0 }}>
               {manga
-                ? 'Un indirizzo incollato viene scaricato sul server al salvataggio.'
-                : 'Salva l’opera per poter caricare un file dal computer.'}
+                ? t('mangaForm.remoteCoverHelp')
+                : t('mangaForm.saveFirst')}
+            </p>
+            <p className="muted" style={{ fontSize: 13, margin: '4px 0 0' }}>
+              {t('mangaForm.uploadHelp')}
             </p>
           </div>
         </div>
@@ -202,10 +207,12 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
 
       <div className="inline-actions">
         <button type="submit" disabled={busy}>
-          {busy ? 'Salvo…' : manga ? 'Salva' : 'Crea'}
+          {busy ? t('common.saving') : manga ? t('common.save') : t('common.create')}
         </button>
         {onCancel && (
-          <button type="button" className="quiet" onClick={onCancel}>Annulla</button>
+          <button type="button" className="quiet" onClick={onCancel}>
+            {t('common.cancel')}
+          </button>
         )}
       </div>
     </form>

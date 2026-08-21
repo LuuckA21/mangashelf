@@ -2,7 +2,10 @@ package me.luucka.mangashelf;
 
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import java.util.List;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -337,6 +340,24 @@ class PurchaseIT extends IntegrationTest {
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/purchases/" + list).with(user(member)).with(csrf()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void toggleRequestsRequireTheirBooleanField() throws Exception {
+        long series = anEdition();
+        long list = aList("Luglio");
+        long item = itemId(json(addLine(list, series, 1, 690, 830), 200), 0);
+
+        for (String path : List.of(
+                "/api/purchases/" + list + "/paid",
+                "/api/purchases/" + list + "/items/" + item + "/reserved",
+                "/api/purchases/" + list + "/items/" + item + "/purchased")) {
+            mvc.perform(put(path).with(user(member)).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("validation_failed"));
+        }
     }
 
     /** What is not bought moves on; what is bought stays where it was paid. */

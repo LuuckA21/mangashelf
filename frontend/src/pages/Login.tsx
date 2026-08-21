@@ -2,15 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, auth } from '../api/client'
 import { useSession } from '../api/session'
-
-const MESSAGES: Record<string, string> = {
-  invalid_credentials: 'Credenziali non valide.',
-  account_disabled: 'Questo account è disattivato.',
-  too_many_attempts: 'Troppi tentativi falliti. Riprova fra un quarto d’ora.',
-}
+import { useI18n } from '../i18n'
 
 export default function Login() {
   const { setUser } = useSession()
+  const { language, setLanguage, t } = useI18n()
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -25,8 +21,12 @@ export default function Login() {
     } catch (e) {
       setError(
         e instanceof ApiError
-          ? (MESSAGES[e.code] ?? 'Accesso non riuscito. Riprova.')
-          : 'Server non raggiungibile.',
+          ? ({
+              invalid_credentials: t('login.invalidCredentials'),
+              account_disabled: t('login.disabled'),
+              too_many_attempts: t('login.blocked'),
+            }[e.code] ?? t('login.failed'))
+          : t('common.serverUnavailable'),
       )
     } finally {
       setBusy(false)
@@ -37,15 +37,25 @@ export default function Login() {
     <div className="auth-shell">
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>MangaShelf</h1>
-        <p className="subtitle">Accedi alla tua collezione.</p>
+        <p className="subtitle">{t('login.subtitle')}</p>
+
+        <label className="auth-language">
+          <span>{t('language.label')}</span>
+          <select value={language}
+                  onChange={(event) => setLanguage(event.target.value as 'it' | 'en')}>
+            <option value="it">{t('language.it')}</option>
+            <option value="en">{t('language.en')}</option>
+          </select>
+        </label>
 
         {error && <div className="error" role="alert">{error}</div>}
 
         <div className="field">
-          <label htmlFor="login">Username o email</label>
+          <label htmlFor="login">{t('login.identity')}</label>
           <input
             id="login"
             autoComplete="username"
+            maxLength={255}
             value={login}
             onChange={(e) => setLogin(e.target.value)}
             required
@@ -53,11 +63,12 @@ export default function Login() {
         </div>
 
         <div className="field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t('login.password')}</label>
           <input
             id="password"
             type="password"
             autoComplete="current-password"
+            maxLength={200}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -65,11 +76,11 @@ export default function Login() {
         </div>
 
         <button type="submit" disabled={busy}>
-          {busy ? 'Accesso…' : 'Accedi'}
+          {busy ? t('login.submitting') : t('login.submit')}
         </button>
 
         <p className="switch">
-          Non hai un account? <Link to="/register">Registrati</Link>
+          {t('login.noAccount')} <Link to="/register">{t('login.register')}</Link>
         </p>
       </form>
     </div>

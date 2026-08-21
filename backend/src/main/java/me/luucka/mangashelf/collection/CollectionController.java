@@ -71,6 +71,7 @@ public class CollectionController {
     public ResponseEntity<Void> remove(@PathVariable Long seriesId,
                                        @PathVariable Short number,
                                        @AuthenticationPrincipal UserPrincipal principal) {
+        requireSaneNumber(number);
         collection.remove(seriesId, number, principal);
         return ResponseEntity.noContent().build();
     }

@@ -10,9 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class AuthService {
+
+    private static final int BCRYPT_MAX_PASSWORD_BYTES = 72;
 
     /** ASCII "MANGASHE"; advisory locks are scoped to this database. */
     private static final long REGISTRATION_LOCK_KEY = 0x4D414E4741534845L;
@@ -44,6 +47,10 @@ public class AuthService {
             throw ApiException.forbidden("registration_closed");
         }
 
+        if (passwordTooLong(request.password())) {
+            throw ApiException.badRequest("password_too_long");
+        }
+
         // BCrypt is deliberately expensive. Do it before taking the database
         // lock so simultaneous registrations wait only for the short section
         // that decides which account is first and writes the row.
@@ -71,6 +78,7 @@ public class AuthService {
                 request.username(),
                 request.email().toLowerCase(Locale.ROOT),
                 passwordHash);
+        user.setLanguage(request.language() == null ? UiLanguage.IT : request.language());
 
         // The first account to exist becomes the administrator, so a fresh
         // instance does not need a seeded password in the compose file.
@@ -79,5 +87,17 @@ public class AuthService {
         }
 
         return users.save(user);
+    }
+
+    @Transactional
+    public AppUser updateLanguage(Long userId, UiLanguage language) {
+        AppUser user = users.findById(userId)
+                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+        user.setLanguage(language);
+        return user;
+    }
+
+    static boolean passwordTooLong(String password) {
+        return password.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_PASSWORD_BYTES;
     }
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../i18n'
 
 interface Props {
   /** What is about to be deleted, named in the confirmation line. */
@@ -16,20 +17,21 @@ interface Props {
  * a native dialog so it names exactly what will go.
  */
 export default function ConfirmDelete({ what, onConfirm, disabled }: Props) {
+  const { t } = useI18n()
   const [armed, setArmed] = useState(false)
   const [busy, setBusy] = useState(false)
 
   if (!armed) {
     return (
       <button className="danger" onClick={() => setArmed(true)} disabled={disabled}>
-        Elimina
+        {t('common.delete')}
       </button>
     )
   }
 
   return (
     <span className="confirm">
-      <span className="confirm-text">Eliminare {what}?</span>
+      <span className="confirm-text">{t('delete.question')} {what}?</span>
       <button
         onClick={async () => {
           setBusy(true)
@@ -42,10 +44,10 @@ export default function ConfirmDelete({ what, onConfirm, disabled }: Props) {
         }}
         disabled={busy}
       >
-        {busy ? 'Elimino…' : 'Sì, elimina'}
+        {busy ? t('common.deleting') : t('common.yesDelete')}
       </button>
       <button className="quiet" onClick={() => setArmed(false)} disabled={busy}>
-        Annulla
+        {t('common.cancel')}
       </button>
     </span>
   )

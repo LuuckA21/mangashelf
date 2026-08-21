@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom'
 import {
   purchases, type PurchaseListSummary, type PurchaseStats, type YearStats,
 } from '../api/client'
-import { formatCents, formatPeriod, MONTHS } from '../format'
+import { formatCents, formatPeriod, monthNames } from '../format'
 import Layout from '../components/Layout'
+import { useI18n } from '../i18n'
 
 /** Index of the purchase lists, newest first. */
 export default function Purchases() {
+  const { locale, t } = useI18n()
+  const months = monthNames(locale)
   const [lists, setLists] = useState<PurchaseListSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +25,7 @@ export default function Purchases() {
   useEffect(() => {
     purchases.listAll()
       .then(setLists)
-      .catch(() => setError('Non riesco a caricare le liste.'))
+      .catch(() => setError(t('purchases.loadFailed')))
       .finally(() => setLoading(false))
     purchases.stats().then(setStats).catch(() => undefined)
   }, [])
@@ -54,59 +57,59 @@ export default function Purchases() {
       setName('')
       setAdding(false)
     } catch {
-      setError('Non sono riuscito a creare la lista.')
+      setError(t('purchases.createFailed'))
     }
   }
 
   return (
     <Layout>
       <div className="page-head">
-        <p className="eyebrow">{lists.length} liste</p>
-        <h1>Acquisti</h1>
+        <p className="eyebrow">{lists.length} {t('purchases.listCount')}</p>
+        <h1>{t('purchases.title')}</h1>
       </div>
 
       {error && <div className="error" role="alert">{error}</div>}
 
       <div className="row purchase-create-actions" style={{ marginBottom: 24 }}>
         <button className="new-purchase-list" onClick={() => setAdding(!adding)}>
-          {adding ? 'Annulla' : 'Nuova lista'}
+          {adding ? t('common.cancel') : t('purchases.newList')}
         </button>
       </div>
 
       {adding && (
         <form className="panel" onSubmit={handleCreate} style={{ marginBottom: 24 }}>
           <div className="field">
-            <label htmlFor="listName">Nome</label>
+            <label htmlFor="listName">{t('purchases.name')}</label>
             <input id="listName" value={name} required autoFocus
-                   placeholder="Manga luglio 2026"
+                   placeholder={t('purchases.namePlaceholder')}
                    onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="grid-2">
             <div className="field">
-              <label htmlFor="listMonth">Mese</label>
+              <label htmlFor="listMonth">{t('purchases.month')}</label>
               <select id="listMonth" value={month}
                       onChange={(e) => setMonth(e.target.value)}>
-                <option value="">Nessuno</option>
-                {MONTHS.map((label, index) => (
+                <option value="">{t('common.none')}</option>
+                {months.map((label, index) => (
                   <option key={label} value={index + 1}>{label}</option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label htmlFor="listYear">Anno</label>
+              <label htmlFor="listYear">{t('purchases.year')}</label>
               <input id="listYear" type="number" min={1900} max={2200} value={year}
                      onChange={(e) => setYear(e.target.value)} />
             </div>
           </div>
-          <button type="submit">Crea</button>
+          <button type="submit">{t('common.create')}</button>
         </form>
       )}
 
       {loading ? (
-        <p className="muted">Carico…</p>
+        <p className="muted">{t('common.loading')}</p>
       ) : lists.length === 0 ? (
         <div className="empty">
-          Nessuna lista. Creane una per pianificare gli acquisti del mese.
+          {t('purchases.empty')}
         </div>
       ) : (
         <ul className="edition-list">
@@ -115,19 +118,20 @@ export default function Purchases() {
               <Link to={`/purchases/${list.id}`}>
                 <div className="name">
                   {list.name}
-                  {list.paidAt && <span className="paid-badge">pagata</span>}
+                  {list.paidAt && <span className="paid-badge">{t('purchases.paid')}</span>}
                 </div>
                 <div className="muted" style={{ fontSize: 14 }}>
                   {[
-                    formatPeriod(list.periodYear, list.periodMonth),
-                    `${list.itemCount} volumi`,
+                    formatPeriod(list.periodYear, list.periodMonth, locale),
+                    `${list.itemCount} ${list.itemCount === 1
+                      ? t('common.volume') : t('common.volumes')}`,
                     list.reservedCount > 0 && !list.paidAt
-                      ? `${list.reservedCount} riservati`
+                      ? `${list.reservedCount} ${t('purchases.reserved')}`
                       : null,
                     list.purchasedCount > 0 && list.purchasedCount < list.itemCount
-                      ? `${list.purchasedCount} acquistati`
+                      ? `${list.purchasedCount} ${t('purchases.purchased')}`
                       : null,
-                    `CHF ${formatCents(list.totalChfCents)}`,
+                    `CHF ${formatCents(list.totalChfCents, locale)}`,
                   ].filter(Boolean).join(' · ')}
                 </div>
               </Link>
@@ -149,9 +153,10 @@ export default function Purchases() {
  * the figure a spreadsheet of monthly lists never shows.
  */
 function Stats({ stats }: { stats: PurchaseStats }) {
+  const { locale, t } = useI18n()
   return (
     <section style={{ marginTop: 48 }}>
-      <p className="eyebrow">Statistiche</p>
+      <p className="eyebrow">{t('purchases.stats')}</p>
 
       {/* On a wide screen the years remain side by side for direct comparison.
           The matching mobile cards below show the same figures without a
@@ -160,14 +165,14 @@ function Stats({ stats }: { stats: PurchaseStats }) {
       <table className="purchase-table stats-table">
         <thead>
           <tr>
-            <th>Anno</th>
-            <th className="num">Liste</th>
-            <th className="num">Volumi</th>
-            <th className="num">Pieno</th>
-            <th className="num">Sconto</th>
-            <th className="num">Speso</th>
-            <th className="num">Medio pieno</th>
-            <th className="num">Medio scontato</th>
+            <th>{t('purchases.year')}</th>
+            <th className="num">{t('purchases.lists')}</th>
+            <th className="num">{t('common.volumes')}</th>
+            <th className="num">{t('purchases.full')}</th>
+            <th className="num">{t('purchases.discount')}</th>
+            <th className="num">{t('purchases.spent')}</th>
+            <th className="num">{t('purchases.averageFull')}</th>
+            <th className="num">{t('purchases.averageDiscounted')}</th>
           </tr>
         </thead>
         <tbody>
@@ -176,44 +181,44 @@ function Stats({ stats }: { stats: PurchaseStats }) {
               <td>{year.year}</td>
               <td className="num">{year.listCount}</td>
               <td className="num">{year.volumeCount}</td>
-              <td className="num">{formatCents(year.fullChfCents)}</td>
+              <td className="num">{formatCents(year.fullChfCents, locale)}</td>
               <td className="num">
-                {year.discountChfCents > 0 ? `−${formatCents(year.discountChfCents)}` : ''}
+                {year.discountChfCents > 0
+                  ? `−${formatCents(year.discountChfCents, locale)}` : ''}
               </td>
-              <td className="num">{formatCents(year.netChfCents)}</td>
-              <td className="num">{formatCents(year.averageFullChfCents)}</td>
-              <td className="num">{formatCents(year.averageNetChfCents)}</td>
+              <td className="num">{formatCents(year.netChfCents, locale)}</td>
+              <td className="num">{formatCents(year.averageFullChfCents, locale)}</td>
+              <td className="num">{formatCents(year.averageNetChfCents, locale)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="grand-total">
-            <td>Totale</td>
+            <td>{t('common.total')}</td>
             <td className="num">{stats.listCount}</td>
             <td className="num">{stats.volumeCount}</td>
-            <td className="num">{formatCents(stats.fullChfCents)}</td>
+            <td className="num">{formatCents(stats.fullChfCents, locale)}</td>
             <td className="num">
-              {stats.discountChfCents > 0 ? `−${formatCents(stats.discountChfCents)}` : ''}
+              {stats.discountChfCents > 0
+                ? `−${formatCents(stats.discountChfCents, locale)}` : ''}
             </td>
-            <td className="num">{formatCents(stats.netChfCents)}</td>
-            <td className="num">{formatCents(stats.averageFullChfCents)}</td>
-            <td className="num">{formatCents(stats.averageNetChfCents)}</td>
+            <td className="num">{formatCents(stats.netChfCents, locale)}</td>
+            <td className="num">{formatCents(stats.averageFullChfCents, locale)}</td>
+            <td className="num">{formatCents(stats.averageNetChfCents, locale)}</td>
           </tr>
         </tfoot>
       </table>
       </div>
 
-      <div className="stats-cards" role="region" aria-label="Statistiche per anno">
+      <div className="stats-cards" role="region" aria-label={t('purchases.statsRegion')}>
         {stats.years.map((year) => (
           <StatsCard key={year.year} title={String(year.year)} values={year} />
         ))}
-        <StatsCard title="Totale" values={stats} />
+        <StatsCard title={t('common.total')} values={stats} />
       </div>
 
       <p className="muted" style={{ fontSize: 13 }}>
-        Importi in franchi. L'anno è quello del periodo della lista, o quello
-        di creazione se non è stato indicato. Le medie considerano solo i
-        volumi con un prezzo.
+        {t('purchases.statsHelp')}
       </p>
     </section>
   )
@@ -221,17 +226,18 @@ function Stats({ stats }: { stats: PurchaseStats }) {
 
 /** A compact equivalent of the comparison table, shown only on small screens. */
 function StatsCard({ title, values }: { title: string, values: YearStats | PurchaseStats }) {
+  const { locale, t } = useI18n()
   return (
     <article className="stats-card">
       <h2>{title}</h2>
       <dl className="stats-values">
-        <div><dt>Liste</dt><dd>{values.listCount}</dd></div>
-        <div><dt>Volumi</dt><dd>{values.volumeCount}</dd></div>
-        <div><dt>Pieno</dt><dd>CHF {formatCents(values.fullChfCents)}</dd></div>
-        <div><dt>Risparmio</dt><dd>{values.discountChfCents > 0 ? `−CHF ${formatCents(values.discountChfCents)}` : '—'}</dd></div>
-        <div><dt>Speso</dt><dd>CHF {formatCents(values.netChfCents)}</dd></div>
-        <div><dt>Medio pieno</dt><dd>CHF {formatCents(values.averageFullChfCents)}</dd></div>
-        <div><dt>Medio scontato</dt><dd>CHF {formatCents(values.averageNetChfCents)}</dd></div>
+        <div><dt>{t('purchases.lists')}</dt><dd>{values.listCount}</dd></div>
+        <div><dt>{t('common.volumes')}</dt><dd>{values.volumeCount}</dd></div>
+        <div><dt>{t('purchases.full')}</dt><dd>CHF {formatCents(values.fullChfCents, locale)}</dd></div>
+        <div><dt>{t('purchases.saving')}</dt><dd>{values.discountChfCents > 0 ? `−CHF ${formatCents(values.discountChfCents, locale)}` : '—'}</dd></div>
+        <div><dt>{t('purchases.spent')}</dt><dd>CHF {formatCents(values.netChfCents, locale)}</dd></div>
+        <div><dt>{t('purchases.averageFull')}</dt><dd>CHF {formatCents(values.averageFullChfCents, locale)}</dd></div>
+        <div><dt>{t('purchases.averageDiscounted')}</dt><dd>CHF {formatCents(values.averageNetChfCents, locale)}</dd></div>
       </dl>
     </article>
   )

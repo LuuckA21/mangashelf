@@ -72,6 +72,7 @@ export interface User {
   username: string
   email: string
   role: 'USER' | 'ADMIN'
+  language: 'it' | 'en'
 }
 
 export type PublicationStatus =
@@ -183,9 +184,11 @@ export const auth = {
   me: () => api.get<User>('/api/auth/me'),
   login: (login: string, password: string) =>
     api.post<User>('/api/auth/login', { login, password }),
-  register: (username: string, email: string, password: string) =>
-    api.post<User>('/api/auth/register', { username, email, password }),
+  register: (username: string, email: string, password: string, language: 'it' | 'en') =>
+    api.post<User>('/api/auth/register', { username, email, password, language }),
   logout: () => api.post<void>('/api/auth/logout'),
+  updateLanguage: (language: 'it' | 'en') =>
+    api.put<User>('/api/auth/me/language', { language }),
 }
 
 export const catalog = {

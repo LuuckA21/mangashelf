@@ -9,6 +9,7 @@ import me.luucka.mangashelf.common.CoverStore;
 import me.luucka.mangashelf.user.Role;
 import me.luucka.mangashelf.user.UserPrincipal;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,8 @@ import java.util.List;
  */
 @Service
 public class CatalogService {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final MangaRepository mangaRepository;
     private final SeriesRepository seriesRepository;
@@ -48,9 +51,14 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public Page<Manga> listManga(String query, Pageable pageable) {
+        // Keep the limit at the service boundary too. This protects callers
+        // even when web pagination auto-configuration is absent or changes.
+        Pageable bounded = pageable.getPageSize() > MAX_PAGE_SIZE
+                ? PageRequest.of(pageable.getPageNumber(), MAX_PAGE_SIZE, pageable.getSort())
+                : pageable;
         return (query == null || query.isBlank())
-                ? mangaRepository.findAll(pageable)
-                : mangaRepository.search(query.trim(), pageable);
+                ? mangaRepository.findAll(bounded)
+                : mangaRepository.search(query.trim(), bounded);
     }
 
     @Transactional(readOnly = true)
@@ -96,10 +104,9 @@ public class CatalogService {
 
     /** Replaces the cover with an uploaded file. */
     @Transactional
-    public Manga setCover(Long id, byte[] bytes, String originalName) {
+    public Manga setCover(Long id, byte[] bytes) {
         Manga manga = getManga(id);
-        manga.setCoverUrl(covers.storeBytes(
-                bytes, "manga-" + id, covers.extensionOf(originalName)));
+        manga.setCoverUrl(covers.storeBytes(bytes, "manga-" + id));
         return manga;
     }
 

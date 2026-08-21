@@ -6,11 +6,13 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.user.dto.LoginRequest;
+import me.luucka.mangashelf.user.dto.LanguageRequest;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import me.luucka.mangashelf.user.dto.UserResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -59,6 +62,11 @@ public class AuthController {
         if (attempts.isBlocked(request.login())) {
             throw new ApiException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
                     "too_many_attempts");
+        }
+
+        if (AuthService.passwordTooLong(request.password())) {
+            attempts.recordFailure(request.login());
+            throw new BadCredentialsException("Password exceeds BCrypt limit");
         }
 
         Authentication authentication;
@@ -114,5 +122,13 @@ public class AuthController {
         return users.findById(principal.id())
                 .map(UserResponse::from)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
+    }
+
+    /** Persists the interface language for the signed-in account. */
+    @PutMapping("/me/language")
+    public UserResponse updateLanguage(@Valid @RequestBody LanguageRequest request,
+                                       @AuthenticationPrincipal UserPrincipal principal) {
+        return UserResponse.from(
+                authService.updateLanguage(principal.id(), request.language()));
     }
 }

@@ -21,8 +21,8 @@ class CoverStoreTest {
 
     @Test
     void downloadsACoverToAnAtomicLocalFile() throws Exception {
-        String remote = "https://203.0.113.10/cover.webp?size=large";
-        byte[] bytes = {1, 2, 3, 4};
+        String remote = "https://8.8.8.8/cover.webp?size=large";
+        byte[] bytes = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'};
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(remote))
@@ -39,29 +39,31 @@ class CoverStoreTest {
     }
 
     @Test
-    void uploadedBytesKeepOnlyAKnownImageExtension() throws Exception {
+    void uploadedBytesUseTheirActualImageFormat() throws Exception {
         CoverStore store = new CoverStore(directory.toString());
+        byte[] png = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
 
-        String path = store.storeBytes(new byte[]{9, 8, 7},
-                "manga-7", store.extensionOf("scan.PNG?download=1"));
+        String path = store.storeBytes(png, "manga-7");
 
         assertThat(path).isEqualTo("/covers/manga-7.png");
         assertThat(Files.readAllBytes(directory.resolve("manga-7.png")))
-                .containsExactly(9, 8, 7);
-        assertThat(store.extensionOf("cover.svg")).isEqualTo(".jpg");
+                .containsExactly(png);
     }
 
     @Test
     void rejectsEmptyAndOversizedUploads() {
         CoverStore store = new CoverStore(directory.toString());
 
-        assertThatThrownBy(() -> store.storeBytes(new byte[0], "empty", ".jpg"))
+        assertThatThrownBy(() -> store.storeBytes(new byte[0], "empty"))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("empty_file");
         assertThatThrownBy(() -> store.storeBytes(
-                new byte[5 * 1024 * 1024 + 1], "large", ".jpg"))
+                new byte[5 * 1024 * 1024 + 1], "large"))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("file_too_large");
+        assertThatThrownBy(() -> store.storeBytes(new byte[]{1, 2, 3}, "text"))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("not_an_image");
     }
 
     @Test
@@ -69,11 +71,15 @@ class CoverStoreTest {
         CoverStore store = new CoverStore(directory.toString());
 
         assertThat(store.store("http://127.0.0.1/admin", "loopback"))
-                .isEqualTo("http://127.0.0.1/admin");
+                .isNull();
         assertThat(store.store("http://192.168.1.10/cover.jpg", "lan"))
-                .isEqualTo("http://192.168.1.10/cover.jpg");
+                .isNull();
+        assertThat(store.store("http://100.64.0.1/cover.jpg", "carrier"))
+                .isNull();
+        assertThat(store.store("http://[fc00::1]/cover.jpg", "unique-local"))
+                .isNull();
         assertThat(store.store("file:///etc/passwd", "file"))
-                .isEqualTo("file:///etc/passwd");
+                .isNull();
         try (var files = Files.list(directory)) {
             assertThat(files).isEmpty();
         }

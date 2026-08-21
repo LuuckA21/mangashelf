@@ -39,5 +39,7 @@ describe('responsive accessibility tokens', () => {
     expect(css).toMatch(/\.catalog-actions button, \.new-purchase-list\s*{\s*width: 100%;/)
     expect(css).toMatch(/\.stats-table-scroll\s*{\s*display: none;/)
     expect(css).toMatch(/\.stats-cards\s*{\s*display: grid;/)
+    expect(css).toContain('content: attr(data-label)')
+    expect(css).toMatch(/\.topbar-inner > \.account-link\s*{\s*max-width: 24vw;/)
   })
 })
