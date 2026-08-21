@@ -38,10 +38,8 @@ public class ApiExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadable(HttpMessageNotReadableException ex) {
-        String detail = ex.getMostSpecificCause().getMessage();
         return ResponseEntity.badRequest()
-                .body(Map.of("error", "malformed_request",
-                        "detail", detail == null ? "" : detail));
+                .body(Map.of("error", "malformed_request"));
     }
 
     /**

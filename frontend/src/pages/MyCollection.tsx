@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { collection, type EditionSummary } from '../api/client'
 import Layout from '../components/Layout'
+import { useI18n } from '../i18n'
 
 type Filter = 'all' | 'gaps' | 'ongoing' | 'done'
 
@@ -12,15 +13,9 @@ type Filter = 'all' | 'gaps' | 'ongoing' | 'done'
  * 46 is missing. Whether more volumes exist past the last one owned cannot
  * be known from the shelf, and is what the edition's own state is for.
  */
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'Tutte' },
-  { key: 'gaps', label: 'Con buchi' },
-  { key: 'ongoing', label: 'In corso' },
-  { key: 'done', label: 'Complete' },
-]
-
 /** Your shelf, grouped by edition, searchable and filterable. */
 export default function MyCollection() {
+  const { locale, t } = useI18n()
   const [editions, setEditions] = useState<EditionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +25,7 @@ export default function MyCollection() {
   useEffect(() => {
     collection.summary()
       .then(setEditions)
-      .catch(() => setError('Non riesco a caricare la collezione.'))
+      .catch(() => setError(t('collection.loadFailed')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -52,8 +47,15 @@ export default function MyCollection() {
           || e.seriesName.toLowerCase().includes(needle)
           || e.publisher.toLowerCase().includes(needle)
       })
-      .sort((a, b) => a.mangaTitle.localeCompare(b.mangaTitle, 'it'))
-  }, [editions, query, filter])
+      .sort((a, b) => a.mangaTitle.localeCompare(b.mangaTitle, locale))
+  }, [editions, query, filter, locale])
+
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'all', label: t('collection.filterAll') },
+    { key: 'gaps', label: t('collection.filterGaps') },
+    { key: 'ongoing', label: t('collection.filterOngoing') },
+    { key: 'done', label: t('collection.filterDone') },
+  ]
 
   const ownedTotal = editions.reduce((sum, e) => sum + e.ownedCount, 0)
   const gapTotal = editions.reduce((sum, e) => sum + e.missingNumbers.length, 0)
@@ -62,10 +64,11 @@ export default function MyCollection() {
     <Layout>
       <div className="page-head">
         <p className="eyebrow">
-          {ownedTotal} volumi · {editions.length} edizioni
-          {gapTotal > 0 && ` · ${gapTotal} buchi`}
+          {ownedTotal} {t('collection.eyebrowVolumes')} · {editions.length}{' '}
+          {t('collection.eyebrowEditions')}
+          {gapTotal > 0 && ` · ${gapTotal} ${t('collection.eyebrowGaps')}`}
         </p>
-        <h1>La mia collezione</h1>
+        <h1>{t('collection.title')}</h1>
       </div>
 
       {error && <div className="error" role="alert">{error}</div>}
@@ -74,21 +77,21 @@ export default function MyCollection() {
         <>
           <div className="row" style={{ marginBottom: 12 }}>
             <input
-              aria-label="Filtra la collezione"
-              placeholder="Filtra per opera, edizione o editore"
+              aria-label={t('collection.filterLabel')}
+              placeholder={t('collection.filterPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               style={{ flex: 1, minWidth: 200 }}
             />
             {query && (
               <button type="button" className="quiet" onClick={() => setQuery('')}>
-                Pulisci
+                {t('collection.clear')}
               </button>
             )}
           </div>
 
           <div className="chips" style={{ marginBottom: 24 }}>
-            {FILTERS.map(({ key, label }) => (
+            {filters.map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
@@ -104,21 +107,20 @@ export default function MyCollection() {
       )}
 
       {loading ? (
-        <p className="muted">Carico…</p>
+        <p className="muted">{t('common.loading')}</p>
       ) : editions.length === 0 ? (
         <div className="empty">
-          Non hai ancora segnato nessun volume. Apri un’edizione dal
-          catalogo e clicca i volumi che possiedi.
+          {t('collection.empty')}
         </div>
       ) : shown.length === 0 ? (
         <div className="empty">
           {filter === 'gaps'
-            ? 'Nessun buco: le collane che segui non hanno numeri mancanti.'
+            ? t('collection.noGaps')
             : filter === 'ongoing'
-              ? 'Nessuna edizione in corso.'
+              ? t('collection.noOngoing')
               : filter === 'done'
-                ? 'Nessuna edizione conclusa e completa, per ora.'
-                : `Nessun risultato per “${query}”.`}
+                ? t('collection.noDone')
+                : `${t('collection.noResults')} “${query}”.`}
         </div>
       ) : (
         <ul className="edition-list">
@@ -132,8 +134,10 @@ export default function MyCollection() {
                   <div className="name">{e.mangaTitle}</div>
                   <div className="muted" style={{ fontSize: 14 }}>
                     {e.seriesName} · {e.publisher} · {e.ownedCount}
-                    {e.declaredTotal != null ? ` di ${e.progressTotal}` : ''} volumi
-                    {e.completed ? ' · conclusa' : ' · in corso'}
+                    {e.declaredTotal != null ? ` ${t('collection.of')} ${e.progressTotal}` : ''}{' '}
+                    {t('common.volumes')}
+                    {e.completed
+                      ? ` · ${t('collection.completed')}` : ` · ${t('collection.ongoing')}`}
                   </div>
 
                   <div className="progress" style={{ margin: '8px 0' }}>
@@ -146,7 +150,7 @@ export default function MyCollection() {
 
                   {e.missingNumbers.length > 0 && (
                     <div className="missing-line">
-                      Mancano: {summarise(e.missingNumbers)}
+                      {t('collection.missing')}: {summarise(e.missingNumbers)}
                     </div>
                   )}
                 </Link>

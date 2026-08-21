@@ -48,6 +48,13 @@ class CatalogPermissionsIT extends IntegrationTest {
     }
 
     @Test
+    void cataloguePageSizeIsCapped() throws Exception {
+        mvc.perform(get("/api/manga?size=1000000").with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(100));
+    }
+
+    @Test
     void signedOutRequestsAreRefused() throws Exception {
         mvc.perform(get("/api/manga"))
                 .andExpect(status().isUnauthorized());

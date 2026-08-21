@@ -96,10 +96,9 @@ public class CatalogService {
 
     /** Replaces the cover with an uploaded file. */
     @Transactional
-    public Manga setCover(Long id, byte[] bytes, String originalName) {
+    public Manga setCover(Long id, byte[] bytes) {
         Manga manga = getManga(id);
-        manga.setCoverUrl(covers.storeBytes(
-                bytes, "manga-" + id, covers.extensionOf(originalName)));
+        manga.setCoverUrl(covers.storeBytes(bytes, "manga-" + id));
         return manga;
     }
 

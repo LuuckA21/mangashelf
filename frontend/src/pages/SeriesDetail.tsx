@@ -5,15 +5,12 @@ import { useSession } from '../api/session'
 import ConfirmDelete from '../components/ConfirmDelete'
 import Layout from '../components/Layout'
 import Shelf from '../components/Shelf'
-
-const DELETE_ERRORS: Record<string, string> = {
-  series_has_owned_volumes: 'Non posso eliminare: qualcuno possiede volumi di questa edizione.',
-  series_in_purchase_list: 'Non posso eliminare: questa edizione compare in una lista d’acquisto.',
-}
+import { useI18n } from '../i18n'
 
 /** One edition: which of its volumes are on your shelf. */
 export default function SeriesDetail() {
   const { user } = useSession()
+  const { t } = useI18n()
   const isAdmin = user?.role === 'ADMIN'
 
   const { id } = useParams()
@@ -33,8 +30,8 @@ export default function SeriesDetail() {
   }, [seriesId])
 
   useEffect(() => {
-    catalog.getSeries(seriesId).then(setSeries).catch(() => setError('Edizione non trovata.'))
-    reload().catch(() => setError('Non riesco a caricare i volumi.'))
+    catalog.getSeries(seriesId).then(setSeries).catch(() => setError(t('series.notFound')))
+    reload().catch(() => setError(t('series.loadFailed')))
   }, [seriesId, reload])
 
   /** Optimistic: the tile flips at once, then reconciles with the server. */
@@ -56,7 +53,7 @@ export default function SeriesDetail() {
       // without there being anything to fix.
       const benign = e instanceof ApiError
         && (e.code === 'already_owned' || e.code === 'not_owned')
-      if (!benign) setError('Modifica non riuscita.')
+      if (!benign) setError(t('common.changeFailed'))
     }
     await reload()
   }
@@ -69,8 +66,8 @@ export default function SeriesDetail() {
       await reload()
     } catch (e) {
       setError(e instanceof ApiError && e.code === 'invalid_range'
-        ? 'Intervallo non valido: usa numeri fra 0 e 999.'
-        : 'Non sono riuscito a segnare l’intervallo.')
+        ? t('series.invalidRange')
+        : t('series.rangeFailed'))
     } finally {
       setWorking(false)
     }
@@ -86,22 +83,26 @@ export default function SeriesDetail() {
         <p className="eyebrow">
           {series
             ? <Link to={`/manga/${series.mangaId}`}>{series.mangaTitle}</Link>
-            : <Link to="/">Catalogo</Link>}
+            : <Link to="/">{t('nav.catalog')}</Link>}
         </p>
         <h1>{series?.name ?? '…'}</h1>
         {series && <p className="muted">{series.publisher}</p>}
         {isAdmin && series && (
           <div className="inline-actions" style={{ marginTop: 12 }}>
             <ConfirmDelete
-              what={`l’edizione “${series.name}”`}
+              what={`${t('manga.deleteEditionWhat')} “${series.name}”`}
               onConfirm={async () => {
                 try {
                   await catalog.deleteSeries(series.id)
                   navigate(`/manga/${series.mangaId}`)
                 } catch (e) {
+                  const messages: Record<string, string> = {
+                    series_has_owned_volumes: t('manga.deleteSeriesOwned'),
+                    series_in_purchase_list: t('manga.deleteSeriesPurchase'),
+                  }
                   setError(e instanceof ApiError
-                    ? (DELETE_ERRORS[e.code] ?? 'Eliminazione non riuscita.')
-                    : 'Eliminazione non riuscita.')
+                    ? (messages[e.code] ?? t('common.deleteFailed'))
+                    : t('common.deleteFailed'))
                 }
               }}
             />
@@ -115,8 +116,9 @@ export default function SeriesDetail() {
         <>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="eyebrow">
-              {progress.ownedCount} di {progress.progressTotal} volumi
-              {progress.declaredTotal == null && ' segnati'}
+              {progress.ownedCount} {t('collection.of')} {progress.progressTotal}{' '}
+              {t('common.volumes')}
+              {progress.declaredTotal == null && ` ${t('series.marked')}`}
             </span>
             <span className="eyebrow">{percent}%</span>
           </div>
@@ -132,30 +134,29 @@ export default function SeriesDetail() {
 
       {progress && progress.missingNumbers.length > 0 && (
         <p className="muted" style={{ marginTop: 24, fontSize: 14 }}>
-          Ti mancano i volumi {progress.missingNumbers.join(', ')}.
+          {t('series.youMissing')} {progress.missingNumbers.join(', ')}.
         </p>
       )}
 
       <div className="panel" style={{ marginTop: 32 }}>
-        <p className="eyebrow" style={{ marginTop: 0 }}>Segna un intervallo</p>
+        <p className="eyebrow" style={{ marginTop: 0 }}>{t('series.rangeTitle')}</p>
         <div className="row" style={{ marginBottom: 16 }}>
           <div className="field-narrow">
-            <label htmlFor="from">Dal</label>
+            <label htmlFor="from">{t('series.from')}</label>
             <input id="from" type="number" min={0} max={999} value={from}
                    onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="field-narrow">
-            <label htmlFor="to">Al</label>
+            <label htmlFor="to">{t('series.to')}</label>
             <input id="to" type="number" min={0} max={999} value={to}
                    onChange={(e) => setTo(e.target.value)} />
           </div>
           <button onClick={handleRange} disabled={working}>
-            {working ? 'Segno…' : 'Segna come posseduti'}
+            {working ? t('series.marking') : t('series.markOwned')}
           </button>
         </div>
         <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
-          Per registrare una collana in un colpo solo. I numeri già segnati
-          vengono saltati.
+          {t('series.rangeHelp')}
         </p>
       </div>
     </Layout>

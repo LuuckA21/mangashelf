@@ -2,6 +2,13 @@ spring:
   application:
     name: mangashelf
 
+  data:
+    web:
+      pageable:
+        # Prevent an authenticated caller from turning `size` into an
+        # unbounded database query and response allocation.
+        max-page-size: 100
+
   datasource:
     hikari:
       maximum-pool-size: 10

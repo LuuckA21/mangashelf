@@ -1,6 +1,7 @@
 package me.luucka.mangashelf.purchase;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import me.luucka.mangashelf.purchase.dto.PurchaseItemRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListRequest;
 import me.luucka.mangashelf.purchase.dto.PurchaseListResponse;
@@ -95,19 +96,19 @@ public class PurchaseController {
     /** Marks the list paid, or reopens it. */
     @PutMapping("/{id}/paid")
     public PurchaseListResponse setPaid(@PathVariable Long id,
-                                        @RequestBody Map<String, Boolean> body,
+                                        @Valid @RequestBody PaidRequest body,
                                         @AuthenticationPrincipal UserPrincipal principal) {
-        return purchases.setPaid(id, Boolean.TRUE.equals(body.get("paid")), principal);
+        return purchases.setPaid(id, body.paid(), principal);
     }
 
     /** Marks one line as bought, or takes the mark back. */
     @PutMapping("/{id}/items/{itemId}/purchased")
     public PurchaseListResponse setPurchased(@PathVariable Long id,
                                              @PathVariable Long itemId,
-                                             @RequestBody Map<String, Boolean> body,
+                                             @Valid @RequestBody PurchasedRequest body,
                                              @AuthenticationPrincipal UserPrincipal principal) {
         return purchases.setPurchased(id, itemId,
-                Boolean.TRUE.equals(body.get("purchased")), principal);
+                body.purchased(), principal);
     }
 
     /** Moves the unbought lines of another list into this one. */
@@ -122,10 +123,10 @@ public class PurchaseController {
     @PutMapping("/{id}/items/{itemId}/reserved")
     public PurchaseListResponse setReserved(@PathVariable Long id,
                                             @PathVariable Long itemId,
-                                            @RequestBody Map<String, Boolean> body,
+                                            @Valid @RequestBody ReservedRequest body,
                                             @AuthenticationPrincipal UserPrincipal principal) {
         return purchases.setReserved(id, itemId,
-                Boolean.TRUE.equals(body.get("reserved")), principal);
+                body.reserved(), principal);
     }
 
     @PostMapping("/{id}/items")
@@ -149,4 +150,8 @@ public class PurchaseController {
                                            @AuthenticationPrincipal UserPrincipal principal) {
         return purchases.removeItem(id, itemId, principal);
     }
+
+    public record PaidRequest(@NotNull Boolean paid) {}
+    public record PurchasedRequest(@NotNull Boolean purchased) {}
+    public record ReservedRequest(@NotNull Boolean reserved) {}
 }

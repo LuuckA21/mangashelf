@@ -91,7 +91,7 @@ public class CatalogController {
         }
         try {
             return MangaResponse.from(
-                    catalog.setCover(id, file.getBytes(), file.getOriginalFilename()));
+                    catalog.setCover(id, file.getBytes()));
         } catch (java.io.IOException e) {
             throw ApiException.badRequest("unreadable_file");
         }

@@ -40,6 +40,10 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false, length = 16)
     private Role role = Role.USER;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 2)
+    private UiLanguage language = UiLanguage.IT;
+
     @Column(nullable = false)
     private boolean enabled = true;
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../i18n'
 
 interface Props {
   /** Highest positive slot: the declared total, or the highest owned volume. */
@@ -21,6 +22,7 @@ const LOOKAHEAD = 3
  * but its absence must never be reported as a gap for editions that do not.
  */
 export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
+  const { t } = useI18n()
   const owned = new Set(ownedNumbers)
   const [busy, setBusy] = useState<number | null>(null)
 
@@ -40,7 +42,7 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
     return (
       <>
         <div className="empty" style={{ marginBottom: 16 }}>
-          Nessun volume segnato. Clicca un numero qui sotto, o usa l’intervallo.
+          {t('shelf.empty')}
         </div>
         <div className="shelf">
           {numbers.map((n) => (
@@ -50,10 +52,10 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
               onClick={() => toggle(n)}
               disabled={busy !== null}
               aria-pressed="false"
-              aria-label={`Volume ${n} non posseduto: aggiungi alla collezione`}
+              aria-label={`Volume ${n} ${t('shelf.notOwnedAdd')}`}
               title={n === 0
-                ? 'Volume 0 — clicca se questa edizione lo include e ce l’hai'
-                : `Volume ${n} — clicca se l'hai preso`}
+                ? t('shelf.volumeZeroAdd')
+                : `Volume ${n} — ${t('shelf.notOwnedTitle')}`}
             >
               {n}
             </button>
@@ -81,16 +83,16 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
               disabled={busy !== null}
               aria-pressed={isOwned}
               aria-label={isOwned
-                ? `Volume ${n} posseduto: rimuovi dalla collezione`
-                : `Volume ${n} ${beyond ? 'non posseduto' : 'mancante'}: aggiungi alla collezione`}
+                ? `Volume ${n} ${t('shelf.ownedRemove')}`
+                : `Volume ${n} ${beyond ? t('shelf.notOwnedAdd') : t('shelf.missingAdd')}`}
               title={
                 isOwned
-                  ? `Volume ${n} — ce l'hai. Clicca per toglierlo.`
+                  ? `Volume ${n} — ${t('shelf.ownedTitle')}`
                   : n === 0
-                    ? 'Volume 0 — clicca se questa edizione lo include e ce l’hai'
+                    ? t('shelf.volumeZeroAdd')
                     : beyond
-                      ? `Volume ${n} — clicca se l'hai preso`
-                      : `Volume ${n} — ti manca. Clicca per aggiungerlo.`
+                      ? `Volume ${n} — ${t('shelf.notOwnedTitle')}`
+                      : `Volume ${n} — ${t('shelf.missingTitle')}`
               }
             >
               {n}
@@ -99,8 +101,8 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
         })}
       </div>
       <div className="shelf-legend">
-        <span><i className="swatch owned" /> Posseduto</span>
-        <span><i className="swatch missing" /> Mancante</span>
+        <span><i className="swatch owned" /> {t('shelf.owned')}</span>
+        <span><i className="swatch missing" /> {t('shelf.missing')}</span>
       </div>
     </>
   )

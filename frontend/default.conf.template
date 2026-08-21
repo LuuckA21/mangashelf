@@ -5,14 +5,20 @@
 # in the clear, and the browser would then drop the Secure session cookie —
 # a login that appears to succeed but creates no session. We forward NPM's
 # original header instead, falling back to $scheme on direct access.
-map $http_x_forwarded_proto $forwarded_proto {
-    default $http_x_forwarded_proto;
-    ""      $scheme;
+geo $realip_remote_addr $trusted_proxy_request {
+    default 0;
+    ${MS_TRUSTED_PROXY} 1;
 }
 
-map $http_x_forwarded_host $forwarded_host {
-    default $http_x_forwarded_host;
-    ""      $host;
+map "$trusted_proxy_request:$http_x_forwarded_proto" $forwarded_proto {
+    ~^1:https$ https;
+    ~^1:http$  http;
+    default    $scheme;
+}
+
+map "$trusted_proxy_request:$http_x_forwarded_host" $forwarded_host {
+    ~^1:(.+)$ $http_x_forwarded_host;
+    default   $host;
 }
 
 server {
@@ -38,9 +44,10 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    # Covers may still point at a remote host when a download failed, hence
-    # https: on images. Inline styles are allowed because React writes them
-    # as style attributes; scripts have no such exception.
+    # AniList search results show remote previews before an import, hence
+    # https: on images. Saved catalogue covers are always kept locally.
+    # Inline styles are allowed because React writes them as style attributes;
+    # scripts have no such exception.
     add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     gzip on;

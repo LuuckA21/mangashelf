@@ -7,9 +7,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -72,26 +75,30 @@ public class AniListClient {
     private final RestClient http;
     private final RateLimiter limiter;
 
-    /**
-     * Builds the client with {@code RestClient.create} rather than injecting
-     * a {@code RestClient.Builder}.
-     *
-     * <p>In Spring Boot 4 the builder's autoconfiguration lives in a
-     * separate module, so injecting it fails at startup unless that module
-     * is on the classpath. The static factory is part of {@code spring-web}
-     * itself and needs nothing else — and this client wants no shared
-     * interceptors anyway.
-     */
+    /** Builds an isolated client with finite network timeouts. */
     @Autowired
     public AniListClient(@Value("${app.metadata.anilist-url}") String url,
                          @Value("${app.metadata.anilist-requests-per-minute}") int perMinute) {
-        this(RestClient.create(url), new RateLimiter(perMinute));
+        this(metadataClient(url), new RateLimiter(perMinute));
     }
 
     /** Test seam for a client backed by Spring's mock HTTP server. */
     AniListClient(RestClient http, RateLimiter limiter) {
         this.http = http;
         this.limiter = limiter;
+    }
+
+    private static RestClient metadataClient(String url) {
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
+        JdkClientHttpRequestFactory requests = new JdkClientHttpRequestFactory(client);
+        requests.setReadTimeout(Duration.ofSeconds(15));
+        return RestClient.builder()
+                .baseUrl(url)
+                .requestFactory(requests)
+                .build();
     }
 
     public List<AniListResponse.Media> search(String term, int limit) {

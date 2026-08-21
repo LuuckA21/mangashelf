@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 
 @Configuration
 @EnableWebSecurity
@@ -114,7 +116,10 @@ public class SecurityConfig {
                             response.setStatus(HttpStatus.FORBIDDEN.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.setCharacterEncoding("UTF-8");
-                            response.getWriter().write("{\"error\":\"admin_required\"}");
+                            String code = deniedEx instanceof MissingCsrfTokenException
+                                    || deniedEx instanceof InvalidCsrfTokenException
+                                    ? "csrf_invalid" : "admin_required";
+                            response.getWriter().write("{\"error\":\"" + code + "\"}");
                         }))
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())

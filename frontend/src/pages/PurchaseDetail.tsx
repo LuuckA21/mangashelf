@@ -5,12 +5,14 @@ import {
   type Manga, type PurchaseItem as PurchaseItemRow, type PurchaseList,
   type PurchaseListSummary, type PurchaseSuggestion, type Series,
 } from '../api/client'
-import { formatCents, formatDate, formatPeriod, MONTHS, parseAmount } from '../format'
+import { formatCents, formatDate, formatPeriod, monthNames, parseAmount } from '../format'
 import ConfirmDelete from '../components/ConfirmDelete'
 import Layout from '../components/Layout'
+import { useI18n } from '../i18n'
 
 /** One purchase list: its lines, its discount and its totals. */
 export default function PurchaseDetail() {
+  const { locale, t } = useI18n()
   const { id } = useParams()
   const listId = Number(id)
   const navigate = useNavigate()
@@ -25,16 +27,16 @@ export default function PurchaseDetail() {
   useEffect(() => {
     purchases.get(listId)
       .then(setList)
-      .catch(() => setError('Lista non trovata.'))
+      .catch(() => setError(t('purchase.notFound')))
   }, [listId])
 
   if (!list) {
     return (
       <Layout>
-        <p className="eyebrow"><Link to="/purchases">Acquisti</Link></p>
+        <p className="eyebrow"><Link to="/purchases">{t('nav.purchases')}</Link></p>
         {error
           ? <div className="error" role="alert">{error}</div>
-          : <p className="muted">Carico…</p>}
+          : <p className="muted">{t('common.loading')}</p>}
       </Layout>
     )
   }
@@ -58,15 +60,15 @@ export default function PurchaseDetail() {
     <Layout>
       <div className="page-head">
         <p className="eyebrow">
-          <Link to="/purchases">Acquisti</Link>
-          {formatPeriod(list.periodYear, list.periodMonth)
-            && ` · ${formatPeriod(list.periodYear, list.periodMonth)}`}
-          {list.items.length > 0 && ` · ${list.reservedCount} riservati`}
-          {list.items.length > 0 && ` · ${list.purchasedCount} di ${list.items.length} acquistati`}
+          <Link to="/purchases">{t('nav.purchases')}</Link>
+          {formatPeriod(list.periodYear, list.periodMonth, locale)
+            && ` · ${formatPeriod(list.periodYear, list.periodMonth, locale)}`}
+          {list.items.length > 0 && ` · ${list.reservedCount} ${t('purchases.reserved')}`}
+          {list.items.length > 0 && ` · ${list.purchasedCount} ${t('collection.of')} ${list.items.length} ${t('purchases.purchased')}`}
         </p>
         <h1>
           {list.name}
-          {list.paidAt && <span className="paid-badge">pagata</span>}
+          {list.paidAt && <span className="paid-badge">{t('purchases.paid')}</span>}
         </h1>
         <div className="inline-actions" style={{ marginTop: 12 }}>
           <button
@@ -75,42 +77,42 @@ export default function PurchaseDetail() {
               try {
                 setList(await purchases.setPaid(list.id, !list.paidAt))
               } catch {
-                setError('Non sono riuscito a cambiare lo stato.')
+                setError(t('purchase.changeStatusFailed'))
               }
             }}
           >
-            {list.paidAt ? 'Riapri la lista' : 'Segna come pagata'}
+            {list.paidAt ? t('purchase.reopen') : t('purchase.markPaid')}
           </button>
           <button
             className="quiet"
             disabled={list.purchasedCount === 0}
             title={list.purchasedCount === 0
-              ? 'Segna prima almeno un volume come acquistato'
-              : 'Aggiungi alla collezione i volumi acquistati'}
+              ? t('purchase.markFirstPurchased')
+              : t('purchase.addToCollection')}
             onClick={async () => {
-              setTransfer('Aggiungo…')
+              setTransfer(t('purchase.adding'))
               try {
                 const r = await purchases.toCollection(list.id)
                 setTransfer([
-                  r.added > 0 ? `${r.added} volumi aggiunti alla collezione` : null,
-                  r.alreadyOwned > 0 ? `${r.alreadyOwned} già posseduti` : null,
-                  r.notPurchased > 0 ? `${r.notPurchased} non acquistati ignorati` : null,
-                ].filter(Boolean).join(' · ') || 'Nessuna modifica.')
+                  r.added > 0 ? `${r.added} ${t('purchase.addedVolumes')}` : null,
+                  r.alreadyOwned > 0 ? `${r.alreadyOwned} ${t('purchase.alreadyOwned')}` : null,
+                  r.notPurchased > 0 ? `${r.notPurchased} ${t('purchase.unpurchasedIgnored')}` : null,
+                ].filter(Boolean).join(' · ') || t('purchase.noChanges'))
               } catch {
                 setTransfer(null)
-                setError('Non sono riuscito ad aggiungere i volumi.')
+                setError(t('purchase.addCollectionFailed'))
               }
             }}
           >
-            Aggiungi alla collezione
+            {t('purchase.addToCollectionShort')}
           </button>
           {!closed && (
             <button className="quiet" onClick={() => setEditing(!editing)}>
-              {editing ? 'Chiudi' : 'Nome, periodo e sconto'}
+              {editing ? t('common.close') : t('purchase.details')}
             </button>
           )}
           <ConfirmDelete
-            what={`la lista “${list.name}”`}
+            what={`${t('purchase.deleteNamedList')} “${list.name}”`}
             disabled={closed}
             onConfirm={async () => {
               try {
@@ -118,8 +120,8 @@ export default function PurchaseDetail() {
                 navigate('/purchases')
               } catch (e) {
                 setError(e instanceof ApiError && e.code === 'list_is_paid'
-                  ? 'Riapri la lista prima di eliminarla.'
-                  : 'Eliminazione non riuscita.')
+                  ? t('purchase.reopenBeforeDelete')
+                  : t('common.deleteFailed'))
               }
             }}
           />
@@ -131,8 +133,7 @@ export default function PurchaseDetail() {
 
       {closed && (
         <p className="muted" style={{ fontSize: 14 }}>
-          Lista chiusa: per modificarla o eliminarla riaprila. I volumi non
-          acquistati si possono comunque riportare in un’altra lista.
+          {t('purchase.closedHelp')}
         </p>
       )}
 
@@ -145,7 +146,7 @@ export default function PurchaseDetail() {
       )}
 
       {list.items.length === 0 ? (
-        <div className="empty">Nessun volume in lista.</div>
+        <div className="empty">{t('purchase.empty')}</div>
       ) : (
         <table className="purchase-table">
           {/* Widths declared once, so a cell holding an input lines up with
@@ -163,11 +164,11 @@ export default function PurchaseDetail() {
           </colgroup>
           <thead>
             <tr>
-              <th className="reserve-cell" title="Riservato in fumetteria">R</th>
-              <th className="reserve-cell" title="Acquistato">A</th>
+              <th className="reserve-cell" title={t('purchase.reservedTitle')}>R</th>
+              <th className="reserve-cell" title={t('purchase.purchasedTitle')}>A</th>
               <th>Manga</th>
-              <th>Edizione</th>
-              <th className="num">Vol.</th>
+              <th>{t('purchase.chooseEdition')}</th>
+              <th className="num">{t('common.volumeShort')}</th>
               <th className="num">EUR</th>
               <th className="num">CHF</th>
               <th />
@@ -176,7 +177,7 @@ export default function PurchaseDetail() {
           {[...byDate.entries()].map(([date, rows]) => (
             <tbody key={date || 'senza-data'}>
               <tr className="date-row">
-                <th colSpan={8}>{date ? formatDate(date) : 'Senza data'}</th>
+                <th colSpan={8}>{date ? formatDate(date, locale) : t('purchase.noDate')}</th>
               </tr>
               {rows.map((item) => (
                 // Guarded against a null id as well as a mismatch: with
@@ -204,16 +205,17 @@ export default function PurchaseDetail() {
                       disabled={closed}
                       aria-pressed={item.reserved}
                       aria-label={`${item.mangaTitle}, volume ${item.volumeNumber}: ${
-                        item.reserved ? 'segna come non riservato' : 'segna come riservato'}`}
+                        item.reserved
+                          ? t('purchase.markUnreserved') : t('purchase.markReservedShort')}`}
                       title={item.reserved
-                        ? 'Riservato in fumetteria'
-                        : 'Segna come riservato in fumetteria'}
+                        ? t('purchase.reservedTitle')
+                        : t('purchase.markReserved')}
                       onClick={async () => {
                         try {
                           setList(await purchases.setReserved(
                             list.id, item.id, !item.reserved))
                         } catch {
-                          setError('Non sono riuscito a cambiare la prenotazione.')
+                          setError(t('purchase.reservationFailed'))
                         }
                       }}
                     >
@@ -227,17 +229,17 @@ export default function PurchaseDetail() {
                       aria-pressed={item.purchasedAt != null}
                       aria-label={`${item.mangaTitle}, volume ${item.volumeNumber}: ${
                         item.purchasedAt != null
-                          ? 'segna come non acquistato'
-                          : 'segna come acquistato'}`}
+                          ? t('purchase.markUnpurchased')
+                          : t('purchase.markPurchasedShort')}`}
                       title={item.purchasedAt != null
-                        ? 'Acquistato'
-                        : 'Segna come acquistato'}
+                        ? t('purchase.purchasedTitle')
+                        : t('purchase.markPurchased')}
                       onClick={async () => {
                         try {
                           setList(await purchases.setPurchased(
                             list.id, item.id, item.purchasedAt == null))
                         } catch {
-                          setError('Non sono riuscito a cambiare lo stato.')
+                          setError(t('purchase.changeStatusFailed'))
                         }
                       }}
                     >
@@ -246,9 +248,9 @@ export default function PurchaseDetail() {
                   </td>
                   <td>{item.mangaTitle}</td>
                   <td className="muted">{item.seriesName}</td>
-                  <td className="num">{item.volumeNumber}</td>
-                  <td className="num">{formatCents(item.priceEurCents)}</td>
-                  <td className="num">{formatCents(item.priceChfCents)}</td>
+                  <td className="num" data-label={t('common.volumeShort')}>{item.volumeNumber}</td>
+                  <td className="num" data-label="EUR">{formatCents(item.priceEurCents, locale)}</td>
+                  <td className="num" data-label="CHF">{formatCents(item.priceChfCents, locale)}</td>
                   <td className="num actions-cell">
                     {closed ? null : removingItem === item.id ? (
                       <>
@@ -258,13 +260,13 @@ export default function PurchaseDetail() {
                             than deleting. */}
                         <button
                           className="link-button danger-text"
-                          aria-label={`Conferma eliminazione di ${item.mangaTitle}, volume ${item.volumeNumber}`}
-                          title="Conferma l’eliminazione"
+                          aria-label={`${t('purchase.confirmDelete')} ${item.mangaTitle}, ${t('common.volume')} ${item.volumeNumber}`}
+                          title={t('purchase.confirmDeleteTitle')}
                           onClick={async () => {
                             try {
                               setList(await purchases.removeItem(list.id, item.id))
                             } catch {
-                              setError('Non sono riuscito a togliere la riga.')
+                              setError(t('purchase.removeRowFailed'))
                             } finally {
                               setRemovingItem(null)
                             }
@@ -274,8 +276,8 @@ export default function PurchaseDetail() {
                         </button>
                         <button
                           className="link-button"
-                          aria-label={`Annulla eliminazione di ${item.mangaTitle}, volume ${item.volumeNumber}`}
-                          title="Annulla"
+                          aria-label={`${t('purchase.cancelDelete')} ${item.mangaTitle}, ${t('common.volume')} ${item.volumeNumber}`}
+                          title={t('common.cancel')}
                           onClick={() => setRemovingItem(null)}
                         >
                           ×
@@ -285,16 +287,16 @@ export default function PurchaseDetail() {
                       <>
                         <button
                           className="link-button"
-                          aria-label={`Modifica ${item.mangaTitle}, volume ${item.volumeNumber}`}
-                          title="Modifica la riga"
+                          aria-label={`${t('common.edit')} ${item.mangaTitle}, ${t('common.volume')} ${item.volumeNumber}`}
+                          title={t('purchase.editRow')}
                           onClick={() => { setRemovingItem(null); setEditingItem(item.id) }}
                         >
                           ✎
                         </button>
                         <button
                           className="link-button"
-                          aria-label={`Togli ${item.mangaTitle}, volume ${item.volumeNumber} dalla lista`}
-                          title="Togli dalla lista"
+                          aria-label={`${t('purchase.removeFromList')} ${item.mangaTitle}, ${t('common.volume')} ${item.volumeNumber}`}
+                          title={t('purchase.removeFromList')}
                           onClick={() => setRemovingItem(item.id)}
                         >
                           ×
@@ -309,25 +311,25 @@ export default function PurchaseDetail() {
           ))}
           <tfoot>
             <tr>
-              <td colSpan={5}>Totale</td>
-              <td className="num">{formatCents(list.totalEurCents)}</td>
-              <td className="num">{formatCents(list.subtotalChfCents)}</td>
+              <td colSpan={5}>{t('common.total')}</td>
+              <td className="num">{formatCents(list.totalEurCents, locale)}</td>
+              <td className="num">{formatCents(list.subtotalChfCents, locale)}</td>
               <td />
             </tr>
             {list.discountAppliedCents > 0 && (
               <>
                 <tr className="muted">
                   <td colSpan={5}>
-                    Sconto{list.discountPercent ? ` ${Number(list.discountPercent)}%` : ''}
+                    {t('purchases.discount')}{list.discountPercent ? ` ${Number(list.discountPercent)}%` : ''}
                   </td>
                   <td className="num" />
-                  <td className="num">−{formatCents(list.discountAppliedCents)}</td>
+                  <td className="num">−{formatCents(list.discountAppliedCents, locale)}</td>
                   <td />
                 </tr>
                 <tr className="grand-total">
-                  <td colSpan={5}>Da pagare</td>
+                  <td colSpan={5}>{t('purchase.payable')}</td>
                   <td className="num" />
-                  <td className="num">{formatCents(list.totalChfCents)}</td>
+                  <td className="num">{formatCents(list.totalChfCents, locale)}</td>
                   <td />
                 </tr>
               </>
@@ -341,8 +343,8 @@ export default function PurchaseDetail() {
         onMoved={async (moved) => {
           setList(await purchases.get(list.id))
           setTransfer(moved === 0
-            ? 'Nessun volume da riportare.'
-            : `${moved} volumi riportati in questa lista.`)
+            ? t('purchase.carryNone')
+            : `${moved} ${t('purchase.carriedVolumes')}`)
         }}
         onError={setError}
       />}
@@ -369,6 +371,8 @@ function ListSettings({ list, onSaved, onError }: {
   onSaved: (list: PurchaseList) => void
   onError: (message: string) => void
 }) {
+  const { locale, t } = useI18n()
+  const months = monthNames(locale)
   const [name, setName] = useState(list.name)
   const [year, setYear] = useState(list.periodYear ? String(list.periodYear) : '')
   const [month, setMonth] = useState(list.periodMonth ? String(list.periodMonth) : '')
@@ -377,7 +381,7 @@ function ListSettings({ list, onSaved, onError }: {
       : list.discountCents != null ? 'amount' : 'none')
   const [percent, setPercent] = useState(
     list.discountPercent != null ? String(Number(list.discountPercent)) : '')
-  const [amount, setAmount] = useState(formatCents(list.discountCents))
+  const [amount, setAmount] = useState(formatCents(list.discountCents, locale))
   const [busy, setBusy] = useState(false)
 
   async function handleSubmit(event: FormEvent) {
@@ -394,7 +398,7 @@ function ListSettings({ list, onSaved, onError }: {
         discountCents: kind === 'amount' ? parseAmount(amount) : null,
       }))
     } catch {
-      onError('Salvataggio non riuscito.')
+      onError(t('common.saveFailed'))
     } finally {
       setBusy(false)
     }
@@ -403,23 +407,23 @@ function ListSettings({ list, onSaved, onError }: {
   return (
     <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
       <div className="field">
-        <label htmlFor="listName">Nome</label>
+        <label htmlFor="listName">{t('purchases.name')}</label>
         <input id="listName" value={name} required
                onChange={(e) => setName(e.target.value)} />
       </div>
 
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="listMonth">Mese</label>
+          <label htmlFor="listMonth">{t('purchases.month')}</label>
           <select id="listMonth" value={month} onChange={(e) => setMonth(e.target.value)}>
-            <option value="">Nessuno</option>
-            {MONTHS.map((label, index) => (
+            <option value="">{t('common.none')}</option>
+            {months.map((label, index) => (
               <option key={label} value={index + 1}>{label}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label htmlFor="listYear">Anno</label>
+          <label htmlFor="listYear">{t('purchases.year')}</label>
           <input id="listYear" type="number" min={1900} max={2200} value={year}
                  placeholder={String(new Date().getFullYear())}
                  onChange={(e) => setYear(e.target.value)} />
@@ -428,25 +432,25 @@ function ListSettings({ list, onSaved, onError }: {
 
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="discountKind">Sconto</label>
+          <label htmlFor="discountKind">{t('purchases.discount')}</label>
           <select id="discountKind" value={kind}
                   onChange={(e) => setKind(e.target.value as typeof kind)}>
-            <option value="none">Nessuno</option>
-            <option value="percent">Percentuale</option>
-            <option value="amount">Importo fisso</option>
+            <option value="none">{t('purchase.noDiscount')}</option>
+            <option value="percent">{t('purchase.discountPercent')}</option>
+            <option value="amount">{t('purchase.discountAmount')}</option>
           </select>
         </div>
         <div className="field">
           {kind === 'percent' && (
             <>
-              <label htmlFor="discountPercent">Percentuale</label>
+              <label htmlFor="discountPercent">{t('purchase.discountPercent')}</label>
               <input id="discountPercent" type="number" min={0} max={100} step="0.5"
                      value={percent} onChange={(e) => setPercent(e.target.value)} />
             </>
           )}
           {kind === 'amount' && (
             <>
-              <label htmlFor="discountAmount">Importo in CHF</label>
+              <label htmlFor="discountAmount">{t('purchase.amountChf')}</label>
               <input id="discountAmount" inputMode="decimal" placeholder="5.00"
                      value={amount} onChange={(e) => setAmount(e.target.value)} />
             </>
@@ -455,10 +459,12 @@ function ListSettings({ list, onSaved, onError }: {
       </div>
 
       <p className="muted" style={{ fontSize: 13 }}>
-        Lo sconto si applica al totale in franchi.
+        {t('purchase.discountHelp')}
       </p>
 
-      <button type="submit" disabled={busy}>{busy ? 'Salvo…' : 'Salva'}</button>
+      <button type="submit" disabled={busy}>
+        {busy ? t('common.saving') : t('common.save')}
+      </button>
     </form>
   )
 }
@@ -481,10 +487,11 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
   onCancel: () => void
   onError: (message: string) => void
 }) {
+  const { locale, t } = useI18n()
   const [number, setNumber] = useState(String(item.volumeNumber))
   const [date, setDate] = useState(item.releaseDate ?? '')
-  const [eur, setEur] = useState(formatCents(item.priceEurCents))
-  const [chf, setChf] = useState(formatCents(item.priceChfCents))
+  const [eur, setEur] = useState(formatCents(item.priceEurCents, locale))
+  const [chf, setChf] = useState(formatCents(item.priceChfCents, locale))
   const [busy, setBusy] = useState(false)
 
   async function save() {
@@ -499,8 +506,8 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
       }))
     } catch (e) {
       onError(e instanceof ApiError && e.code === 'item_already_on_list'
-        ? 'Questo volume è già presente nella lista.'
-        : 'Modifica non riuscita.')
+        ? t('purchase.itemDuplicate')
+        : t('common.changeFailed'))
     } finally {
       setBusy(false)
     }
@@ -516,25 +523,27 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
         {/* The date sits under the edition rather than in a column of its
             own: in read mode it is the heading of the group the row belongs
             to, so changing it here moves the line to another day. */}
-        <input type="date" value={date} className="date-input" aria-label="Data di uscita"
+        <input type="date" value={date} className="date-input"
+               aria-label={t('purchase.releaseDate')}
                onChange={(e) => setDate(e.target.value)} />
       </td>
-      <td className="num">
-        <input type="number" min={0} max={999} value={number} aria-label="Numero volume"
+      <td className="num" data-label={t('common.volumeShort')}>
+        <input type="number" min={0} max={999} value={number}
+               aria-label={t('common.volume')}
                onChange={(e) => setNumber(e.target.value)} />
       </td>
-      <td className="num">
-        <input inputMode="decimal" value={eur} aria-label="Prezzo EUR"
+      <td className="num" data-label="EUR">
+        <input inputMode="decimal" value={eur} aria-label={t('purchase.priceEur')}
                onChange={(e) => setEur(e.target.value)} />
       </td>
-      <td className="num">
-        <input inputMode="decimal" value={chf} aria-label="Prezzo CHF"
+      <td className="num" data-label="CHF">
+        <input inputMode="decimal" value={chf} aria-label={t('purchase.priceChf')}
                onChange={(e) => setChf(e.target.value)} />
       </td>
       <td className="num actions-cell">
-        <button className="link-button" aria-label="Salva modifica" title="Salva"
+        <button className="link-button" aria-label={t('purchase.saveEdit')} title={t('common.save')}
                 disabled={busy} onClick={save}>✓</button>
-        <button className="link-button" aria-label="Annulla modifica" title="Annulla"
+        <button className="link-button" aria-label={t('purchase.cancelEdit')} title={t('common.cancel')}
                 onClick={onCancel}>×</button>
       </td>
     </tr>
@@ -552,6 +561,7 @@ function CarryOver({ list, onMoved, onError }: {
   onMoved: (moved: number) => Promise<void>
   onError: (message: string) => void
 }) {
+  const { t } = useI18n()
   const [others, setOthers] = useState<PurchaseListSummary[]>([])
   const [sourceId, setSourceId] = useState('')
   const [busy, setBusy] = useState(false)
@@ -570,15 +580,15 @@ function CarryOver({ list, onMoved, onError }: {
 
   return (
     <div className="panel" style={{ marginTop: 32 }}>
-      <p className="eyebrow" style={{ marginTop: 0 }}>Riporta da un’altra lista</p>
+      <p className="eyebrow" style={{ marginTop: 0 }}>{t('purchase.carryTitle')}</p>
       <div className="row">
-        <select aria-label="Lista di origine" value={sourceId}
+        <select aria-label={t('purchase.sourceList')} value={sourceId}
                 onChange={(e) => setSourceId(e.target.value)}
                 style={{ flex: 1, minWidth: 200 }}>
-          <option value="">Scegli la lista…</option>
+          <option value="">{t('purchase.chooseList')}</option>
           {others.map((l) => (
             <option key={l.id} value={l.id}>
-              {l.name} — {l.itemCount - l.purchasedCount} non acquistati
+              {l.name} — {l.itemCount - l.purchasedCount} {t('purchase.unpurchased')}
             </option>
           ))}
         </select>
@@ -591,18 +601,17 @@ function CarryOver({ list, onMoved, onError }: {
               await onMoved(moved)
               setSourceId('')
             } catch {
-              onError('Non sono riuscito a riportare i volumi.')
+              onError(t('purchase.carryFailed'))
             } finally {
               setBusy(false)
             }
           }}
         >
-          {busy ? 'Riporto…' : 'Riporta i non acquistati'}
+          {busy ? t('purchase.carrying') : t('purchase.carry')}
         </button>
       </div>
       <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
-        I volumi non acquistati passano qui e spariscono dalla lista di
-        origine, che resta così la spesa reale di quel mese.
+        {t('purchase.carryHelp')}
       </p>
     </div>
   )
@@ -623,6 +632,7 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
   onAdded: (list: PurchaseList) => void
   onError: (message: string) => void
 }) {
+  const { locale, t } = useI18n()
   const [rows, setRows] = useState<PurchaseSuggestion[]>([])
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -652,12 +662,12 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
     <div className="panel" style={{ marginTop: 32 }}>
       <div className="row" style={{ marginBottom: 12 }}>
         <p className="eyebrow" style={{ margin: 0 }}>
-          Continua una collana · {rows.length}
+          {t('purchase.continueSeries')} · {rows.length}
         </p>
         <span className="spacer" />
         <input
-          aria-label="Filtra suggerimenti"
-          placeholder="Filtra"
+          aria-label={t('purchase.filterSuggestions')}
+          placeholder={t('purchase.filter')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="filter-input"
@@ -666,7 +676,7 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
 
       {matching.length === 0 ? (
         <p className="muted" style={{ fontSize: 14, marginBottom: 0 }}>
-          Nessuna collana per “{query}”.
+          {t('purchase.noSeries')} “{query}”.
         </p>
       ) : (
         <>
@@ -675,12 +685,12 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
               <li key={row.seriesId}>
                 <div className="grow">
                   <span className="suggestion-title">{row.mangaTitle}</span>
-                  <span className="muted"> · {row.seriesName} · volume {row.volumeNumber}</span>
+                  <span className="muted"> · {row.seriesName} · {t('common.volume')} {row.volumeNumber}</span>
                   <div className="muted" style={{ fontSize: 13 }}>
                     {[
-                      row.priceChfCents != null ? `CHF ${formatCents(row.priceChfCents)}` : null,
-                      row.priceEurCents != null ? `EUR ${formatCents(row.priceEurCents)}` : null,
-                      `come in “${row.lastBoughtIn}”`,
+                      row.priceChfCents != null ? `CHF ${formatCents(row.priceChfCents, locale)}` : null,
+                      row.priceEurCents != null ? `EUR ${formatCents(row.priceEurCents, locale)}` : null,
+                      `${t('purchase.likeIn')} “${row.lastBoughtIn}”`,
                     ].filter(Boolean).join(' · ')}
                   </div>
                 </div>
@@ -700,13 +710,15 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
                         priceChfCents: row.priceChfCents,
                       }))
                     } catch {
-                      onError('Non sono riuscito ad aggiungere la riga.')
+                      onError(t('purchase.addFailed'))
                     } finally {
                       setBusy(null)
                     }
                   }}
                 >
-                  {busy === row.seriesId ? 'Aggiungo…' : `Aggiungi vol. ${row.volumeNumber}`}
+                  {busy === row.seriesId
+                    ? t('purchase.adding')
+                    : `${t('purchase.addVolumeShort')} ${row.volumeNumber}`}
                 </button>
               </li>
             ))}
@@ -715,13 +727,13 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
           {hidden > 0 && (
             <button type="button" className="quiet" style={{ marginTop: 12 }}
                     onClick={() => setExpanded(true)}>
-              Mostra le altre {hidden}
+              {t('purchase.showOthers')} {hidden}
             </button>
           )}
           {expanded && !needle && (
             <button type="button" className="quiet" style={{ marginTop: 12 }}
                     onClick={() => setExpanded(false)}>
-              Mostra meno
+              {t('purchase.showLess')}
             </button>
           )}
         </>
@@ -736,6 +748,7 @@ function AddItem({ listId, onAdded, onError }: {
   onAdded: (list: PurchaseList) => void
   onError: (message: string) => void
 }) {
+  const { t } = useI18n()
   const [manga, setManga] = useState<Manga[]>([])
   const [mangaQuery, setMangaQuery] = useState('')
   const [activeMangaQuery, setActiveMangaQuery] = useState('')
@@ -770,7 +783,7 @@ function AddItem({ listId, onAdded, onError }: {
       setMangaTotalPages(result.totalPages)
       setMangaTotalElements(result.totalElements)
     } catch {
-      onError('Non riesco a caricare il catalogo manga.')
+      onError(t('purchase.catalogLoadFailed'))
     } finally {
       setMangaLoading(false)
     }
@@ -802,8 +815,8 @@ function AddItem({ listId, onAdded, onError }: {
       setChf('')
     } catch (e) {
       onError(e instanceof ApiError && e.code === 'item_already_on_list'
-        ? 'Questo volume è già presente nella lista.'
-        : 'Non sono riuscito ad aggiungere la riga.')
+        ? t('purchase.itemDuplicate')
+        : t('purchase.addFailed'))
     } finally {
       setBusy(false)
     }
@@ -816,14 +829,14 @@ function AddItem({ listId, onAdded, onError }: {
 
   return (
     <form className="panel" onSubmit={handleSubmit} style={{ marginTop: 32 }}>
-      <p className="eyebrow" style={{ marginTop: 0 }}>Aggiungi un volume</p>
+      <p className="eyebrow" style={{ marginTop: 0 }}>{t('purchase.addVolume')}</p>
 
       <div className="field" style={{ marginBottom: 16 }}>
-        <label htmlFor="pi-manga-search">Cerca nel catalogo</label>
+        <label htmlFor="pi-manga-search">{t('purchase.searchCatalog')}</label>
         <div className="row">
           <input
             id="pi-manga-search"
-            placeholder="Titolo del manga"
+            placeholder={t('purchase.mangaTitle')}
             value={mangaQuery}
             onChange={(e) => setMangaQuery(e.target.value)}
             onKeyDown={(event) => {
@@ -836,7 +849,7 @@ function AddItem({ listId, onAdded, onError }: {
           />
           <button type="button" className="quiet" disabled={mangaLoading}
                   onClick={searchManga}>
-            Cerca
+            {t('common.search')}
           </button>
         </div>
       </div>
@@ -846,16 +859,16 @@ function AddItem({ listId, onAdded, onError }: {
           <label htmlFor="pi-manga">Manga</label>
           <select id="pi-manga" value={mangaId} required disabled={mangaLoading && manga.length === 0}
                   onChange={(e) => setMangaId(e.target.value)}>
-            <option value="">Scegli…</option>
+            <option value="">{t('purchase.choose')}</option>
             {manga.map((m) => <option key={m.id} value={m.id}>{m.displayTitle}</option>)}
           </select>
           <div className="row" style={{ marginTop: 8 }}>
             <span className="muted" style={{ fontSize: 13 }}>
               {mangaLoading && manga.length === 0
-                ? 'Carico…'
+                ? t('common.loading')
                 : mangaTotalElements === 0
-                  ? 'Nessun manga trovato.'
-                  : `${manga.length} di ${mangaTotalElements}`}
+                  ? t('purchase.noManga')
+                  : `${manga.length} ${t('collection.of')} ${mangaTotalElements}`}
             </span>
             {mangaPage + 1 < mangaTotalPages && (
               <button
@@ -864,16 +877,16 @@ function AddItem({ listId, onAdded, onError }: {
                 disabled={mangaLoading}
                 onClick={() => void loadManga(activeMangaQuery, mangaPage + 1, true)}
               >
-                {mangaLoading ? 'Carico…' : 'Carica altri'}
+                {mangaLoading ? t('common.loading') : t('catalog.loadMore')}
               </button>
             )}
           </div>
         </div>
         <div className="field">
-          <label htmlFor="pi-series">Edizione</label>
+          <label htmlFor="pi-series">{t('purchase.chooseEdition')}</label>
           <select id="pi-series" value={seriesId} required disabled={series.length === 0}
                   onChange={(e) => setSeriesId(e.target.value)}>
-            <option value="">Scegli…</option>
+            <option value="">{t('purchase.choose')}</option>
             {series.map((s) => (
               <option key={s.id} value={s.id}>{s.name} — {s.publisher}</option>
             ))}
@@ -883,27 +896,27 @@ function AddItem({ listId, onAdded, onError }: {
 
       <div className="row" style={{ alignItems: 'flex-end' }}>
         <div className="field-narrow">
-          <label htmlFor="pi-number">Volume</label>
+          <label htmlFor="pi-number">{t('common.volume')}</label>
           <input id="pi-number" type="number" min={0} max={999} value={number} required
                  onChange={(e) => setNumber(e.target.value)} />
         </div>
         <div className="field-date">
-          <label htmlFor="pi-date">Uscita</label>
+          <label htmlFor="pi-date">{t('purchase.release')}</label>
           <input id="pi-date" type="date" value={date}
                  onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="field-medium">
-          <label htmlFor="pi-eur">Prezzo EUR</label>
+          <label htmlFor="pi-eur">{t('purchase.priceEur')}</label>
           <input id="pi-eur" inputMode="decimal" placeholder="6.90"
                  value={eur} onChange={(e) => setEur(e.target.value)} />
         </div>
         <div className="field-medium">
-          <label htmlFor="pi-chf">Prezzo CHF</label>
+          <label htmlFor="pi-chf">{t('purchase.priceChf')}</label>
           <input id="pi-chf" inputMode="decimal" placeholder="8.30"
                  value={chf} onChange={(e) => setChf(e.target.value)} />
         </div>
         <button type="submit" disabled={busy || !seriesId}>
-          {busy ? 'Aggiungo…' : 'Aggiungi'}
+          {busy ? t('purchase.adding') : t('purchase.addSuggested')}
         </button>
       </div>
     </form>

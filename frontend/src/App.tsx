@@ -8,13 +8,28 @@ import PurchaseDetail from './pages/PurchaseDetail'
 import Purchases from './pages/Purchases'
 import Register from './pages/Register'
 import SeriesDetail from './pages/SeriesDetail'
+import Settings from './pages/Settings'
+import { useI18n } from './i18n'
 
 export default function App() {
-  const { user, loading } = useSession()
+  const { user, loading, unavailable, retry } = useSession()
+  const { t } = useI18n()
 
   // Rendering routes before the session check resolves would flash the login
   // screen at users who are in fact already signed in.
-  if (loading) return null
+  if (loading) {
+    return <div className="app-state" role="status">{t('session.loading')}</div>
+  }
+
+  if (unavailable) {
+    return (
+      <div className="app-state">
+        <h1>{t('session.unavailableTitle')}</h1>
+        <p>{t('session.unavailableBody')}</p>
+        <button type="button" onClick={retry}>{t('common.retry')}</button>
+      </div>
+    )
+  }
 
   if (!user) {
     return (
@@ -34,6 +49,7 @@ export default function App() {
       <Route path="/collection" element={<MyCollection />} />
       <Route path="/purchases" element={<Purchases />} />
       <Route path="/purchases/:id" element={<PurchaseDetail />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

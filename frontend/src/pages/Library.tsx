@@ -5,10 +5,12 @@ import { useSession } from '../api/session'
 import AniListSearch from '../components/AniListSearch'
 import Layout from '../components/Layout'
 import MangaForm from '../components/MangaForm'
+import { useI18n } from '../i18n'
 
 /** The catalogue: every work known to this instance, shared by all users. */
 export default function Library() {
   const { user } = useSession()
+  const { t } = useI18n()
   const isAdmin = user?.role === 'ADMIN'
 
   const [manga, setManga] = useState<Manga[]>([])
@@ -34,7 +36,7 @@ export default function Library() {
       setPage(result.number)
       setTotalPages(result.totalPages)
     } catch {
-      setError('Non riesco a caricare il catalogo.')
+      setError(t('catalog.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -50,8 +52,8 @@ export default function Library() {
   return (
     <Layout>
       <div className="page-head">
-        <p className="eyebrow">Catalogo condiviso</p>
-        <h1>Opere</h1>
+        <p className="eyebrow">{t('catalog.eyebrow')}</p>
+        <h1>{t('catalog.title')}</h1>
       </div>
 
       {error && <div className="error" role="alert">{error}</div>}
@@ -59,20 +61,20 @@ export default function Library() {
       <div className="catalog-controls">
         <form className="catalog-search" onSubmit={handleSearch}>
           <input
-            aria-label="Cerca nel catalogo"
-            placeholder="Cerca per titolo"
+            aria-label={t('catalog.searchLabel')}
+            placeholder={t('catalog.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button type="submit" className="quiet">Cerca</button>
+          <button type="submit" className="quiet">{t('common.search')}</button>
         </form>
         {isAdmin && (
           <div className="catalog-actions">
             <button type="button" onClick={() => setImporting(!importing)}>
-              {importing ? 'Chiudi' : 'Importa da AniList'}
+              {importing ? t('common.close') : t('catalog.importAniList')}
             </button>
             <button type="button" className="quiet" onClick={() => setAdding(!adding)}>
-              {adding ? 'Annulla' : 'Inserisci a mano'}
+              {adding ? t('common.cancel') : t('catalog.manual')}
             </button>
           </div>
         )}
@@ -100,14 +102,14 @@ export default function Library() {
       )}
 
       {loading && manga.length === 0 ? (
-        <p className="muted">Carico…</p>
+        <p className="muted">{t('common.loading')}</p>
       ) : manga.length === 0 ? (
         <div className="empty">
           {activeQuery
-            ? `Nessun risultato per “${activeQuery}”.`
+            ? `${t('catalog.noResults')} “${activeQuery}”.`
             : isAdmin
-              ? 'Il catalogo è vuoto. Aggiungi la prima opera per iniziare.'
-              : 'Il catalogo è vuoto. Chiedi a un amministratore di aggiungere le opere.'}
+              ? t('catalog.emptyAdmin')
+              : t('catalog.emptyUser')}
         </div>
       ) : (
         <ul className="manga-list">
@@ -133,7 +135,7 @@ export default function Library() {
             disabled={loading}
             onClick={() => void load(activeQuery, page + 1, true)}
           >
-            {loading ? 'Carico…' : 'Carica altri'}
+            {loading ? t('common.loading') : t('catalog.loadMore')}
           </button>
         </div>
       )}

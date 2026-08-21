@@ -20,8 +20,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -71,6 +73,27 @@ class AuthIT extends IntegrationTest {
                 .andExpect(jsonPath("$.fields.username").exists())
                 .andExpect(jsonPath("$.fields.email").exists())
                 .andExpect(jsonPath("$.fields.password").exists());
+    }
+
+    @Test
+    void passwordsBeyondTheBcryptLimitAreRejectedCleanly() throws Exception {
+        String tooLong = "x".repeat(73);
+        mvc.perform(post("/api/auth/register").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "long-password", "email": "long@example.test",
+                                 "password": "%s"}
+                                """.formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("password_too_long"));
+
+        try {
+            mvc.perform(login("member", tooLong))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("invalid_credentials"));
+        } finally {
+            attempts.recordSuccess("member");
+        }
     }
 
     @Test
@@ -143,6 +166,48 @@ class AuthIT extends IntegrationTest {
     }
 
     @Test
+    void languageIsPersistedAndOnlySupportedValuesAreAccepted() throws Exception {
+        mvc.perform(get("/api/auth/me").with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.language").value("it"));
+
+        mvc.perform(put("/api/auth/me/language").with(user(member)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"language": "en"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.language").value("en"));
+
+        assertThat(users.findById(member.id()).orElseThrow().getLanguage().code())
+                .isEqualTo("en");
+
+        mvc.perform(put("/api/auth/me/language").with(user(member)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"language": "xx"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("malformed_request"))
+                .andExpect(jsonPath("$.detail").doesNotExist());
+    }
+
+    @Test
+    void registrationKeepsTheChosenLanguage() throws Exception {
+        mvc.perform(post("/api/auth/register").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "english-user", "email": "english@example.test",
+                                 "password": "%s", "language": "en"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.language").value("en"));
+
+        assertThat(users.findByUsernameIgnoreCase("english-user").orElseThrow()
+                .getLanguage().code()).isEqualTo("en");
+    }
+
+    @Test
     void simultaneousFirstRegistrationsElectExactlyOneAdministrator() throws Exception {
         users.deleteAll();
         users.flush();
@@ -175,7 +240,8 @@ class AuthIT extends IntegrationTest {
         return new RegisterRequest(
                 username,
                 username + "@example.test",
-                PASSWORD);
+                PASSWORD,
+                null);
     }
 
     private MockHttpServletRequestBuilder register(String username, String email) {

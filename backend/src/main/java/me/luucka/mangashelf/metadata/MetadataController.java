@@ -35,7 +35,7 @@ public class MetadataController {
     @GetMapping("/search")
     public List<MangaSearchResult> search(@RequestParam String q,
                                           @RequestParam(defaultValue = "10") int limit) {
-        return metadata.search(q, Math.min(limit, 25));
+        return metadata.search(q, Math.max(1, Math.min(limit, 25)));
     }
 
     @PostMapping("/import/{anilistId}")

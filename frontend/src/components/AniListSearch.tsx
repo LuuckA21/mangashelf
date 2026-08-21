@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { metadata, type Manga, type MangaSearchResult } from '../api/client'
+import { useI18n } from '../i18n'
 
 /**
  * Finds a work on AniList and imports its metadata.
@@ -11,6 +12,7 @@ import { metadata, type Manga, type MangaSearchResult } from '../api/client'
  */
 export default function AniListSearch({ onImported }: { onImported: (m: Manga) => void }) {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [term, setTerm] = useState('')
   const [results, setResults] = useState<MangaSearchResult[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -25,7 +27,7 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
     try {
       setResults(await metadata.search(term))
     } catch {
-      setError('AniList non risponde. Riprova fra poco.')
+      setError(t('anilist.searchFailed'))
     } finally {
       setBusy(false)
     }
@@ -39,7 +41,7 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
       setResults(null)
       setTerm('')
     } catch {
-      setError('Import non riuscito.')
+      setError(t('anilist.importFailed'))
     } finally {
       setImporting(null)
     }
@@ -47,23 +49,27 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
 
   return (
     <div className="panel" style={{ marginBottom: 24 }}>
-      <p className="eyebrow" style={{ marginTop: 0 }}>Cerca su AniList</p>
+      <p className="eyebrow" style={{ marginTop: 0 }}>{t('anilist.title')}</p>
 
       <form className="row" onSubmit={handleSearch} style={{ marginBottom: 16 }}>
         <input
-          aria-label="Titolo da cercare su AniList"
-          placeholder="Titolo dell’opera, anche in giapponese"
+          aria-label={t('anilist.searchLabel')}
+          placeholder={t('anilist.searchPlaceholder')}
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           style={{ flex: 1, minWidth: 200 }}
         />
-        <button type="submit" disabled={busy}>{busy ? 'Cerco…' : 'Cerca'}</button>
+        <button type="submit" disabled={busy}>
+          {busy ? t('common.searching') : t('common.search')}
+        </button>
       </form>
 
       {error && <div className="error" role="alert">{error}</div>}
 
       {results?.length === 0 && (
-        <p className="muted" style={{ fontSize: 14 }}>Nessun risultato per “{term}”.</p>
+        <p className="muted" style={{ fontSize: 14 }}>
+          {t('anilist.noResults')} “{term}”.
+        </p>
       )}
 
       {results && results.length > 0 && (
@@ -79,7 +85,7 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
                 </div>
                 <div className="muted" style={{ fontSize: 13 }}>
                   {[result.authors, result.startYear,
-                    result.totalVolumes ? `${result.totalVolumes} vol.` : null]
+                    result.totalVolumes ? `${result.totalVolumes} ${t('common.volumeShort')}` : null]
                     .filter(Boolean).join(' · ')}
                 </div>
               </div>
@@ -88,14 +94,15 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
                   className="quiet"
                   onClick={() => navigate(`/manga/${result.mangaId}`)}
                 >
-                  Già presente
+                  {t('anilist.alreadyPresent')}
                 </button>
               ) : (
                 <button
                   onClick={() => handleImport(result)}
                   disabled={importing !== null}
                 >
-                  {importing === result.anilistId ? 'Importo…' : 'Importa'}
+                  {importing === result.anilistId
+                    ? t('common.importing') : t('common.import')}
                 </button>
               )}
             </li>

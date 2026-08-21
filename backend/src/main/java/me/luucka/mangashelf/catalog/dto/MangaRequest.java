@@ -1,6 +1,8 @@
 package me.luucka.mangashelf.catalog.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import me.luucka.mangashelf.catalog.PublicationStatus;
 
@@ -18,8 +20,8 @@ public record MangaRequest(
         @Size(max = 20000) String description,
         @Size(max = 1000) String coverUrl,
         PublicationStatus status,
-        String[] genres,
-        Short startYear,
-        Short totalVolumes
+        @Size(max = 50) String[] genres,
+        @Min(1800) @Max(2200) Short startYear,
+        @Min(0) @Max(999) Short totalVolumes
 ) {
 }
