@@ -10,6 +10,13 @@ on:
   pull_request:
 
 jobs:
+  operations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n scripts/backup.sh scripts/restore.sh scripts/test-backup-restore.sh scripts/tests/fake-docker
+      - run: ./scripts/test-backup-restore.sh
+
   backend:
     runs-on: ubuntu-latest
     steps:
