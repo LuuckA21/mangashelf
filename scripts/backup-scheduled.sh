@@ -11,6 +11,13 @@ DAILY_RETENTION="${MANGASHELF_DAILY_RETENTION:-7}"
 WEEKLY_RETENTION="${MANGASHELF_WEEKLY_RETENTION:-4}"
 WEEKLY_DAY="${MANGASHELF_WEEKLY_DAY:-7}"
 
+if [[ -z "${DOCKER_HOST:-}" ]]; then
+  RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [[ -S "$RUNTIME_DIR/docker.sock" ]]; then
+    export DOCKER_HOST="unix://$RUNTIME_DIR/docker.sock"
+  fi
+fi
+
 require_positive_integer() {
   local name=$1
   local value=$2
