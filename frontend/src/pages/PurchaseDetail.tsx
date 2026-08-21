@@ -32,7 +32,9 @@ export default function PurchaseDetail() {
     return (
       <Layout>
         <p className="eyebrow"><Link to="/purchases">Acquisti</Link></p>
-        {error ? <div className="error">{error}</div> : <p className="muted">Carico…</p>}
+        {error
+          ? <div className="error" role="alert">{error}</div>
+          : <p className="muted">Carico…</p>}
       </Layout>
     )
   }
@@ -124,7 +126,7 @@ export default function PurchaseDetail() {
         </div>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
       {transfer && <p className="muted" style={{ fontSize: 14 }}>{transfer}</p>}
 
       {closed && (
@@ -201,6 +203,8 @@ export default function PurchaseDetail() {
                       className="reserve-toggle"
                       disabled={closed}
                       aria-pressed={item.reserved}
+                      aria-label={`${item.mangaTitle}, volume ${item.volumeNumber}: ${
+                        item.reserved ? 'segna come non riservato' : 'segna come riservato'}`}
                       title={item.reserved
                         ? 'Riservato in fumetteria'
                         : 'Segna come riservato in fumetteria'}
@@ -221,6 +225,10 @@ export default function PurchaseDetail() {
                       className="reserve-toggle bought"
                       disabled={closed}
                       aria-pressed={item.purchasedAt != null}
+                      aria-label={`${item.mangaTitle}, volume ${item.volumeNumber}: ${
+                        item.purchasedAt != null
+                          ? 'segna come non acquistato'
+                          : 'segna come acquistato'}`}
                       title={item.purchasedAt != null
                         ? 'Acquistato'
                         : 'Segna come acquistato'}
@@ -250,6 +258,7 @@ export default function PurchaseDetail() {
                             than deleting. */}
                         <button
                           className="link-button danger-text"
+                          aria-label={`Conferma eliminazione di ${item.mangaTitle}, volume ${item.volumeNumber}`}
                           title="Conferma l’eliminazione"
                           onClick={async () => {
                             try {
@@ -265,6 +274,7 @@ export default function PurchaseDetail() {
                         </button>
                         <button
                           className="link-button"
+                          aria-label={`Annulla eliminazione di ${item.mangaTitle}, volume ${item.volumeNumber}`}
                           title="Annulla"
                           onClick={() => setRemovingItem(null)}
                         >
@@ -275,6 +285,7 @@ export default function PurchaseDetail() {
                       <>
                         <button
                           className="link-button"
+                          aria-label={`Modifica ${item.mangaTitle}, volume ${item.volumeNumber}`}
                           title="Modifica la riga"
                           onClick={() => { setRemovingItem(null); setEditingItem(item.id) }}
                         >
@@ -282,6 +293,7 @@ export default function PurchaseDetail() {
                         </button>
                         <button
                           className="link-button"
+                          aria-label={`Togli ${item.mangaTitle}, volume ${item.volumeNumber} dalla lista`}
                           title="Togli dalla lista"
                           onClick={() => setRemovingItem(item.id)}
                         >
@@ -504,22 +516,26 @@ function ItemRow({ listId, item, onSaved, onCancel, onError }: {
         {/* The date sits under the edition rather than in a column of its
             own: in read mode it is the heading of the group the row belongs
             to, so changing it here moves the line to another day. */}
-        <input type="date" value={date} className="date-input"
+        <input type="date" value={date} className="date-input" aria-label="Data di uscita"
                onChange={(e) => setDate(e.target.value)} />
       </td>
       <td className="num">
-        <input type="number" min={0} max={999} value={number}
+        <input type="number" min={0} max={999} value={number} aria-label="Numero volume"
                onChange={(e) => setNumber(e.target.value)} />
       </td>
       <td className="num">
-        <input inputMode="decimal" value={eur} onChange={(e) => setEur(e.target.value)} />
+        <input inputMode="decimal" value={eur} aria-label="Prezzo EUR"
+               onChange={(e) => setEur(e.target.value)} />
       </td>
       <td className="num">
-        <input inputMode="decimal" value={chf} onChange={(e) => setChf(e.target.value)} />
+        <input inputMode="decimal" value={chf} aria-label="Prezzo CHF"
+               onChange={(e) => setChf(e.target.value)} />
       </td>
       <td className="num actions-cell">
-        <button className="link-button" title="Salva" disabled={busy} onClick={save}>✓</button>
-        <button className="link-button" title="Annulla" onClick={onCancel}>×</button>
+        <button className="link-button" aria-label="Salva modifica" title="Salva"
+                disabled={busy} onClick={save}>✓</button>
+        <button className="link-button" aria-label="Annulla modifica" title="Annulla"
+                onClick={onCancel}>×</button>
       </td>
     </tr>
   )
@@ -556,7 +572,8 @@ function CarryOver({ list, onMoved, onError }: {
     <div className="panel" style={{ marginTop: 32 }}>
       <p className="eyebrow" style={{ marginTop: 0 }}>Riporta da un’altra lista</p>
       <div className="row">
-        <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}
+        <select aria-label="Lista di origine" value={sourceId}
+                onChange={(e) => setSourceId(e.target.value)}
                 style={{ flex: 1, minWidth: 200 }}>
           <option value="">Scegli la lista…</option>
           {others.map((l) => (
@@ -639,6 +656,7 @@ function Suggestions({ listId, itemCount, onAdded, onError }: {
         </p>
         <span className="spacer" />
         <input
+          aria-label="Filtra suggerimenti"
           placeholder="Filtra"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

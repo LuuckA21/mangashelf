@@ -2,6 +2,7 @@ package me.luucka.mangashelf.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -34,10 +35,17 @@ public class CoverStore {
     private static final String PUBLIC_PREFIX = "/covers/";
 
     private final Path directory;
-    private final RestClient http = RestClient.create();
+    private final RestClient http;
 
+    @Autowired
     public CoverStore(@Value("${app.covers-dir}") String coversDir) {
+        this(coversDir, RestClient.create());
+    }
+
+    /** Test seam for downloads backed by Spring's mock HTTP server. */
+    CoverStore(String coversDir, RestClient http) {
         this.directory = Path.of(coversDir);
+        this.http = http;
     }
 
     /**

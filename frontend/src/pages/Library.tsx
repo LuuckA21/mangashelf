@@ -54,27 +54,29 @@ export default function Library() {
         <h1>Opere</h1>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
-      <form className="row" onSubmit={handleSearch} style={{ marginBottom: 24 }}>
-        <input
-          placeholder="Cerca per titolo"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 1, minWidth: 200 }}
-        />
-        <button type="submit" className="quiet">Cerca</button>
+      <div className="catalog-controls">
+        <form className="catalog-search" onSubmit={handleSearch}>
+          <input
+            aria-label="Cerca nel catalogo"
+            placeholder="Cerca per titolo"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="submit" className="quiet">Cerca</button>
+        </form>
         {isAdmin && (
-          <>
+          <div className="catalog-actions">
             <button type="button" onClick={() => setImporting(!importing)}>
               {importing ? 'Chiudi' : 'Importa da AniList'}
             </button>
             <button type="button" className="quiet" onClick={() => setAdding(!adding)}>
               {adding ? 'Annulla' : 'Inserisci a mano'}
             </button>
-          </>
+          </div>
         )}
-      </form>
+      </div>
 
       {importing && (
         <AniListSearch

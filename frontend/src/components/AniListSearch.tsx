@@ -51,6 +51,7 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
 
       <form className="row" onSubmit={handleSearch} style={{ marginBottom: 16 }}>
         <input
+          aria-label="Titolo da cercare su AniList"
           placeholder="Titolo dell’opera, anche in giapponese"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
@@ -59,7 +60,7 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
         <button type="submit" disabled={busy}>{busy ? 'Cerco…' : 'Cerca'}</button>
       </form>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       {results?.length === 0 && (
         <p className="muted" style={{ fontSize: 14 }}>Nessun risultato per “{term}”.</p>

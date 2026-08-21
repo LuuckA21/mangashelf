@@ -39,7 +39,7 @@ export default function Login() {
         <h1>MangaShelf</h1>
         <p className="subtitle">Accedi alla tua collezione.</p>
 
-        {error && <div className="error">{error}</div>}
+        {error && <div className="error" role="alert">{error}</div>}
 
         <div className="field">
           <label htmlFor="login">Username o email</label>
