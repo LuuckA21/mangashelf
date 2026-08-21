@@ -114,6 +114,71 @@ La directory contiene dati personali e deve essere conservata con accesso limita
 
 Un backup non è considerato affidabile finché non è stato copiato fuori dal server e provato almeno una volta con il ripristino.
 
+### Backup automatici con systemd
+
+Il timer incluso nel repository crea un backup ogni giorno alle 03:30, con un
+ritardo casuale massimo di 15 minuti. Se il server è spento all'orario previsto,
+`Persistent=true` avvia il backup al successivo avvio.
+
+Installa il servizio per l'utente che gestisce MangaShelf:
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp ops/systemd/mangashelf-backup.service ~/.config/systemd/user/
+cp ops/systemd/mangashelf-backup.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now mangashelf-backup.timer
+systemctl --user list-timers mangashelf-backup.timer
+```
+
+Il servizio presuppone che il repository si trovi in `~/mangashelf`. Per
+eseguire i timer utente anche senza una sessione aperta, controlla:
+
+```bash
+loginctl show-user "$USER" -p Linger
+```
+
+Se il risultato è `Linger=no`, abilitalo una sola volta:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+Esegui subito un backup supervisionato e controllane il risultato:
+
+```bash
+systemctl --user start mangashelf-backup.service
+systemctl --user status mangashelf-backup.service --no-pager
+journalctl --user -u mangashelf-backup.service -n 100 --no-pager
+cat backups/last-success
+```
+
+I backup sono conservati in `backups/daily` e `backups/weekly`. Per impostazione
+predefinita vengono mantenuti gli ultimi 7 giornalieri e gli ultimi 4
+settimanali; la copia settimanale viene creata la domenica. Le copie settimanali
+usano hard link, quindi restano valide anche dopo la rimozione della copia
+giornaliera senza duplicare immediatamente gli stessi dati sul disco.
+
+Per cambiare la conservazione, crea un override del servizio:
+
+```bash
+systemctl --user edit mangashelf-backup.service
+```
+
+Inserisci, per esempio:
+
+```ini
+[Service]
+Environment=MANGASHELF_DAILY_RETENTION=14
+Environment=MANGASHELF_WEEKLY_RETENTION=8
+```
+
+Poi applica la modifica con `systemctl --user daemon-reload`. L'ultimo esito
+positivo è registrato in `backups/last-success`; in caso di errore vengono
+conservati data e codice di uscita in `backups/last-failure` e nei log di
+systemd. Un backup automatico può essere ripristinato passando allo script il
+percorso completo, per esempio `backups/daily/mangashelf-AAAAMMGGTHHMMSSZ`.
+
 ## Ripristino
 
 Il ripristino sostituisce completamente database e copertine correnti. Per impostazione predefinita lo script crea prima un ulteriore backup di sicurezza in `backups/pre-restore`.
@@ -171,6 +236,7 @@ Script operativi, senza modificare Docker o dati reali:
 ```bash
 ./scripts/test-backup-restore.sh
 ./scripts/test-deploy.sh
+./scripts/test-scheduled-backup.sh
 ```
 
 GitHub Actions esegue automaticamente tutte queste verifiche sulle pull request.

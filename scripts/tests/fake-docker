@@ -5,6 +5,10 @@ set -Eeuo pipefail
 : "${FAKE_DOCKER_LOG:?FAKE_DOCKER_LOG must be set}"
 printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
 
+if [[ "${FAKE_DOCKER_FAIL:-0}" == 1 ]]; then
+  exit 42
+fi
+
 COMMAND="$*"
 case "$COMMAND" in
   *pg_dump*)
