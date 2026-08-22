@@ -23,23 +23,39 @@ export default function Layout({ children }: { children: ReactNode }) {
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link to="/" className="brand">MangaShelf</Link>
+          <Link to="/" className="brand">
+            MangaShelf
+          </Link>
           <nav aria-label={t('nav.main')}>
-            <NavLink to="/" end>{t('nav.catalog')}</NavLink>
+            <NavLink to="/" end>
+              {t('nav.catalog')}
+            </NavLink>
             <NavLink to="/collection">{t('nav.collection')}</NavLink>
             <NavLink to="/purchases">{t('nav.purchases')}</NavLink>
+            {user?.role === 'ADMIN' && (
+              <NavLink to="/admin/users">{t('nav.users')}</NavLink>
+            )}
           </nav>
           <span className="spacer" />
-          <Link to="/settings" className="account-link"
-                aria-label={`${t('nav.settings')}: ${user?.username ?? ''}`}
-                title={user?.username}>
+          <Link
+            to="/settings"
+            className="account-link"
+            aria-label={`${t('nav.settings')}: ${user?.username ?? ''}`}
+            title={user?.username}
+          >
             {user?.username}
           </Link>
-          <button className="quiet" onClick={handleLogout}>{t('nav.logout')}</button>
+          <button className="quiet" onClick={handleLogout}>
+            {t('nav.logout')}
+          </button>
         </div>
       </header>
       <main className="page">
-        {error && <div className="error" role="alert">{error}</div>}
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
         {children}
       </main>
     </>

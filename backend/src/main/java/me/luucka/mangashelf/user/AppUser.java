@@ -47,6 +47,15 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /**
+     * Incremented whenever credentials or authorisation change. Sessions
+     * carry the value they authenticated with and are rejected as soon as it
+     * no longer matches, so password changes, demotions and disables take
+     * effect on every device without keeping a server-side session registry.
+     */
+    @Column(name = "session_version", nullable = false)
+    private int sessionVersion;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

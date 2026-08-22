@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  purchases, type PurchaseListSummary, type PurchaseStats, type YearStats,
+  purchases,
+  type PurchaseListSummary,
+  type PurchaseStats,
+  type YearStats,
 } from '../api/client'
 import { formatCents, formatPeriod, monthNames } from '../format'
 import Layout from '../components/Layout'
@@ -23,12 +26,16 @@ export default function Purchases() {
   const [stats, setStats] = useState<PurchaseStats | null>(null)
 
   useEffect(() => {
-    purchases.listAll()
+    purchases
+      .listAll()
       .then(setLists)
       .catch(() => setError(t('purchases.loadFailed')))
       .finally(() => setLoading(false))
-    purchases.stats().then(setStats).catch(() => undefined)
-  }, [])
+    purchases
+      .stats()
+      .then(setStats)
+      .catch(() => undefined)
+  }, [t])
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
@@ -64,41 +71,70 @@ export default function Purchases() {
   return (
     <Layout>
       <div className="page-head">
-        <p className="eyebrow">{lists.length} {t('purchases.listCount')}</p>
+        <p className="eyebrow">
+          {lists.length} {t('purchases.listCount')}
+        </p>
         <h1>{t('purchases.title')}</h1>
       </div>
 
-      {error && <div className="error" role="alert">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="row purchase-create-actions" style={{ marginBottom: 24 }}>
-        <button className="new-purchase-list" onClick={() => setAdding(!adding)}>
+        <button
+          className="new-purchase-list"
+          onClick={() => setAdding(!adding)}
+        >
           {adding ? t('common.cancel') : t('purchases.newList')}
         </button>
       </div>
 
       {adding && (
-        <form className="panel" onSubmit={handleCreate} style={{ marginBottom: 24 }}>
+        <form
+          className="panel"
+          onSubmit={handleCreate}
+          style={{ marginBottom: 24 }}
+        >
           <div className="field">
             <label htmlFor="listName">{t('purchases.name')}</label>
-            <input id="listName" value={name} required autoFocus
-                   placeholder={t('purchases.namePlaceholder')}
-                   onChange={(e) => setName(e.target.value)} />
+            <input
+              id="listName"
+              value={name}
+              required
+              autoFocus
+              placeholder={t('purchases.namePlaceholder')}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div className="grid-2">
             <div className="field">
               <label htmlFor="listMonth">{t('purchases.month')}</label>
-              <select id="listMonth" value={month}
-                      onChange={(e) => setMonth(e.target.value)}>
+              <select
+                id="listMonth"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+              >
                 <option value="">{t('common.none')}</option>
                 {months.map((label, index) => (
-                  <option key={label} value={index + 1}>{label}</option>
+                  <option key={label} value={index + 1}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="field">
               <label htmlFor="listYear">{t('purchases.year')}</label>
-              <input id="listYear" type="number" min={1900} max={2200} value={year}
-                     onChange={(e) => setYear(e.target.value)} />
+              <input
+                id="listYear"
+                type="number"
+                min={1900}
+                max={2200}
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              />
             </div>
           </div>
           <button type="submit">{t('common.create')}</button>
@@ -108,9 +144,7 @@ export default function Purchases() {
       {loading ? (
         <p className="muted">{t('common.loading')}</p>
       ) : lists.length === 0 ? (
-        <div className="empty">
-          {t('purchases.empty')}
-        </div>
+        <div className="empty">{t('purchases.empty')}</div>
       ) : (
         <ul className="edition-list">
           {lists.map((list) => (
@@ -118,21 +152,29 @@ export default function Purchases() {
               <Link to={`/purchases/${list.id}`}>
                 <div className="name">
                   {list.name}
-                  {list.paidAt && <span className="paid-badge">{t('purchases.paid')}</span>}
+                  {list.paidAt && (
+                    <span className="paid-badge">{t('purchases.paid')}</span>
+                  )}
                 </div>
                 <div className="muted" style={{ fontSize: 14 }}>
                   {[
                     formatPeriod(list.periodYear, list.periodMonth, locale),
-                    `${list.itemCount} ${list.itemCount === 1
-                      ? t('common.volume') : t('common.volumes')}`,
+                    `${list.itemCount} ${
+                      list.itemCount === 1
+                        ? t('common.volume')
+                        : t('common.volumes')
+                    }`,
                     list.reservedCount > 0 && !list.paidAt
                       ? `${list.reservedCount} ${t('purchases.reserved')}`
                       : null,
-                    list.purchasedCount > 0 && list.purchasedCount < list.itemCount
+                    list.purchasedCount > 0 &&
+                    list.purchasedCount < list.itemCount
                       ? `${list.purchasedCount} ${t('purchases.purchased')}`
                       : null,
                     `CHF ${formatCents(list.totalChfCents, locale)}`,
-                  ].filter(Boolean).join(' · ')}
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </div>
               </Link>
             </li>
@@ -162,55 +204,71 @@ function Stats({ stats }: { stats: PurchaseStats }) {
           The matching mobile cards below show the same figures without a
           horizontal table. */}
       <div className="table-scroll stats-table-scroll">
-      <table className="purchase-table stats-table">
-        <thead>
-          <tr>
-            <th>{t('purchases.year')}</th>
-            <th className="num">{t('purchases.lists')}</th>
-            <th className="num">{t('common.volumes')}</th>
-            <th className="num">{t('purchases.full')}</th>
-            <th className="num">{t('purchases.discount')}</th>
-            <th className="num">{t('purchases.spent')}</th>
-            <th className="num">{t('purchases.averageFull')}</th>
-            <th className="num">{t('purchases.averageDiscounted')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stats.years.map((year) => (
-            <tr key={year.year}>
-              <td>{year.year}</td>
-              <td className="num">{year.listCount}</td>
-              <td className="num">{year.volumeCount}</td>
-              <td className="num">{formatCents(year.fullChfCents, locale)}</td>
-              <td className="num">
-                {year.discountChfCents > 0
-                  ? `−${formatCents(year.discountChfCents, locale)}` : ''}
-              </td>
-              <td className="num">{formatCents(year.netChfCents, locale)}</td>
-              <td className="num">{formatCents(year.averageFullChfCents, locale)}</td>
-              <td className="num">{formatCents(year.averageNetChfCents, locale)}</td>
+        <table className="purchase-table stats-table">
+          <thead>
+            <tr>
+              <th>{t('purchases.year')}</th>
+              <th className="num">{t('purchases.lists')}</th>
+              <th className="num">{t('common.volumes')}</th>
+              <th className="num">{t('purchases.full')}</th>
+              <th className="num">{t('purchases.discount')}</th>
+              <th className="num">{t('purchases.spent')}</th>
+              <th className="num">{t('purchases.averageFull')}</th>
+              <th className="num">{t('purchases.averageDiscounted')}</th>
             </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="grand-total">
-            <td>{t('common.total')}</td>
-            <td className="num">{stats.listCount}</td>
-            <td className="num">{stats.volumeCount}</td>
-            <td className="num">{formatCents(stats.fullChfCents, locale)}</td>
-            <td className="num">
-              {stats.discountChfCents > 0
-                ? `−${formatCents(stats.discountChfCents, locale)}` : ''}
-            </td>
-            <td className="num">{formatCents(stats.netChfCents, locale)}</td>
-            <td className="num">{formatCents(stats.averageFullChfCents, locale)}</td>
-            <td className="num">{formatCents(stats.averageNetChfCents, locale)}</td>
-          </tr>
-        </tfoot>
-      </table>
+          </thead>
+          <tbody>
+            {stats.years.map((year) => (
+              <tr key={year.year}>
+                <td>{year.year}</td>
+                <td className="num">{year.listCount}</td>
+                <td className="num">{year.volumeCount}</td>
+                <td className="num">
+                  {formatCents(year.fullChfCents, locale)}
+                </td>
+                <td className="num">
+                  {year.discountChfCents > 0
+                    ? `−${formatCents(year.discountChfCents, locale)}`
+                    : ''}
+                </td>
+                <td className="num">{formatCents(year.netChfCents, locale)}</td>
+                <td className="num">
+                  {formatCents(year.averageFullChfCents, locale)}
+                </td>
+                <td className="num">
+                  {formatCents(year.averageNetChfCents, locale)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="grand-total">
+              <td>{t('common.total')}</td>
+              <td className="num">{stats.listCount}</td>
+              <td className="num">{stats.volumeCount}</td>
+              <td className="num">{formatCents(stats.fullChfCents, locale)}</td>
+              <td className="num">
+                {stats.discountChfCents > 0
+                  ? `−${formatCents(stats.discountChfCents, locale)}`
+                  : ''}
+              </td>
+              <td className="num">{formatCents(stats.netChfCents, locale)}</td>
+              <td className="num">
+                {formatCents(stats.averageFullChfCents, locale)}
+              </td>
+              <td className="num">
+                {formatCents(stats.averageNetChfCents, locale)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      <div className="stats-cards" role="region" aria-label={t('purchases.statsRegion')}>
+      <div
+        className="stats-cards"
+        role="region"
+        aria-label={t('purchases.statsRegion')}
+      >
         {stats.years.map((year) => (
           <StatsCard key={year.year} title={String(year.year)} values={year} />
         ))}
@@ -225,19 +283,50 @@ function Stats({ stats }: { stats: PurchaseStats }) {
 }
 
 /** A compact equivalent of the comparison table, shown only on small screens. */
-function StatsCard({ title, values }: { title: string, values: YearStats | PurchaseStats }) {
+function StatsCard({
+  title,
+  values,
+}: {
+  title: string
+  values: YearStats | PurchaseStats
+}) {
   const { locale, t } = useI18n()
   return (
     <article className="stats-card">
       <h2>{title}</h2>
       <dl className="stats-values">
-        <div><dt>{t('purchases.lists')}</dt><dd>{values.listCount}</dd></div>
-        <div><dt>{t('common.volumes')}</dt><dd>{values.volumeCount}</dd></div>
-        <div><dt>{t('purchases.full')}</dt><dd>CHF {formatCents(values.fullChfCents, locale)}</dd></div>
-        <div><dt>{t('purchases.saving')}</dt><dd>{values.discountChfCents > 0 ? `−CHF ${formatCents(values.discountChfCents, locale)}` : '—'}</dd></div>
-        <div><dt>{t('purchases.spent')}</dt><dd>CHF {formatCents(values.netChfCents, locale)}</dd></div>
-        <div><dt>{t('purchases.averageFull')}</dt><dd>CHF {formatCents(values.averageFullChfCents, locale)}</dd></div>
-        <div><dt>{t('purchases.averageDiscounted')}</dt><dd>CHF {formatCents(values.averageNetChfCents, locale)}</dd></div>
+        <div>
+          <dt>{t('purchases.lists')}</dt>
+          <dd>{values.listCount}</dd>
+        </div>
+        <div>
+          <dt>{t('common.volumes')}</dt>
+          <dd>{values.volumeCount}</dd>
+        </div>
+        <div>
+          <dt>{t('purchases.full')}</dt>
+          <dd>CHF {formatCents(values.fullChfCents, locale)}</dd>
+        </div>
+        <div>
+          <dt>{t('purchases.saving')}</dt>
+          <dd>
+            {values.discountChfCents > 0
+              ? `−CHF ${formatCents(values.discountChfCents, locale)}`
+              : '—'}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('purchases.spent')}</dt>
+          <dd>CHF {formatCents(values.netChfCents, locale)}</dd>
+        </div>
+        <div>
+          <dt>{t('purchases.averageFull')}</dt>
+          <dd>CHF {formatCents(values.averageFullChfCents, locale)}</dd>
+        </div>
+        <div>
+          <dt>{t('purchases.averageDiscounted')}</dt>
+          <dd>CHF {formatCents(values.averageNetChfCents, locale)}</dd>
+        </div>
       </dl>
     </article>
   )

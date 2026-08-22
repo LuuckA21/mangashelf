@@ -9,6 +9,7 @@ import Purchases from './pages/Purchases'
 import Register from './pages/Register'
 import SeriesDetail from './pages/SeriesDetail'
 import Settings from './pages/Settings'
+import AdminUsers from './pages/AdminUsers'
 import { useI18n } from './i18n'
 
 export default function App() {
@@ -18,7 +19,11 @@ export default function App() {
   // Rendering routes before the session check resolves would flash the login
   // screen at users who are in fact already signed in.
   if (loading) {
-    return <div className="app-state" role="status">{t('session.loading')}</div>
+    return (
+      <div className="app-state" role="status">
+        {t('session.loading')}
+      </div>
+    )
   }
 
   if (unavailable) {
@@ -26,7 +31,9 @@ export default function App() {
       <div className="app-state">
         <h1>{t('session.unavailableTitle')}</h1>
         <p>{t('session.unavailableBody')}</p>
-        <button type="button" onClick={retry}>{t('common.retry')}</button>
+        <button type="button" onClick={retry}>
+          {t('common.retry')}
+        </button>
       </div>
     )
   }
@@ -50,6 +57,12 @@ export default function App() {
       <Route path="/purchases" element={<Purchases />} />
       <Route path="/purchases/:id" element={<PurchaseDetail />} />
       <Route path="/settings" element={<Settings />} />
+      <Route
+        path="/admin/users"
+        element={
+          user.role === 'ADMIN' ? <AdminUsers /> : <Navigate to="/" replace />
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

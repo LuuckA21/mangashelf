@@ -23,11 +23,12 @@ export default function MyCollection() {
   const [filter, setFilter] = useState<Filter>('all')
 
   useEffect(() => {
-    collection.summary()
+    collection
+      .summary()
       .then(setEditions)
       .catch(() => setError(t('collection.loadFailed')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   // Filtering happens in the browser: the summary endpoint already returns
   // the whole shelf in one request, so a query per keystroke would add
@@ -41,11 +42,14 @@ export default function MyCollection() {
         if (filter === 'gaps' && e.missingNumbers.length === 0) return false
         if (filter === 'ongoing' && e.completed) return false
         // Complete means the run is over and nothing is missing from it.
-        if (filter === 'done' && (!e.completed || e.missingNumbers.length > 0)) return false
+        if (filter === 'done' && (!e.completed || e.missingNumbers.length > 0))
+          return false
         if (!needle) return true
-        return e.mangaTitle.toLowerCase().includes(needle)
-          || e.seriesName.toLowerCase().includes(needle)
-          || e.publisher.toLowerCase().includes(needle)
+        return (
+          e.mangaTitle.toLowerCase().includes(needle) ||
+          e.seriesName.toLowerCase().includes(needle) ||
+          e.publisher.toLowerCase().includes(needle)
+        )
       })
       .sort((a, b) => a.mangaTitle.localeCompare(b.mangaTitle, locale))
   }, [editions, query, filter, locale])
@@ -71,7 +75,11 @@ export default function MyCollection() {
         <h1>{t('collection.title')}</h1>
       </div>
 
-      {error && <div className="error" role="alert">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       {editions.length > 0 && (
         <>
@@ -84,7 +92,11 @@ export default function MyCollection() {
               style={{ flex: 1, minWidth: 200 }}
             />
             {query && (
-              <button type="button" className="quiet" onClick={() => setQuery('')}>
+              <button
+                type="button"
+                className="quiet"
+                onClick={() => setQuery('')}
+              >
                 {t('collection.clear')}
               </button>
             )}
@@ -109,9 +121,7 @@ export default function MyCollection() {
       {loading ? (
         <p className="muted">{t('common.loading')}</p>
       ) : editions.length === 0 ? (
-        <div className="empty">
-          {t('collection.empty')}
-        </div>
+        <div className="empty">{t('collection.empty')}</div>
       ) : shown.length === 0 ? (
         <div className="empty">
           {filter === 'gaps'
@@ -125,19 +135,23 @@ export default function MyCollection() {
       ) : (
         <ul className="edition-list">
           {shown.map((e) => {
-            const percent = e.progressTotal > 0
-              ? Math.round((e.ownedCount / e.progressTotal) * 100)
-              : 0
+            const percent =
+              e.progressTotal > 0
+                ? Math.round((e.ownedCount / e.progressTotal) * 100)
+                : 0
             return (
               <li key={e.seriesId}>
                 <Link to={`/edition/${e.seriesId}`}>
                   <div className="name">{e.mangaTitle}</div>
                   <div className="muted" style={{ fontSize: 14 }}>
                     {e.seriesName} · {e.publisher} · {e.ownedCount}
-                    {e.declaredTotal != null ? ` ${t('collection.of')} ${e.progressTotal}` : ''}{' '}
+                    {e.declaredTotal != null
+                      ? ` ${t('collection.of')} ${e.progressTotal}`
+                      : ''}{' '}
                     {t('common.volumes')}
                     {e.completed
-                      ? ` · ${t('collection.completed')}` : ` · ${t('collection.ongoing')}`}
+                      ? ` · ${t('collection.completed')}`
+                      : ` · ${t('collection.ongoing')}`}
                   </div>
 
                   <div className="progress" style={{ margin: '8px 0' }}>

@@ -10,7 +10,11 @@ import { useI18n } from '../i18n'
  * entry instead of offering an import, because two rows for the same work
  * would each collect their own editions and split the shelf in half.
  */
-export default function AniListSearch({ onImported }: { onImported: (m: Manga) => void }) {
+export default function AniListSearch({
+  onImported,
+}: {
+  onImported: (m: Manga) => void
+}) {
   const navigate = useNavigate()
   const { t } = useI18n()
   const [term, setTerm] = useState('')
@@ -49,9 +53,15 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
 
   return (
     <div className="panel" style={{ marginBottom: 24 }}>
-      <p className="eyebrow" style={{ marginTop: 0 }}>{t('anilist.title')}</p>
+      <p className="eyebrow" style={{ marginTop: 0 }}>
+        {t('anilist.title')}
+      </p>
 
-      <form className="row" onSubmit={handleSearch} style={{ marginBottom: 16 }}>
+      <form
+        className="row"
+        onSubmit={handleSearch}
+        style={{ marginBottom: 16 }}
+      >
         <input
           aria-label={t('anilist.searchLabel')}
           placeholder={t('anilist.searchPlaceholder')}
@@ -64,7 +74,11 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
         </button>
       </form>
 
-      {error && <div className="error" role="alert">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       {results?.length === 0 && (
         <p className="muted" style={{ fontSize: 14 }}>
@@ -77,16 +91,27 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
           {results.map((result) => (
             <li key={result.anilistId}>
               {result.coverUrl && (
-                <img src={result.coverUrl} alt="" className="result-cover" loading="lazy" />
+                <img
+                  src={result.coverUrl}
+                  alt=""
+                  className="result-cover"
+                  loading="lazy"
+                />
               )}
               <div className="result-body">
                 <div className="result-title">
                   {result.titleEnglish ?? result.titleRomaji}
                 </div>
                 <div className="muted" style={{ fontSize: 13 }}>
-                  {[result.authors, result.startYear,
-                    result.totalVolumes ? `${result.totalVolumes} ${t('common.volumeShort')}` : null]
-                    .filter(Boolean).join(' · ')}
+                  {[
+                    result.authors,
+                    result.startYear,
+                    result.totalVolumes
+                      ? `${result.totalVolumes} ${t('common.volumeShort')}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </div>
               </div>
               {result.alreadyInCatalogue ? (
@@ -102,7 +127,8 @@ export default function AniListSearch({ onImported }: { onImported: (m: Manga) =
                   disabled={importing !== null}
                 >
                   {importing === result.anilistId
-                    ? t('common.importing') : t('common.import')}
+                    ? t('common.importing')
+                    : t('common.import')}
                 </button>
               )}
             </li>

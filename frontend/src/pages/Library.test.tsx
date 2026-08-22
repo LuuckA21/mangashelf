@@ -44,13 +44,21 @@ function manga(id: number, title: string): Manga {
   }
 }
 
-function page(content: Manga[], number: number, totalPages: number,
-              totalElements = content.length): PageResult<Manga> {
+function page(
+  content: Manga[],
+  number: number,
+  totalPages: number,
+  totalElements = content.length,
+): PageResult<Manga> {
   return { content, size: 24, number, totalPages, totalElements }
 }
 
 function renderLibrary() {
-  render(<MemoryRouter><Library /></MemoryRouter>)
+  render(
+    <MemoryRouter>
+      <Library />
+    </MemoryRouter>,
+  )
 }
 
 describe('Library', () => {
@@ -69,7 +77,9 @@ describe('Library', () => {
     expect(await screen.findByText('Beyond twenty-four')).toBeInTheDocument()
     expect(screen.getByText('First page')).toBeInTheDocument()
     expect(listManga).toHaveBeenLastCalledWith('', 1)
-    expect(screen.queryByRole('button', { name: 'Carica altri' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Carica altri' }),
+    ).not.toBeInTheDocument()
   })
 
   it('searches on the server and replaces the previous result set', async () => {
@@ -81,13 +91,17 @@ describe('Library', () => {
     renderLibrary()
     expect(await screen.findByText('Berserk')).toBeInTheDocument()
 
-    await user.type(screen.getByRole('textbox', { name: 'Cerca nel catalogo' }),
-      '  Vagabond  ')
+    await user.type(
+      screen.getByRole('textbox', { name: 'Cerca nel catalogo' }),
+      '  Vagabond  ',
+    )
     await user.click(screen.getByRole('button', { name: 'Cerca' }))
 
     expect(await screen.findByText('Vagabond')).toBeInTheDocument()
     expect(screen.queryByText('Berserk')).not.toBeInTheDocument()
-    await waitFor(() => expect(listManga).toHaveBeenLastCalledWith('  Vagabond  ', 0))
+    await waitFor(() =>
+      expect(listManga).toHaveBeenLastCalledWith('  Vagabond  ', 0),
+    )
   })
 
   it('keeps the admin actions in their own responsive control group', async () => {
@@ -95,9 +109,11 @@ describe('Library', () => {
     renderLibrary()
 
     await screen.findByRole('button', { name: 'Importa da AniList' })
-    expect(screen.getByRole('button', { name: 'Importa da AniList' }).parentElement)
-      .toHaveClass('catalog-actions')
-    expect(screen.getByRole('button', { name: 'Cerca' }).closest('form'))
-      .toHaveClass('catalog-search')
+    expect(
+      screen.getByRole('button', { name: 'Importa da AniList' }).parentElement,
+    ).toHaveClass('catalog-actions')
+    expect(
+      screen.getByRole('button', { name: 'Cerca' }).closest('form'),
+    ).toHaveClass('catalog-search')
   })
 })

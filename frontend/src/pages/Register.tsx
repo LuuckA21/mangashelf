@@ -46,14 +46,20 @@ export default function Register() {
 
         <label className="auth-language">
           <span>{t('language.label')}</span>
-          <select value={language}
-                  onChange={(event) => setLanguage(event.target.value as 'it' | 'en')}>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as 'it' | 'en')}
+          >
             <option value="it">{t('language.it')}</option>
             <option value="en">{t('language.en')}</option>
           </select>
         </label>
 
-        {error && <div className="error" role="alert">{error}</div>}
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="username">{t('register.username')}</label>
@@ -99,7 +105,8 @@ export default function Register() {
         </button>
 
         <p className="switch">
-          {t('register.hasAccount')} <Link to="/login">{t('register.login')}</Link>
+          {t('register.hasAccount')}{' '}
+          <Link to="/login">{t('register.login')}</Link>
         </p>
       </form>
     </div>

@@ -29,17 +29,19 @@ export default function MangaDetail() {
   const [editingSeriesId, setEditingSeriesId] = useState<number | null>(null)
 
   const loadSeries = useCallback(() => {
-    catalog.listSeries(mangaId)
+    catalog
+      .listSeries(mangaId)
       .then(setSeries)
       .catch(() => setError(t('manga.loadEditionsFailed')))
-  }, [mangaId])
+  }, [mangaId, t])
 
   useEffect(() => {
-    catalog.getManga(mangaId)
+    catalog
+      .getManga(mangaId)
       .then(setManga)
       .catch(() => setError(t('manga.notFound')))
     loadSeries()
-  }, [mangaId, loadSeries])
+  }, [mangaId, loadSeries, t])
 
   function describe(e: unknown, fallback: string) {
     const messages: Record<string, string> = {
@@ -57,7 +59,10 @@ export default function MangaDetail() {
     setError(null)
     try {
       const created = await catalog.createSeries(mangaId, {
-        publisher, name, language: 'it', completed: false,
+        publisher,
+        name,
+        language: 'it',
+        completed: false,
       })
       setSeries((current) => [...current, created])
       setPublisher('')
@@ -71,20 +76,29 @@ export default function MangaDetail() {
   return (
     <Layout>
       <div className="page-head">
-        <p className="eyebrow"><Link to="/">{t('nav.catalog')}</Link></p>
+        <p className="eyebrow">
+          <Link to="/">{t('nav.catalog')}</Link>
+        </p>
         <div className="row" style={{ alignItems: 'flex-start', gap: 20 }}>
-          {manga?.coverUrl && <img src={manga.coverUrl} alt="" className="detail-cover" />}
+          {manga?.coverUrl && (
+            <img src={manga.coverUrl} alt="" className="detail-cover" />
+          )}
           <div style={{ flex: 1, minWidth: 240 }}>
             <h1>{manga?.displayTitle ?? '…'}</h1>
             {manga?.authors && (
-              <p className="muted" style={{ margin: '4px 0' }}>{manga.authors}</p>
+              <p className="muted" style={{ margin: '4px 0' }}>
+                {manga.authors}
+              </p>
             )}
             {manga?.genres && manga.genres.length > 0 && (
               <p className="eyebrow">{manga.genres.slice(0, 5).join(' · ')}</p>
             )}
             {isAdmin && manga && (
               <div className="inline-actions" style={{ marginTop: 12 }}>
-                <button className="quiet" onClick={() => setEditingManga(!editingManga)}>
+                <button
+                  className="quiet"
+                  onClick={() => setEditingManga(!editingManga)}
+                >
                   {editingManga ? t('common.close') : t('common.edit')}
                 </button>
                 <ConfirmDelete
@@ -104,7 +118,11 @@ export default function MangaDetail() {
         </div>
       </div>
 
-      {error && <div className="error" role="alert">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       {editingManga && manga && (
         <MangaForm
@@ -115,7 +133,10 @@ export default function MangaDetail() {
         />
       )}
 
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+      <div
+        className="row"
+        style={{ justifyContent: 'space-between', marginBottom: 16 }}
+      >
         <h2 style={{ fontSize: 20 }}>{t('manga.editions')}</h2>
         {isAdmin && (
           <button onClick={() => setAdding(!adding)}>
@@ -125,17 +146,31 @@ export default function MangaDetail() {
       </div>
 
       {adding && (
-        <form className="panel" onSubmit={handleAddSeries} style={{ marginBottom: 24 }}>
+        <form
+          className="panel"
+          onSubmit={handleAddSeries}
+          style={{ marginBottom: 24 }}
+        >
           <div className="grid-2">
             <div className="field">
               <label htmlFor="publisher">{t('manga.publisher')}</label>
-              <input id="publisher" placeholder="Star Comics" value={publisher} required
-                     onChange={(e) => setPublisher(e.target.value)} />
+              <input
+                id="publisher"
+                placeholder="Star Comics"
+                value={publisher}
+                required
+                onChange={(e) => setPublisher(e.target.value)}
+              />
             </div>
             <div className="field">
               <label htmlFor="name">{t('manga.editionName')}</label>
-              <input id="name" placeholder="New Edition" value={name} required
-                     onChange={(e) => setName(e.target.value)} />
+              <input
+                id="name"
+                placeholder="New Edition"
+                value={name}
+                required
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
           </div>
           <button type="submit">{t('common.save')}</button>
@@ -155,7 +190,10 @@ export default function MangaDetail() {
               {editingSeriesId === s.id ? (
                 <SeriesForm
                   series={s}
-                  onSaved={() => { setEditingSeriesId(null); loadSeries() }}
+                  onSaved={() => {
+                    setEditingSeriesId(null)
+                    loadSeries()
+                  }}
                   onCancel={() => setEditingSeriesId(null)}
                   onError={(message) => setError(message)}
                 />
@@ -165,13 +203,17 @@ export default function MangaDetail() {
                     <div className="name">{s.name}</div>
                     <div className="muted" style={{ fontSize: 14 }}>
                       {s.publisher}
-                      {s.totalVolumes != null && ` · ${s.totalVolumes} ${t('common.volumes')}`}
+                      {s.totalVolumes != null &&
+                        ` · ${s.totalVolumes} ${t('common.volumes')}`}
                       {s.completed && ` · ${t('collection.completed')}`}
                     </div>
                   </Link>
                   {isAdmin && (
                     <div className="inline-actions">
-                      <button className="quiet" onClick={() => setEditingSeriesId(s.id)}>
+                      <button
+                        className="quiet"
+                        onClick={() => setEditingSeriesId(s.id)}
+                      >
                         {t('common.edit')}
                       </button>
                       <ConfirmDelete
@@ -197,7 +239,12 @@ export default function MangaDetail() {
   )
 }
 
-function SeriesForm({ series, onSaved, onCancel, onError }: {
+function SeriesForm({
+  series,
+  onSaved,
+  onCancel,
+  onError,
+}: {
   series: Series
   onSaved: () => void
   onCancel: () => void
@@ -208,7 +255,8 @@ function SeriesForm({ series, onSaved, onCancel, onError }: {
   const [name, setName] = useState(series.name)
   const [language, setLanguage] = useState(series.language)
   const [totalVolumes, setTotalVolumes] = useState(
-    series.totalVolumes === null ? '' : String(series.totalVolumes))
+    series.totalVolumes === null ? '' : String(series.totalVolumes),
+  )
   const [completed, setCompleted] = useState(series.completed)
   const [busy, setBusy] = useState(false)
 
@@ -225,9 +273,11 @@ function SeriesForm({ series, onSaved, onCancel, onError }: {
       })
       onSaved()
     } catch (e) {
-      onError(e instanceof ApiError && e.code === 'validation_failed'
-        ? t('manga.seriesValidation')
-        : t('manga.seriesSaveFailed'))
+      onError(
+        e instanceof ApiError && e.code === 'validation_failed'
+          ? t('manga.seriesValidation')
+          : t('manga.seriesSaveFailed'),
+      )
     } finally {
       setBusy(false)
     }
@@ -238,22 +288,33 @@ function SeriesForm({ series, onSaved, onCancel, onError }: {
       <div className="grid-2">
         <div className="field">
           <label htmlFor={`pub-${series.id}`}>{t('manga.publisher')}</label>
-          <input id={`pub-${series.id}`} value={publisher} required
-                 onChange={(e) => setPublisher(e.target.value)} />
+          <input
+            id={`pub-${series.id}`}
+            value={publisher}
+            required
+            onChange={(e) => setPublisher(e.target.value)}
+          />
         </div>
         <div className="field">
           <label htmlFor={`name-${series.id}`}>{t('manga.editionName')}</label>
-          <input id={`name-${series.id}`} value={name} required
-                 placeholder="Normale, New Edition, Gazzetta…"
-                 onChange={(e) => setName(e.target.value)} />
+          <input
+            id={`name-${series.id}`}
+            value={name}
+            required
+            placeholder="Normale, New Edition, Gazzetta…"
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="grid-2">
         <div className="field">
           <label htmlFor={`lang-${series.id}`}>{t('manga.language')}</label>
-          <select id={`lang-${series.id}`} value={language}
-                  onChange={(e) => setLanguage(e.target.value)}>
+          <select
+            id={`lang-${series.id}`}
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+          >
             <option value="it">{t('manga.languageIt')}</option>
             <option value="ja">{t('manga.languageJa')}</option>
             <option value="en">{t('manga.languageEn')}</option>
@@ -264,16 +325,25 @@ function SeriesForm({ series, onSaved, onCancel, onError }: {
         </div>
         <div className="field">
           <label htmlFor={`tot-${series.id}`}>{t('manga.totalVolumes')}</label>
-          <input id={`tot-${series.id}`} type="number" min={0} max={999} value={totalVolumes}
-                 placeholder={t('mangaForm.blankIfOngoing')}
-                 onChange={(e) => setTotalVolumes(e.target.value)} />
+          <input
+            id={`tot-${series.id}`}
+            type="number"
+            min={0}
+            max={999}
+            value={totalVolumes}
+            placeholder={t('mangaForm.blankIfOngoing')}
+            onChange={(e) => setTotalVolumes(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="field">
         <label htmlFor={`done-${series.id}`}>{t('mangaForm.status')}</label>
-        <select id={`done-${series.id}`} value={completed ? 'yes' : 'no'}
-                onChange={(e) => setCompleted(e.target.value === 'yes')}>
+        <select
+          id={`done-${series.id}`}
+          value={completed ? 'yes' : 'no'}
+          onChange={(e) => setCompleted(e.target.value === 'yes')}
+        >
           <option value="no">{t('status.releasing')}</option>
           <option value="yes">{t('status.finished')}</option>
         </select>

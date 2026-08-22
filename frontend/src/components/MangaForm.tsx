@@ -18,7 +18,12 @@ interface Props {
  * have to be filled in a second, different form — and a field left out of an
  * update payload is written back as null.
  */
-export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) {
+export default function MangaForm({
+  manga,
+  onSaved,
+  onCancel,
+  onError,
+}: Props) {
   const { t } = useI18n()
   const [titleRomaji, setTitleRomaji] = useState(manga?.titleRomaji ?? '')
   const [titleEnglish, setTitleEnglish] = useState(manga?.titleEnglish ?? '')
@@ -29,9 +34,11 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
   const [status, setStatus] = useState<string>(manga?.status ?? '')
   const [genres, setGenres] = useState((manga?.genres ?? []).join(', '))
   const [startYear, setStartYear] = useState(
-    manga?.startYear == null ? '' : String(manga.startYear))
+    manga?.startYear == null ? '' : String(manga.startYear),
+  )
   const [totalVolumes, setTotalVolumes] = useState(
-    manga?.totalVolumes == null ? '' : String(manga.totalVolumes))
+    manga?.totalVolumes == null ? '' : String(manga.totalVolumes),
+  )
 
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -50,14 +57,19 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
         coverUrl: coverUrl || null,
         status: (status || null) as Manga['status'],
         genres: genres.trim()
-          ? genres.split(',').map((g) => g.trim()).filter(Boolean)
+          ? genres
+              .split(',')
+              .map((g) => g.trim())
+              .filter(Boolean)
           : null,
         startYear: startYear === '' ? null : Number(startYear),
         totalVolumes: totalVolumes === '' ? null : Number(totalVolumes),
       }
-      onSaved(manga
-        ? await catalog.updateManga(manga.id, body)
-        : await catalog.createManga(body))
+      onSaved(
+        manga
+          ? await catalog.updateManga(manga.id, body)
+          : await catalog.createManga(body),
+      )
     } catch {
       onError(t('common.saveFailed'))
     } finally {
@@ -88,78 +100,124 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
   }
 
   return (
-    <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
+    <form
+      className="panel"
+      onSubmit={handleSubmit}
+      style={{ marginBottom: 24 }}
+    >
       <div className="grid-2">
         <div className="field">
           <label htmlFor="titleRomaji">{t('mangaForm.title')}</label>
-          <input id="titleRomaji" value={titleRomaji} required autoFocus
-                 onChange={(e) => setTitleRomaji(e.target.value)} />
+          <input
+            id="titleRomaji"
+            value={titleRomaji}
+            required
+            autoFocus
+            onChange={(e) => setTitleRomaji(e.target.value)}
+          />
         </div>
         <div className="field">
           <label htmlFor="authorsEdit">{t('mangaForm.author')}</label>
-          <input id="authorsEdit" value={authors}
-                 onChange={(e) => setAuthors(e.target.value)} />
+          <input
+            id="authorsEdit"
+            value={authors}
+            onChange={(e) => setAuthors(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="grid-2">
         <div className="field">
           <label htmlFor="titleEnglishEdit">{t('mangaForm.english')}</label>
-          <input id="titleEnglishEdit" value={titleEnglish}
-                 onChange={(e) => setTitleEnglish(e.target.value)} />
+          <input
+            id="titleEnglishEdit"
+            value={titleEnglish}
+            onChange={(e) => setTitleEnglish(e.target.value)}
+          />
         </div>
         <div className="field">
           <label htmlFor="titleNative">{t('mangaForm.native')}</label>
-          <input id="titleNative" value={titleNative}
-                 onChange={(e) => setTitleNative(e.target.value)} />
+          <input
+            id="titleNative"
+            value={titleNative}
+            onChange={(e) => setTitleNative(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="field">
         <label htmlFor="descriptionEdit">{t('mangaForm.plot')}</label>
-        <textarea id="descriptionEdit" rows={5} value={description}
-                  onChange={(e) => setDescription(e.target.value)} />
+        <textarea
+          id="descriptionEdit"
+          rows={5}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
       </div>
 
       <div className="field">
         <label htmlFor="genresEdit">{t('mangaForm.genresSeparated')}</label>
-        <input id="genresEdit" value={genres} placeholder="Action, Adventure"
-               onChange={(e) => setGenres(e.target.value)} />
+        <input
+          id="genresEdit"
+          value={genres}
+          placeholder="Action, Adventure"
+          onChange={(e) => setGenres(e.target.value)}
+        />
       </div>
 
       <div className="grid-2">
         <div className="field">
           <label htmlFor="statusEdit">{t('mangaForm.publicationStatus')}</label>
-          <select id="statusEdit" value={status}
-                  onChange={(e) => setStatus(e.target.value)}>
+          <select
+            id="statusEdit"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option value="">{t('mangaForm.notSpecified')}</option>
             <option value="RELEASING">{t('status.releasing')}</option>
             <option value="FINISHED">{t('status.finished')}</option>
             <option value="HIATUS">{t('status.hiatus')}</option>
-            <option value="NOT_YET_RELEASED">{t('status.notYetReleased')}</option>
+            <option value="NOT_YET_RELEASED">
+              {t('status.notYetReleased')}
+            </option>
             <option value="CANCELLED">{t('status.cancelled')}</option>
           </select>
         </div>
         <div className="field">
           <label htmlFor="yearEdit">{t('mangaForm.startYear')}</label>
-          <input id="yearEdit" type="number" min={1900} max={2200} value={startYear}
-                 onChange={(e) => setStartYear(e.target.value)} />
+          <input
+            id="yearEdit"
+            type="number"
+            min={1900}
+            max={2200}
+            value={startYear}
+            onChange={(e) => setStartYear(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="field">
         <label htmlFor="volsEdit">{t('mangaForm.originalVolumes')}</label>
-        <input id="volsEdit" type="number" min={0} value={totalVolumes}
-               placeholder={t('mangaForm.blankIfOngoing')}
-               onChange={(e) => setTotalVolumes(e.target.value)} />
+        <input
+          id="volsEdit"
+          type="number"
+          min={0}
+          value={totalVolumes}
+          placeholder={t('mangaForm.blankIfOngoing')}
+          onChange={(e) => setTotalVolumes(e.target.value)}
+        />
       </div>
 
       <div className="field">
         <label htmlFor="coverUrl">{t('mangaForm.cover')}</label>
         <div className="cover-picker">
-          {coverUrl
-            ? <img src={coverUrl} alt="" className="cover-preview" />
-            : <div className="cover-preview empty-cover">{t('mangaForm.noCover')}</div>}
+          {coverUrl ? (
+            <img src={coverUrl} alt="" className="cover-preview" />
+          ) : (
+            <div className="cover-preview empty-cover">
+              {t('mangaForm.noCover')}
+            </div>
+          )}
 
           <div className="cover-controls">
             <input
@@ -188,7 +246,11 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
                 {uploading ? t('mangaForm.uploading') : t('mangaForm.upload')}
               </button>
               {coverUrl && (
-                <button type="button" className="quiet" onClick={() => setCoverUrl('')}>
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() => setCoverUrl('')}
+                >
                   {t('mangaForm.removeCover')}
                 </button>
               )}
@@ -207,7 +269,11 @@ export default function MangaForm({ manga, onSaved, onCancel, onError }: Props) 
 
       <div className="inline-actions">
         <button type="submit" disabled={busy}>
-          {busy ? t('common.saving') : manga ? t('common.save') : t('common.create')}
+          {busy
+            ? t('common.saving')
+            : manga
+              ? t('common.save')
+              : t('common.create')}
         </button>
         {onCancel && (
           <button type="button" className="quiet" onClick={onCancel}>

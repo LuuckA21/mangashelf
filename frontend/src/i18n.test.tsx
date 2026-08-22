@@ -9,7 +9,10 @@ function Probe() {
   return (
     <>
       <span>{t('settings.title')}</span>
-      <button type="button" onClick={() => setLanguage(language === 'it' ? 'en' : 'it')}>
+      <button
+        type="button"
+        onClick={() => setLanguage(language === 'it' ? 'en' : 'it')}
+      >
         switch
       </button>
     </>
@@ -24,7 +27,11 @@ describe('internationalisation', () => {
   })
 
   it('changes the interface language and persists it locally', async () => {
-    render(<I18nProvider><Probe /></I18nProvider>)
+    render(
+      <I18nProvider>
+        <Probe />
+      </I18nProvider>,
+    )
 
     expect(screen.getByText('Impostazioni')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'switch' }))
