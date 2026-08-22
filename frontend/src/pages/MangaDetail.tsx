@@ -32,14 +32,14 @@ export default function MangaDetail() {
     catalog.listSeries(mangaId)
       .then(setSeries)
       .catch(() => setError(t('manga.loadEditionsFailed')))
-  }, [mangaId])
+  }, [mangaId, t])
 
   useEffect(() => {
     catalog.getManga(mangaId)
       .then(setManga)
       .catch(() => setError(t('manga.notFound')))
     loadSeries()
-  }, [mangaId, loadSeries])
+  }, [mangaId, loadSeries, t])
 
   function describe(e: unknown, fallback: string) {
     const messages: Record<string, string> = {

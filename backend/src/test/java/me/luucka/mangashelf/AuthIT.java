@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -37,6 +39,9 @@ class AuthIT extends IntegrationTest {
 
     @Autowired
     private LoginAttempts attempts;
+
+    @Autowired
+    private PasswordEncoder encoder;
 
     @Test
     void registrationAssignsRolesAndReportsDuplicates() throws Exception {
@@ -208,6 +213,116 @@ class AuthIT extends IntegrationTest {
     }
 
     @Test
+    void profileUpdateRequiresThePasswordAndKeepsIdentityUnique() throws Exception {
+        UserPrincipal signedIn = withPassword(member, PASSWORD);
+        AppUser existingAdmin = users.findById(admin.id()).orElseThrow();
+        existingAdmin.setEmail("admin@example.test");
+        users.saveAndFlush(existingAdmin);
+
+        mvc.perform(put("/api/auth/me/profile").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "reader", "email": "READER@EXAMPLE.TEST",
+                                 "currentPassword": "wrong password"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("current_password_invalid"));
+
+        mvc.perform(put("/api/auth/me/profile").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "email": "reader@example.test",
+                                 "currentPassword": "%s"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("username_taken"));
+
+        mvc.perform(put("/api/auth/me/profile").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "reader", "email": "ADMIN@EXAMPLE.TEST",
+                                 "currentPassword": "%s"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("email_taken"));
+
+        mvc.perform(put("/api/auth/me/profile").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "reader", "email": "READER@EXAMPLE.TEST",
+                                 "currentPassword": "%s"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("reader"))
+                .andExpect(jsonPath("$.email").value("reader@example.test"));
+
+        AppUser updated = users.findById(member.id()).orElseThrow();
+        assertThat(updated.getUsername()).isEqualTo("reader");
+        assertThat(updated.getEmail()).isEqualTo("reader@example.test");
+    }
+
+    @Test
+    void passwordChangeRejectsWrongAndOverlongSecretsThenRotatesTheHash() throws Exception {
+        UserPrincipal signedIn = withPassword(member, PASSWORD);
+        String replacement = "a different secure password";
+
+        mvc.perform(put("/api/auth/me/password").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "wrong password",
+                                 "newPassword": "%s"}
+                                """.formatted(replacement)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("current_password_invalid"));
+
+        mvc.perform(put("/api/auth/me/password").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s", "newPassword": "%s"}
+                                """.formatted(PASSWORD, "x".repeat(73))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("password_too_long"));
+
+        mvc.perform(put("/api/auth/me/password").with(user(signedIn)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s", "newPassword": "%s"}
+                                """.formatted(PASSWORD, replacement)))
+                .andExpect(status().isNoContent());
+
+        String hash = users.findById(member.id()).orElseThrow().getPasswordHash();
+        assertThat(encoder.matches(PASSWORD, hash)).isFalse();
+        assertThat(encoder.matches(replacement, hash)).isTrue();
+    }
+
+    @Test
+    void regularUserCanDeleteTheAccountButAdministratorCannot() throws Exception {
+        UserPrincipal signedInMember = withPassword(member, PASSWORD);
+        UserPrincipal signedInAdmin = withPassword(admin, PASSWORD);
+
+        mvc.perform(delete("/api/auth/me").with(user(signedInAdmin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("admin_account_delete_forbidden"));
+        assertThat(users.existsById(admin.id())).isTrue();
+
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(delete("/api/auth/me").with(user(signedInMember)).with(csrf())
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isNoContent());
+
+        assertThat(users.existsById(member.id())).isFalse();
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
     void simultaneousFirstRegistrationsElectExactlyOneAdministrator() throws Exception {
         users.deleteAll();
         users.flush();
@@ -258,5 +373,11 @@ class AuthIT extends IntegrationTest {
                 .content("""
                         {"login": "%s", "password": "%s"}
                         """.formatted(login, password));
+    }
+
+    private UserPrincipal withPassword(UserPrincipal principal, String password) {
+        AppUser user = users.findById(principal.id()).orElseThrow();
+        user.setPasswordHash(encoder.encode(password));
+        return UserPrincipal.from(users.saveAndFlush(user));
     }
 }

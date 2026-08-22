@@ -201,8 +201,13 @@ label {
   border-radius: var(--radius);
   padding: calc(var(--s) * 3);
 }
-.settings-panel { max-width: 520px; }
+.settings-stack { display: grid; gap: calc(var(--s) * 3); max-width: 620px; }
+.settings-panel { width: 100%; }
+.settings-panel h2 { margin-bottom: calc(var(--s) * 2); font-size: 22px; }
+.settings-panel .field:last-child { margin-bottom: 0; }
 .field-help { margin: var(--s) 0 0; font-size: 13px; }
+.danger-zone { border-left: 3px solid var(--vermilion); }
+.danger-zone > p { margin-top: 0; }
 
 /* ------------------------------------------------------------ manga list */
 
@@ -713,6 +718,7 @@ button.danger:hover:not(:disabled) { background: var(--vermilion); color: #fff; 
   .catalog-search, .catalog-actions { flex: 1 1 100%; }
   .catalog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .catalog-actions button, .new-purchase-list { width: 100%; }
+  .settings-panel > button { width: 100%; }
 
   /* A 44px minimum keeps every control usable with a thumb. */
   button, input, select { min-height: 44px; }

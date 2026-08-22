@@ -11,6 +11,9 @@ interface Session {
   setUser: (user: User | null) => void
   retry: () => void
   updateLanguage: (language: Language) => Promise<void>
+  updateProfile: (username: string, email: string, currentPassword: string) => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  deleteAccount: (currentPassword: string) => Promise<void>
 }
 
 const SessionContext = createContext<Session | null>(null)
@@ -55,9 +58,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(await auth.updateLanguage(language))
   }
 
+  async function updateProfile(username: string, email: string, currentPassword: string) {
+    setUser(await auth.updateProfile(username, email, currentPassword))
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string) {
+    await auth.changePassword(currentPassword, newPassword)
+  }
+
+  async function deleteAccount(currentPassword: string) {
+    await auth.deleteAccount(currentPassword)
+    setUser(null)
+  }
+
   return (
     <SessionContext.Provider value={{
       user, loading, unavailable, setUser, retry: restore, updateLanguage,
+      updateProfile, changePassword, deleteAccount,
     }}>
       {children}
     </SessionContext.Provider>

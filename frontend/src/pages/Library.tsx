@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { catalog, type Manga } from '../api/client'
 import { useSession } from '../api/session'
@@ -23,7 +23,7 @@ export default function Library() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function load(q = '', targetPage = 0, append = false) {
+  const load = useCallback(async (q = '', targetPage = 0, append = false) => {
     setLoading(true)
     setError(null)
     if (!append) setManga([])
@@ -40,9 +40,9 @@ export default function Library() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { void load() }, [load])
 
   function handleSearch(event: FormEvent) {
     event.preventDefault()

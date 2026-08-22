@@ -3,14 +3,16 @@ package me.luucka.mangashelf.user;
 import jakarta.persistence.EntityManager;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.config.AppProperties;
+import me.luucka.mangashelf.user.dto.PasswordChangeRequest;
+import me.luucka.mangashelf.user.dto.ProfileUpdateRequest;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import org.hibernate.Session;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Locale;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 @Service
 public class AuthService {
@@ -91,10 +93,69 @@ public class AuthService {
 
     @Transactional
     public AppUser updateLanguage(Long userId, UiLanguage language) {
-        AppUser user = users.findById(userId)
-                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+        AppUser user = load(userId);
         user.setLanguage(language);
         return user;
+    }
+
+    /** Changes the public identity only after re-authenticating the session holder. */
+    @Transactional
+    public AppUser updateProfile(Long userId, ProfileUpdateRequest request) {
+        AppUser user = load(userId);
+        requireCurrentPassword(user, request.currentPassword());
+
+        if (users.existsByUsernameIgnoreCaseAndIdNot(request.username(), userId)) {
+            throw ApiException.conflict("username_taken");
+        }
+
+        String email = request.email().toLowerCase(Locale.ROOT);
+        if (users.existsByEmailIgnoreCaseAndIdNot(email, userId)) {
+            throw ApiException.conflict("email_taken");
+        }
+
+        user.setUsername(request.username());
+        user.setEmail(email);
+        return user;
+    }
+
+    /** Rotates the BCrypt hash without ever returning either password. */
+    @Transactional
+    public void changePassword(Long userId, PasswordChangeRequest request) {
+        AppUser user = load(userId);
+        requireCurrentPassword(user, request.currentPassword());
+        if (passwordTooLong(request.newPassword())) {
+            throw ApiException.badRequest("password_too_long");
+        }
+        user.setPasswordHash(encoder.encode(request.newPassword()));
+    }
+
+    /**
+     * Removes a regular account and its personal rows through the schema's
+     * cascades. Administrators must never self-delete: an authenticated
+     * session retains its authorities until it expires, so deleting an admin
+     * here could leave a privileged orphan session and an instance with no
+     * account able to maintain the shared catalogue.
+     */
+    @Transactional
+    public void deleteAccount(Long userId, String currentPassword) {
+        AppUser user = load(userId);
+        requireCurrentPassword(user, currentPassword);
+        if (user.getRole() == Role.ADMIN) {
+            throw ApiException.forbidden("admin_account_delete_forbidden");
+        }
+        users.delete(user);
+    }
+
+    private AppUser load(Long userId) {
+        return users.findById(userId)
+                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+    }
+
+    private void requireCurrentPassword(AppUser user, String currentPassword) {
+        if (passwordTooLong(currentPassword)
+                || !encoder.matches(currentPassword, user.getPasswordHash())) {
+            throw ApiException.unauthorized("current_password_invalid");
+        }
     }
 
     static boolean passwordTooLong(String password) {

@@ -27,7 +27,7 @@ export default function MyCollection() {
       .then(setEditions)
       .catch(() => setError(t('collection.loadFailed')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   // Filtering happens in the browser: the summary endpoint already returns
   // the whole shelf in one request, so a query per keystroke would add

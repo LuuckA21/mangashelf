@@ -5,8 +5,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import me.luucka.mangashelf.common.ApiException;
-import me.luucka.mangashelf.user.dto.LoginRequest;
+import me.luucka.mangashelf.user.dto.DeleteAccountRequest;
 import me.luucka.mangashelf.user.dto.LanguageRequest;
+import me.luucka.mangashelf.user.dto.LoginRequest;
+import me.luucka.mangashelf.user.dto.PasswordChangeRequest;
+import me.luucka.mangashelf.user.dto.ProfileUpdateRequest;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import me.luucka.mangashelf.user.dto.UserResponse;
 import org.springframework.http.HttpStatus;
@@ -19,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -130,5 +134,33 @@ public class AuthController {
                                        @AuthenticationPrincipal UserPrincipal principal) {
         return UserResponse.from(
                 authService.updateLanguage(principal.id(), request.language()));
+    }
+
+    @PutMapping("/me/profile")
+    public UserResponse updateProfile(@Valid @RequestBody ProfileUpdateRequest request,
+                                      @AuthenticationPrincipal UserPrincipal principal) {
+        return UserResponse.from(authService.updateProfile(principal.id(), request));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody PasswordChangeRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.changePassword(principal.id(), request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteAccount(
+            @Valid @RequestBody DeleteAccountRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
+        authService.deleteAccount(principal.id(), request.currentPassword());
+        HttpSession session = httpRequest.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
     }
 }

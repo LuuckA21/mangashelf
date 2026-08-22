@@ -37,6 +37,7 @@ describe('responsive accessibility tokens', () => {
     expect(css).toMatch(/\.purchase-table tr\s*{[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;/)
     expect(css).toMatch(/\.catalog-actions\s*{\s*display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/)
     expect(css).toMatch(/\.catalog-actions button, \.new-purchase-list\s*{\s*width: 100%;/)
+    expect(css).toMatch(/\.settings-panel > button\s*{\s*width: 100%;/)
     expect(css).toMatch(/\.stats-table-scroll\s*{\s*display: none;/)
     expect(css).toMatch(/\.stats-cards\s*{\s*display: grid;/)
     expect(css).toContain('content: attr(data-label)')

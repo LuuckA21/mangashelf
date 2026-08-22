@@ -28,7 +28,7 @@ export default function Purchases() {
       .catch(() => setError(t('purchases.loadFailed')))
       .finally(() => setLoading(false))
     purchases.stats().then(setStats).catch(() => undefined)
-  }, [])
+  }, [t])
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault()

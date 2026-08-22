@@ -32,7 +32,7 @@ export default function SeriesDetail() {
   useEffect(() => {
     catalog.getSeries(seriesId).then(setSeries).catch(() => setError(t('series.notFound')))
     reload().catch(() => setError(t('series.loadFailed')))
-  }, [seriesId, reload])
+  }, [seriesId, reload, t])
 
   /** Optimistic: the tile flips at once, then reconciles with the server. */
   async function handleToggle(number: number, owned: boolean) {
