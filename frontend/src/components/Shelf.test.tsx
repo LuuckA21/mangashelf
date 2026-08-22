@@ -16,8 +16,10 @@ describe('Shelf', () => {
     await userEvent.click(zero)
 
     expect(onToggle).toHaveBeenCalledWith(0, true)
-    expect(screen.getByRole('button', {
-      name: 'Volume 1 mancante: aggiungi alla collezione',
-    })).toHaveAttribute('aria-pressed', 'false')
+    expect(
+      screen.getByRole('button', {
+        name: 'Volume 1 mancante: aggiungi alla collezione',
+      }),
+    ).toHaveAttribute('aria-pressed', 'false')
   })
 })

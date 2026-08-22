@@ -45,6 +45,21 @@ Il primo account registrato diventa amministratore. Dopo averlo creato, imposta 
 docker compose up -d --wait
 ```
 
+## Gestione account
+
+Ogni utente può cambiare lingua e password dalla pagina **Impostazioni**. Il
+cambio password disconnette tutte le sessioni attive, compreso il dispositivo
+da cui viene eseguito, e richiede quindi un nuovo accesso.
+
+Gli amministratori vedono la pagina **Utenti**, dalla quale possono assegnare o
+rimuovere il ruolo amministratore e attivare o disattivare un account. Le
+modifiche invalidano immediatamente le sessioni dell'utente interessato. Non è
+possibile modificare il proprio ruolo o stato, né rimuovere l'ultimo
+amministratore attivo.
+
+Gli account non vengono cancellati definitivamente: la disattivazione conserva
+collezioni, liste acquisti e storico associati all'utente.
+
 ## Reverse proxy
 
 Il reverse proxy deve inoltrare il traffico HTTPS verso `BIND_ADDRESS:HTTP_PORT`. Il database non viene pubblicato sulla rete host; solo Nginx espone la porta configurata.
@@ -225,6 +240,8 @@ Frontend:
 ```bash
 cd frontend
 npm ci
+npm run lint
+npm run format:check
 npm test
 npm run build
 ```

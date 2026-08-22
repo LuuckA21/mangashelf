@@ -8,7 +8,12 @@ vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
   return {
     ...actual,
-    purchases: { ...actual.purchases, listAll: vi.fn(), stats: vi.fn(), create: vi.fn() },
+    purchases: {
+      ...actual.purchases,
+      listAll: vi.fn(),
+      stats: vi.fn(),
+      create: vi.fn(),
+    },
   }
 })
 
@@ -20,16 +25,18 @@ const listAll = vi.mocked(purchases.listAll)
 const stats = vi.mocked(purchases.stats)
 
 const purchaseStats: PurchaseStats = {
-  years: [{
-    year: 2026,
-    listCount: 3,
-    volumeCount: 12,
-    fullChfCents: 9000,
-    discountChfCents: 900,
-    netChfCents: 8100,
-    averageFullChfCents: 750,
-    averageNetChfCents: 675,
-  }],
+  years: [
+    {
+      year: 2026,
+      listCount: 3,
+      volumeCount: 12,
+      fullChfCents: 9000,
+      discountChfCents: 900,
+      netChfCents: 8100,
+      averageFullChfCents: 750,
+      averageNetChfCents: 675,
+    },
+  ],
   listCount: 3,
   volumeCount: 12,
   fullChfCents: 9000,
@@ -46,11 +53,18 @@ describe('Purchases', () => {
   })
 
   it('provides full-width creation and card-friendly statistics controls', async () => {
-    render(<MemoryRouter><Purchases /></MemoryRouter>)
+    render(
+      <MemoryRouter>
+        <Purchases />
+      </MemoryRouter>,
+    )
 
-    expect(await screen.findByRole('button', { name: 'Nuova lista' }))
-      .toHaveClass('new-purchase-list')
-    const mobileStats = await screen.findByRole('region', { name: 'Statistiche per anno' })
+    expect(
+      await screen.findByRole('button', { name: 'Nuova lista' }),
+    ).toHaveClass('new-purchase-list')
+    const mobileStats = await screen.findByRole('region', {
+      name: 'Statistiche per anno',
+    })
     expect(mobileStats).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '2026' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Totale' })).toBeInTheDocument()

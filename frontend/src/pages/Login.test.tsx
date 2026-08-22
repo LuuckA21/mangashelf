@@ -19,12 +19,19 @@ vi.mock('../api/session', () => ({
 const login = vi.mocked(auth.login)
 
 function renderLogin() {
-  render(<MemoryRouter><Login /></MemoryRouter>)
+  render(
+    <MemoryRouter>
+      <Login />
+    </MemoryRouter>,
+  )
 }
 
 async function fillAndSubmit(password: string) {
   const user = userEvent.setup()
-  await user.type(screen.getByRole('textbox', { name: 'Username o email' }), 'luca')
+  await user.type(
+    screen.getByRole('textbox', { name: 'Username o email' }),
+    'luca',
+  )
   await user.type(screen.getByLabelText('Password'), password)
   await user.click(screen.getByRole('button', { name: 'Accedi' }))
 }
@@ -41,7 +48,9 @@ describe('Login', () => {
 
     await fillAndSubmit('wrong password')
 
-    expect(await screen.findByText('Credenziali non valide.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Credenziali non valide.'),
+    ).toBeInTheDocument()
     expect(session.setUser).not.toHaveBeenCalled()
   })
 

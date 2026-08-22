@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import me.luucka.mangashelf.common.ApiException;
 import me.luucka.mangashelf.user.dto.LoginRequest;
 import me.luucka.mangashelf.user.dto.LanguageRequest;
+import me.luucka.mangashelf.user.dto.PasswordChangeRequest;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import me.luucka.mangashelf.user.dto.UserResponse;
 import org.springframework.http.HttpStatus;
@@ -130,5 +131,22 @@ public class AuthController {
                                        @AuthenticationPrincipal UserPrincipal principal) {
         return UserResponse.from(
                 authService.updateLanguage(principal.id(), request.language()));
+    }
+
+    /** Changes credentials and signs every active device out. */
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> updatePassword(
+            @Valid @RequestBody PasswordChangeRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
+        authService.updatePassword(
+                principal.id(), request.currentPassword(), request.newPassword());
+
+        HttpSession session = httpRequest.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
     }
 }

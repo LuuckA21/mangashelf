@@ -53,9 +53,11 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
               disabled={busy !== null}
               aria-pressed="false"
               aria-label={`Volume ${n} ${t('shelf.notOwnedAdd')}`}
-              title={n === 0
-                ? t('shelf.volumeZeroAdd')
-                : `Volume ${n} — ${t('shelf.notOwnedTitle')}`}
+              title={
+                n === 0
+                  ? t('shelf.volumeZeroAdd')
+                  : `Volume ${n} — ${t('shelf.notOwnedTitle')}`
+              }
             >
               {n}
             </button>
@@ -77,14 +79,18 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
           return (
             <button
               key={n}
-              className={`tile${isOwned ? '' : ' missing'}${beyond ? ' future' : ''}`
-                + (busy === n ? ' busy' : '')}
+              className={
+                `tile${isOwned ? '' : ' missing'}${beyond ? ' future' : ''}` +
+                (busy === n ? ' busy' : '')
+              }
               onClick={() => toggle(n)}
               disabled={busy !== null}
               aria-pressed={isOwned}
-              aria-label={isOwned
-                ? `Volume ${n} ${t('shelf.ownedRemove')}`
-                : `Volume ${n} ${beyond ? t('shelf.notOwnedAdd') : t('shelf.missingAdd')}`}
+              aria-label={
+                isOwned
+                  ? `Volume ${n} ${t('shelf.ownedRemove')}`
+                  : `Volume ${n} ${beyond ? t('shelf.notOwnedAdd') : t('shelf.missingAdd')}`
+              }
               title={
                 isOwned
                   ? `Volume ${n} — ${t('shelf.ownedTitle')}`
@@ -101,8 +107,12 @@ export default function Shelf({ upTo, ownedNumbers, onToggle }: Props) {
         })}
       </div>
       <div className="shelf-legend">
-        <span><i className="swatch owned" /> {t('shelf.owned')}</span>
-        <span><i className="swatch missing" /> {t('shelf.missing')}</span>
+        <span>
+          <i className="swatch owned" /> {t('shelf.owned')}
+        </span>
+        <span>
+          <i className="swatch missing" /> {t('shelf.missing')}
+        </span>
       </div>
     </>
   )

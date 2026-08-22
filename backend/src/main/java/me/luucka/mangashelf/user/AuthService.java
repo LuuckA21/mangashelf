@@ -97,6 +97,27 @@ public class AuthService {
         return user;
     }
 
+    /** Changes the password and expires every session for the account. */
+    @Transactional
+    public void updatePassword(Long userId, String currentPassword, String newPassword) {
+        AppUser user = users.findByIdForUpdate(userId)
+                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+
+        if (passwordTooLong(currentPassword)
+                || !encoder.matches(currentPassword, user.getPasswordHash())) {
+            throw ApiException.badRequest("current_password_invalid");
+        }
+        if (passwordTooLong(newPassword)) {
+            throw ApiException.badRequest("password_too_long");
+        }
+        if (encoder.matches(newPassword, user.getPasswordHash())) {
+            throw ApiException.badRequest("password_unchanged");
+        }
+
+        user.setPasswordHash(encoder.encode(newPassword));
+        user.setSessionVersion(user.getSessionVersion() + 1);
+    }
+
     static boolean passwordTooLong(String password) {
         return password.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_PASSWORD_BYTES;
     }

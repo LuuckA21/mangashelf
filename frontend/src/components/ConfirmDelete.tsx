@@ -23,7 +23,11 @@ export default function ConfirmDelete({ what, onConfirm, disabled }: Props) {
 
   if (!armed) {
     return (
-      <button className="danger" onClick={() => setArmed(true)} disabled={disabled}>
+      <button
+        className="danger"
+        onClick={() => setArmed(true)}
+        disabled={disabled}
+      >
         {t('common.delete')}
       </button>
     )
@@ -31,7 +35,9 @@ export default function ConfirmDelete({ what, onConfirm, disabled }: Props) {
 
   return (
     <span className="confirm">
-      <span className="confirm-text">{t('delete.question')} {what}?</span>
+      <span className="confirm-text">
+        {t('delete.question')} {what}?
+      </span>
       <button
         onClick={async () => {
           setBusy(true)

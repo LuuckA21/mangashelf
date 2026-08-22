@@ -208,6 +208,84 @@ class AuthIT extends IntegrationTest {
     }
 
     @Test
+    void passwordChangeRequiresTheCurrentPasswordAndExpiresEverySession() throws Exception {
+        mvc.perform(register("password-user", "password@example.test"))
+                .andExpect(status().isCreated());
+
+        MockHttpSession first = (MockHttpSession) mvc.perform(
+                        login("password-user", PASSWORD))
+                .andExpect(status().isOk())
+                .andReturn().getRequest().getSession(false);
+        MockHttpSession second = (MockHttpSession) mvc.perform(
+                        login("password-user", PASSWORD))
+                .andExpect(status().isOk())
+                .andReturn().getRequest().getSession(false);
+        assertThat(first).isNotNull();
+        assertThat(second).isNotNull();
+
+        mvc.perform(put("/api/auth/me/password").session(first).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "wrong password",
+                                 "newPassword": "a new sufficiently long password"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("current_password_invalid"));
+        mvc.perform(get("/api/auth/me").session(first))
+                .andExpect(status().isOk());
+
+        mvc.perform(put("/api/auth/me/password").session(first).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s",
+                                 "newPassword": "a new sufficiently long password"}
+                                """.formatted(PASSWORD)))
+                .andExpect(status().isNoContent());
+        assertThat(first.isInvalid()).isTrue();
+
+        mvc.perform(get("/api/auth/me").session(second))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("session_invalid"));
+        assertThat(second.isInvalid()).isTrue();
+
+        try {
+            mvc.perform(login("password-user", PASSWORD))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("invalid_credentials"));
+            mvc.perform(login("password-user", "a new sufficiently long password"))
+                    .andExpect(status().isOk());
+        } finally {
+            attempts.recordSuccess("password-user");
+        }
+    }
+
+    @Test
+    void passwordChangeRejectsReuseAndBcryptOverflow() throws Exception {
+        mvc.perform(register("password-rules", "rules@example.test"))
+                .andExpect(status().isCreated());
+        MockHttpSession session = (MockHttpSession) mvc.perform(
+                        login("password-rules", PASSWORD))
+                .andExpect(status().isOk())
+                .andReturn().getRequest().getSession(false);
+
+        mvc.perform(put("/api/auth/me/password").session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s", "newPassword": "%s"}
+                                """.formatted(PASSWORD, PASSWORD)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("password_unchanged"));
+
+        mvc.perform(put("/api/auth/me/password").session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s", "newPassword": "%s"}
+                                """.formatted(PASSWORD, "x".repeat(73))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("password_too_long"));
+    }
+
+    @Test
     void simultaneousFirstRegistrationsElectExactlyOneAdministrator() throws Exception {
         users.deleteAll();
         users.flush();

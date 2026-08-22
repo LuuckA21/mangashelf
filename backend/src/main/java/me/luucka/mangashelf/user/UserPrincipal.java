@@ -19,13 +19,16 @@ import java.util.List;
  * @param password BCrypt hash, erased by Spring after authentication
  * @param role     granted role
  * @param enabled  whether the account may log in
+ * @param sessionVersion version of the account state at authentication time
  */
 public record UserPrincipal(Long id, String username, String password,
-                            Role role, boolean enabled) implements UserDetails {
+                            Role role, boolean enabled,
+                            int sessionVersion) implements UserDetails {
 
     public static UserPrincipal from(AppUser user) {
         return new UserPrincipal(user.getId(), user.getUsername(),
-                user.getPasswordHash(), user.getRole(), user.isEnabled());
+                user.getPasswordHash(), user.getRole(), user.isEnabled(),
+                user.getSessionVersion());
     }
 
     @Override

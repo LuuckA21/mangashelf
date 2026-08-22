@@ -35,19 +35,21 @@ function purchaseList(purchasedAt: string | null = null): PurchaseList {
     paidAt: null,
     discountPercent: null,
     discountCents: null,
-    items: [{
-      id: 6,
-      seriesId: 9,
-      seriesName: 'Standard',
-      publisher: 'Planet Manga',
-      mangaTitle: 'Berserk',
-      volumeNumber: 11,
-      releaseDate: '2026-08-20',
-      priceEurCents: 590,
-      priceChfCents: 790,
-      reserved: false,
-      purchasedAt,
-    }],
+    items: [
+      {
+        id: 6,
+        seriesId: 9,
+        seriesName: 'Standard',
+        publisher: 'Planet Manga',
+        mangaTitle: 'Berserk',
+        volumeNumber: 11,
+        releaseDate: '2026-08-20',
+        priceEurCents: 590,
+        priceChfCents: 790,
+        reserved: false,
+        purchasedAt,
+      },
+    ],
     reservedCount: 0,
     purchasedCount: purchasedAt ? 1 : 0,
     totalEurCents: 590,
@@ -74,7 +76,11 @@ describe('PurchaseDetail', () => {
     suggestions.mockReset().mockResolvedValue([])
     listAll.mockReset().mockResolvedValue([])
     listManga.mockReset().mockResolvedValue({
-      content: [], size: 24, number: 0, totalElements: 0, totalPages: 0,
+      content: [],
+      size: 24,
+      number: 0,
+      totalElements: 0,
+      totalPages: 0,
     })
   })
 
@@ -91,8 +97,12 @@ describe('PurchaseDetail', () => {
     await userEvent.click(toggle)
 
     expect(setPurchased).toHaveBeenCalledWith(3, 6, true)
-    await waitFor(() => expect(screen.getByRole('button', {
-      name: 'Berserk, volume 11: segna come non acquistato',
-    })).toHaveAttribute('aria-pressed', 'true'))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: 'Berserk, volume 11: segna come non acquistato',
+        }),
+      ).toHaveAttribute('aria-pressed', 'true'),
+    )
   })
 })

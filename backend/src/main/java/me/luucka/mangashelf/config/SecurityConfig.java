@@ -1,6 +1,7 @@
 package me.luucka.mangashelf.config;
 
 import me.luucka.mangashelf.user.AppUserDetailsService;
+import me.luucka.mangashelf.user.AccountStateFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.InvalidCsrfTokenException;
@@ -59,7 +61,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           SecurityContextRepository contextRepository)
+                                           SecurityContextRepository contextRepository,
+                                           AccountStateFilter accountStateFilter)
             throws Exception {
         http
                 // spa() wires the cookie-based repository and the plain token
@@ -82,6 +85,7 @@ public class SecurityConfig {
                         // that precedes it, so the whole prefix is admin-only
                         // regardless of method.
                         .requestMatchers("/api/metadata/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/manga", "/api/manga/**", "/api/series/**")
                         .hasRole("ADMIN")
@@ -124,6 +128,11 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable());
+
+        // A stored SecurityContext otherwise keeps the role and enabled flag
+        // it had at login forever. Validate its compact version marker before
+        // authorisation so account administration takes effect immediately.
+        http.addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();
     }

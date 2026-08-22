@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { catalog, type Manga } from '../api/client'
 import { useSession } from '../api/session'
@@ -23,26 +23,40 @@ export default function Library() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function load(q = '', targetPage = 0, append = false) {
-    setLoading(true)
-    setError(null)
-    if (!append) setManga([])
-    try {
-      const result = await catalog.listManga(q, targetPage)
-      setManga((current) => append
-        ? [...new Map([...current, ...result.content].map((item) => [item.id, item])).values()]
-        : result.content)
-      setActiveQuery(q.trim())
-      setPage(result.number)
-      setTotalPages(result.totalPages)
-    } catch {
-      setError(t('catalog.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const load = useCallback(
+    async (q = '', targetPage = 0, append = false) => {
+      setLoading(true)
+      setError(null)
+      if (!append) setManga([])
+      try {
+        const result = await catalog.listManga(q, targetPage)
+        setManga((current) =>
+          append
+            ? [
+                ...new Map(
+                  [...current, ...result.content].map((item) => [
+                    item.id,
+                    item,
+                  ]),
+                ).values(),
+              ]
+            : result.content,
+        )
+        setActiveQuery(q.trim())
+        setPage(result.number)
+        setTotalPages(result.totalPages)
+      } catch {
+        setError(t('catalog.loadFailed'))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [t],
+  )
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    void load()
+  }, [load])
 
   function handleSearch(event: FormEvent) {
     event.preventDefault()
@@ -56,7 +70,11 @@ export default function Library() {
         <h1>{t('catalog.title')}</h1>
       </div>
 
-      {error && <div className="error" role="alert">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="catalog-controls">
         <form className="catalog-search" onSubmit={handleSearch}>
@@ -66,14 +84,20 @@ export default function Library() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button type="submit" className="quiet">{t('common.search')}</button>
+          <button type="submit" className="quiet">
+            {t('common.search')}
+          </button>
         </form>
         {isAdmin && (
           <div className="catalog-actions">
             <button type="button" onClick={() => setImporting(!importing)}>
               {importing ? t('common.close') : t('catalog.importAniList')}
             </button>
-            <button type="button" className="quiet" onClick={() => setAdding(!adding)}>
+            <button
+              type="button"
+              className="quiet"
+              onClick={() => setAdding(!adding)}
+            >
               {adding ? t('common.cancel') : t('catalog.manual')}
             </button>
           </div>
@@ -116,7 +140,14 @@ export default function Library() {
           {manga.map((m) => (
             <li key={m.id}>
               <Link to={`/manga/${m.id}`}>
-                {m.coverUrl && <img src={m.coverUrl} alt="" className="cover" loading="lazy" />}
+                {m.coverUrl && (
+                  <img
+                    src={m.coverUrl}
+                    alt=""
+                    className="cover"
+                    loading="lazy"
+                  />
+                )}
                 <span className="title">{m.displayTitle}</span>
                 <span className="meta">
                   {[m.authors, m.startYear].filter(Boolean).join(' · ')}

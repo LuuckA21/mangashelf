@@ -1,5 +1,10 @@
 import {
-  createContext, useCallback, useContext, useEffect, useState, type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
 } from 'react'
 import { ApiError, auth, type User } from './client'
 import { useI18n, type Language } from '../i18n'
@@ -25,15 +30,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
 
-  const setUser = useCallback((next: User | null) => {
-    setUserState(next)
-    if (next) setLanguage(next.language)
-  }, [setLanguage])
+  const setUser = useCallback(
+    (next: User | null) => {
+      setUserState(next)
+      if (next) setLanguage(next.language)
+    },
+    [setLanguage],
+  )
 
   const restore = useCallback(() => {
     setLoading(true)
     setUnavailable(false)
-    auth.me()
+    auth
+      .me()
       .then(setUser)
       .catch((error) => {
         if (isExpiredSession(error)) {
@@ -56,9 +65,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SessionContext.Provider value={{
-      user, loading, unavailable, setUser, retry: restore, updateLanguage,
-    }}>
+    <SessionContext.Provider
+      value={{
+        user,
+        loading,
+        unavailable,
+        setUser,
+        retry: restore,
+        updateLanguage,
+      }}
+    >
       {children}
     </SessionContext.Provider>
   )
@@ -66,6 +82,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
 export function useSession(): Session {
   const context = useContext(SessionContext)
-  if (!context) throw new Error('useSession must be used inside SessionProvider')
+  if (!context)
+    throw new Error('useSession must be used inside SessionProvider')
   return context
 }

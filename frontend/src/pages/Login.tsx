@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ApiError, auth } from '../api/client'
 import { useSession } from '../api/session'
 import { useI18n } from '../i18n'
 
 export default function Login() {
   const { setUser } = useSession()
+  const location = useLocation()
   const { language, setLanguage, t } = useI18n()
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
@@ -39,16 +40,29 @@ export default function Login() {
         <h1>MangaShelf</h1>
         <p className="subtitle">{t('login.subtitle')}</p>
 
+        {(location.state as { passwordChanged?: boolean } | null)
+          ?.passwordChanged && (
+          <div className="success" role="status">
+            {t('login.passwordChanged')}
+          </div>
+        )}
+
         <label className="auth-language">
           <span>{t('language.label')}</span>
-          <select value={language}
-                  onChange={(event) => setLanguage(event.target.value as 'it' | 'en')}>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as 'it' | 'en')}
+          >
             <option value="it">{t('language.it')}</option>
             <option value="en">{t('language.en')}</option>
           </select>
         </label>
 
-        {error && <div className="error" role="alert">{error}</div>}
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="login">{t('login.identity')}</label>
@@ -80,7 +94,8 @@ export default function Login() {
         </button>
 
         <p className="switch">
-          {t('login.noAccount')} <Link to="/register">{t('login.register')}</Link>
+          {t('login.noAccount')}{' '}
+          <Link to="/register">{t('login.register')}</Link>
         </p>
       </form>
     </div>
