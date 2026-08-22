@@ -4,6 +4,7 @@ import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AuthService;
 import me.luucka.mangashelf.user.LoginAttempts;
 import me.luucka.mangashelf.user.Role;
+import me.luucka.mangashelf.user.UserPrincipal;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
