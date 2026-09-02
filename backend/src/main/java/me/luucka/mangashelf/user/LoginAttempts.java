@@ -12,9 +12,9 @@ import java.util.Locale;
  * Slows down repeated failed logins for the same account.
  *
  * <p>Without this the login endpoint answers as fast as it is asked, and a
- * short password falls to a script in minutes. Counting per submitted account
- * identifier rather than per address keeps it working behind a proxy, where
- * every request arrives from the same IP.
+ * short password falls to a script in minutes. Accounts are counted by their
+ * canonical database identity and client addresses have a wider, independent
+ * ceiling, limiting both alias-based attacks and sprays across many accounts.
  *
  * <p>State is in memory: a restart forgives everyone, which is acceptable
  * for an instance with a handful of accounts and avoids a table whose only
@@ -23,14 +23,16 @@ import java.util.Locale;
 @Component
 public class LoginAttempts {
 
-    private static final int MAX_FAILURES = 5;
-    private static final int MAX_TRACKED_USERS = 10_000;
+    private static final int MAX_ACCOUNT_FAILURES = 5;
+    private static final int MAX_ADDRESS_FAILURES = 30;
+    private static final int MAX_TRACKED_KEYS = 10_000;
     private static final Duration LOCKOUT = Duration.ofMinutes(15);
 
     private record Record(int failures, long blockedUntilNanos) {
     }
 
-    private final Cache<String, Record> byUser;
+    private final Cache<String, Record> byAccount;
+    private final Cache<String, Record> byAddress;
     private final Ticker ticker;
 
     public LoginAttempts() {
@@ -39,11 +41,16 @@ public class LoginAttempts {
 
     LoginAttempts(Ticker ticker) {
         this.ticker = ticker;
-        this.byUser = Caffeine.newBuilder()
+        this.byAccount = newCache();
+        this.byAddress = newCache();
+    }
+
+    private Cache<String, Record> newCache() {
+        return Caffeine.newBuilder()
                 // Random usernames cannot grow this process for ever. At the
                 // ceiling Caffeine evicts cold entries while active accounts
                 // remain protected by their recent access.
-                .maximumSize(MAX_TRACKED_USERS)
+                .maximumSize(MAX_TRACKED_KEYS)
                 // Failed attempts below the lock threshold need forgetting
                 // too, otherwise every typo would remain until a restart.
                 .expireAfterWrite(LOCKOUT)
@@ -51,35 +58,63 @@ public class LoginAttempts {
                 .build();
     }
 
-    public boolean isBlocked(String login) {
-        String key = key(login);
-        Record record = byUser.getIfPresent(key);
+    /**
+     * Checks both the resolved account and the client address. The account
+     * key is canonical (the database id), so alternating between username
+     * and email cannot obtain a second set of guesses.
+     */
+    public boolean isBlocked(String accountKey, String clientAddress) {
+        return blocked(byAccount, key(accountKey))
+                || blocked(byAddress, key(clientAddress));
+    }
+
+    private boolean blocked(Cache<String, Record> cache, String key) {
+        Record record = cache.getIfPresent(key);
         if (record == null || record.blockedUntilNanos() == 0) return false;
         if (ticker.read() >= record.blockedUntilNanos()) {
-            byUser.invalidate(key);
+            cache.invalidate(key);
             return false;
         }
         return true;
     }
 
-    public void recordFailure(String login) {
+    public void recordFailure(String accountKey, String clientAddress) {
         long now = ticker.read();
-        byUser.asMap().compute(key(login), (ignored, current) -> {
+        record(byAccount, key(accountKey), MAX_ACCOUNT_FAILURES, now);
+        record(byAddress, key(clientAddress), MAX_ADDRESS_FAILURES, now);
+    }
+
+    private void record(Cache<String, Record> cache, String key, int maximum, long now) {
+        cache.asMap().compute(key, (ignored, current) -> {
             int failures = current == null ? 1 : current.failures() + 1;
             return new Record(failures,
-                    failures >= MAX_FAILURES ? now + LOCKOUT.toNanos() : 0);
+                    failures >= maximum ? now + LOCKOUT.toNanos() : 0);
         });
     }
 
-    /** A successful login clears the count, so a typo costs nothing later. */
-    public void recordSuccess(String login) {
-        byUser.invalidate(key(login));
+    /** A successful login clears that account's count, so a typo costs nothing later. */
+    public void recordSuccess(String accountKey) {
+        byAccount.invalidate(key(accountKey));
+    }
+
+    // Convenience methods retained for focused tests and maintenance calls.
+    boolean isBlocked(String accountKey) {
+        return blocked(byAccount, key(accountKey));
+    }
+
+    void recordFailure(String accountKey) {
+        record(byAccount, key(accountKey), MAX_ACCOUNT_FAILURES, ticker.read());
     }
 
     /** Visible to the focused unit test, not part of the login API. */
     long trackedUsers() {
-        byUser.cleanUp();
-        return byUser.estimatedSize();
+        byAccount.cleanUp();
+        return byAccount.estimatedSize();
+    }
+
+    long trackedAddresses() {
+        byAddress.cleanUp();
+        return byAddress.estimatedSize();
     }
 
     private String key(String login) {

@@ -70,15 +70,9 @@ public class ApiExceptionHandler {
      * Both a wrong password and an unknown username answer the same way, so
      * the endpoint cannot be used to enumerate which accounts exist.
      */
-    @ExceptionHandler(BadCredentialsException.class)
+    @ExceptionHandler({BadCredentialsException.class, DisabledException.class})
     public ResponseEntity<Map<String, Object>> handleBadCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "invalid_credentials"));
-    }
-
-    @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<Map<String, Object>> handleDisabled() {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", "account_disabled"));
     }
 }

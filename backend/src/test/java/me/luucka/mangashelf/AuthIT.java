@@ -92,7 +92,7 @@ class AuthIT extends IntegrationTest {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.error").value("invalid_credentials"));
         } finally {
-            attempts.recordSuccess("member");
+            attempts.recordSuccess("user:" + member.id());
         }
     }
 
@@ -147,11 +147,12 @@ class AuthIT extends IntegrationTest {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.error").value("invalid_credentials"));
             mvc.perform(login("disabled", PASSWORD))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.error").value("account_disabled"));
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("invalid_credentials"));
 
             for (int failure = 0; failure < 5; failure++) {
-                mvc.perform(login("locked", "wrong password"))
+                String alias = failure % 2 == 0 ? "locked" : "locked@example.test";
+                mvc.perform(login(alias, "wrong password"))
                         .andExpect(status().isUnauthorized())
                         .andExpect(jsonPath("$.error").value("invalid_credentials"));
             }
@@ -159,9 +160,10 @@ class AuthIT extends IntegrationTest {
                     .andExpect(status().isTooManyRequests())
                     .andExpect(jsonPath("$.error").value("too_many_attempts"));
         } finally {
-            attempts.recordSuccess("does-not-exist");
-            attempts.recordSuccess("disabled");
-            attempts.recordSuccess("locked");
+            attempts.recordSuccess("login:does-not-exist");
+            attempts.recordSuccess("user:" + disabled.getId());
+            attempts.recordSuccess("user:" +
+                    users.findByUsernameIgnoreCase("locked").orElseThrow().getId());
         }
     }
 
@@ -255,7 +257,8 @@ class AuthIT extends IntegrationTest {
             mvc.perform(login("password-user", "a new sufficiently long password"))
                     .andExpect(status().isOk());
         } finally {
-            attempts.recordSuccess("password-user");
+            attempts.recordSuccess("user:" +
+                    users.findByUsernameIgnoreCase("password-user").orElseThrow().getId());
         }
     }
 

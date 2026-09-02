@@ -28,6 +28,7 @@ export default function Register() {
               username_taken: t('register.usernameTaken'),
               email_taken: t('register.emailTaken'),
               registration_closed: t('register.closed'),
+              too_many_registrations: t('register.tooManyAttempts'),
               validation_failed: t('register.validation'),
               password_too_long: t('register.passwordTooLong'),
             }[e.code] ?? t('register.failed'))

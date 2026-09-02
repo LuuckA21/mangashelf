@@ -59,6 +59,18 @@ class LoginAttemptsTest {
         assertThat(attempts.trackedUsers()).isLessThanOrEqualTo(10_000);
     }
 
+    @Test
+    void addressLimitAlsoStopsSprayingAcrossAccounts() {
+        LoginAttempts attempts = new LoginAttempts(Ticker.systemTicker());
+        for (int failure = 0; failure < 30; failure++) {
+            attempts.recordFailure("user:" + failure, "203.0.113.10");
+        }
+
+        assertThat(attempts.isBlocked("different-account", "203.0.113.10")).isTrue();
+        assertThat(attempts.isBlocked("different-account", "203.0.113.11")).isFalse();
+        assertThat(attempts.trackedAddresses()).isEqualTo(1);
+    }
+
     private static final class MutableTicker implements Ticker {
         private long nanos;
 

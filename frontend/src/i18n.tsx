@@ -82,6 +82,8 @@ const italian = {
   'register.validation':
     'Controlla i campi: la password richiede almeno 10 caratteri.',
   'register.passwordTooLong': 'La password non può superare 72 byte in UTF-8.',
+  'register.tooManyAttempts':
+    'Troppe registrazioni da questo indirizzo. Riprova più tardi.',
   'register.failed': 'Registrazione non riuscita.',
 
   'settings.eyebrow': 'Preferenze personali',
@@ -175,7 +177,7 @@ const italian = {
   'mangaForm.coverUrlPlaceholder': 'Incolla l’indirizzo di un’immagine',
   'mangaForm.upload': 'Carica un file',
   'mangaForm.uploading': 'Carico…',
-  'mangaForm.uploadHelp': 'JPG, PNG, WebP o GIF, massimo 5 MB.',
+  'mangaForm.uploadHelp': 'JPG, PNG o GIF, massimo 5 MB.',
   'mangaForm.saveFirst':
     'Salva l’opera per poter caricare un file dal computer.',
   'mangaForm.saveBeforeUpload':
@@ -183,7 +185,7 @@ const italian = {
   'mangaForm.uploadFailed': 'Caricamento della copertina non riuscito.',
   'mangaForm.removeCover': 'Togli',
   'mangaForm.remoteCoverHelp':
-    'Un indirizzo incollato viene scaricato sul server al salvataggio.',
+    'Sono accettati solo indirizzi HTTPS da host autorizzati.',
   'mangaForm.blankIfOngoing': 'vuoto se ancora in corso',
   'mangaForm.create': 'Crea',
   'status.finished': 'Conclusa',
@@ -464,6 +466,8 @@ const english: Messages = {
   'register.validation':
     'Check the fields: the password must be at least 10 characters.',
   'register.passwordTooLong': 'The password cannot exceed 72 UTF-8 bytes.',
+  'register.tooManyAttempts':
+    'Too many registrations from this address. Try again later.',
   'register.failed': 'Registration failed.',
   'settings.eyebrow': 'Personal preferences',
   'settings.title': 'Settings',
@@ -550,7 +554,7 @@ const english: Messages = {
   'mangaForm.coverUrlPlaceholder': 'Paste an image address',
   'mangaForm.upload': 'Upload a file',
   'mangaForm.uploading': 'Uploading…',
-  'mangaForm.uploadHelp': 'JPG, PNG, WebP or GIF, up to 5 MB.',
+  'mangaForm.uploadHelp': 'JPG, PNG or GIF, up to 5 MB.',
   'mangaForm.saveFirst':
     'Save the work before uploading a file from your device.',
   'mangaForm.saveBeforeUpload':
@@ -558,7 +562,7 @@ const english: Messages = {
   'mangaForm.uploadFailed': 'Cover upload failed.',
   'mangaForm.removeCover': 'Remove',
   'mangaForm.remoteCoverHelp':
-    'A pasted address is downloaded to the server when saved.',
+    'Only HTTPS addresses from approved hosts are accepted.',
   'mangaForm.blankIfOngoing': 'leave blank if still ongoing',
   'mangaForm.create': 'Create',
   'status.finished': 'Finished',
