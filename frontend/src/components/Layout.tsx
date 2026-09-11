@@ -33,7 +33,10 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to="/collection">{t('nav.collection')}</NavLink>
             <NavLink to="/purchases">{t('nav.purchases')}</NavLink>
             {user?.role === 'ADMIN' && (
-              <NavLink to="/admin/users">{t('nav.users')}</NavLink>
+              <>
+                <NavLink to="/admin/users">{t('nav.users')}</NavLink>
+                <NavLink to="/admin/audit">{t('nav.audit')}</NavLink>
+              </>
             )}
           </nav>
           <span className="spacer" />

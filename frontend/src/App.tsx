@@ -10,6 +10,7 @@ import Register from './pages/Register'
 import SeriesDetail from './pages/SeriesDetail'
 import Settings from './pages/Settings'
 import AdminUsers from './pages/AdminUsers'
+import AdminAudit from './pages/AdminAudit'
 import { useI18n } from './i18n'
 
 export default function App() {
@@ -61,6 +62,12 @@ export default function App() {
         path="/admin/users"
         element={
           user.role === 'ADMIN' ? <AdminUsers /> : <Navigate to="/" replace />
+        }
+      />
+      <Route
+        path="/admin/audit"
+        element={
+          user.role === 'ADMIN' ? <AdminAudit /> : <Navigate to="/" replace />
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

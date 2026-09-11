@@ -1,5 +1,5 @@
 import { api } from './http'
-import type { AdminUser, User } from './types'
+import type { AdminAuditEvent, AdminUser, User } from './types'
 
 export const auth = {
   me: () => api.get<User>('/api/auth/me'),
@@ -28,4 +28,8 @@ export const adminAccounts = {
   list: () => api.get<AdminUser[]>('/api/admin/users'),
   update: (id: number, role: User['role'], enabled: boolean) =>
     api.put<AdminUser>(`/api/admin/users/${id}`, { role, enabled }),
+}
+
+export const adminAudit = {
+  list: () => api.get<AdminAuditEvent[]>('/api/admin/audit'),
 }

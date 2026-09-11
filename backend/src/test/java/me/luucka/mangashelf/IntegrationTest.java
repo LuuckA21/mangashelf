@@ -84,7 +84,7 @@ public abstract class IntegrationTest {
         // Truncate rather than delete: it resets the sequences too, so ids
         // start from 1 in every test and a failure reads the same way twice.
         jdbc.execute("""
-                TRUNCATE purchase_item, purchase_list, user_volume,
+                TRUNCATE admin_audit_event, purchase_item, purchase_list, user_volume,
                          series, manga, app_user
                 RESTART IDENTITY CASCADE
                 """);
