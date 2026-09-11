@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Locale;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -36,21 +38,29 @@ public class AuthController {
     private final SecurityContextRepository contextRepository;
     private final AppUserRepository users;
     private final LoginAttempts attempts;
+    private final RegistrationAttempts registrationAttempts;
 
     public AuthController(AuthService authService,
                           AuthenticationManager authenticationManager,
                           SecurityContextRepository contextRepository,
                           AppUserRepository users,
-                          LoginAttempts attempts) {
+                          LoginAttempts attempts,
+                          RegistrationAttempts registrationAttempts) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.contextRepository = contextRepository;
         this.users = users;
         this.attempts = attempts;
+        this.registrationAttempts = registrationAttempts;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                 HttpServletRequest httpRequest) {
+        if (!registrationAttempts.tryAcquire(httpRequest.getRemoteAddr())) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                    "too_many_registrations");
+        }
         AppUser user = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
     }
@@ -60,13 +70,15 @@ public class AuthController {
                               HttpServletRequest httpRequest,
                               HttpServletResponse httpResponse) {
 
-        if (attempts.isBlocked(request.login())) {
+        String accountKey = loginAttemptKey(request.login());
+        String clientAddress = httpRequest.getRemoteAddr();
+        if (attempts.isBlocked(accountKey, clientAddress)) {
             throw new ApiException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
                     "too_many_attempts");
         }
 
         if (AuthService.passwordTooLong(request.password())) {
-            attempts.recordFailure(request.login());
+            attempts.recordFailure(accountKey, clientAddress);
             throw new BadCredentialsException("Password exceeds BCrypt limit");
         }
 
@@ -76,10 +88,10 @@ public class AuthController {
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             request.login(), request.password()));
         } catch (RuntimeException e) {
-            attempts.recordFailure(request.login());
+            attempts.recordFailure(accountKey, clientAddress);
             throw e;
         }
-        attempts.recordSuccess(request.login());
+        attempts.recordSuccess(accountKey);
 
         // Rotating the session id is what prevents session fixation: an id
         // an attacker planted before login stops being valid the moment the
@@ -105,6 +117,14 @@ public class AuthController {
         return users.findById(principal.id())
                 .map(UserResponse::from)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
+    }
+
+    /** Stable key shared by the username and email aliases of one account. */
+    private String loginAttemptKey(String login) {
+        return users.findByUsernameIgnoreCase(login)
+                .or(() -> users.findByEmailIgnoreCase(login))
+                .map(user -> "user:" + user.getId())
+                .orElseGet(() -> "login:" + login.trim().toLowerCase(Locale.ROOT));
     }
 
     @PostMapping("/logout")

@@ -6,8 +6,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,33 +26,40 @@ class CoverStoreTest {
 
     @Test
     void downloadsACoverToAnAtomicLocalFile() throws Exception {
-        String remote = "https://8.8.8.8/cover.webp?size=large";
-        byte[] bytes = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'};
+        String remote = "https://8.8.8.8/cover.png?size=large";
+        byte[] bytes = image("png", 20, 30);
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(remote))
-                .andRespond(withSuccess(bytes, MediaType.parseMediaType("image/webp")));
-        CoverStore store = new CoverStore(directory.toString(), builder.build());
+                .andRespond(withSuccess(bytes, MediaType.IMAGE_PNG));
+        CoverStore store = new CoverStore(
+                directory.toString(), builder.build(), Set.of("8.8.8.8"));
 
         String path = store.store(remote, "anilist-42");
 
-        assertThat(path).isEqualTo("/covers/anilist-42.webp");
-        assertThat(Files.readAllBytes(directory.resolve("anilist-42.webp")))
-                .containsExactly(bytes);
-        assertThat(directory.resolve("anilist-42.webp.part")).doesNotExist();
+        assertThat(path).isEqualTo("/covers/anilist-42.png");
+        byte[] stored = Files.readAllBytes(directory.resolve("anilist-42.png"));
+        assertThat(ImageIO.read(new ByteArrayInputStream(stored)))
+                .extracting(BufferedImage::getWidth, BufferedImage::getHeight)
+                .containsExactly(20, 30);
+        try (var files = Files.list(directory)) {
+            assertThat(files.map(pathEntry -> pathEntry.getFileName().toString()))
+                    .noneMatch(name -> name.endsWith(".part"));
+        }
         server.verify();
     }
 
     @Test
     void uploadedBytesUseTheirActualImageFormat() throws Exception {
         CoverStore store = new CoverStore(directory.toString());
-        byte[] png = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+        byte[] png = image("png", 10, 12);
 
         String path = store.storeBytes(png, "manga-7");
 
         assertThat(path).isEqualTo("/covers/manga-7.png");
-        assertThat(Files.readAllBytes(directory.resolve("manga-7.png")))
-                .containsExactly(png);
+        assertThat(ImageIO.read(directory.resolve("manga-7.png").toFile()))
+                .extracting(BufferedImage::getWidth, BufferedImage::getHeight)
+                .containsExactly(10, 12);
     }
 
     @Test
@@ -64,6 +76,15 @@ class CoverStoreTest {
         assertThatThrownBy(() -> store.storeBytes(new byte[]{1, 2, 3}, "text"))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("not_an_image");
+        assertThatThrownBy(() -> store.storeBytes(
+                new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'},
+                "unverified-webp"))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("not_an_image");
+        assertThatThrownBy(() -> store.storeBytes(
+                image("png", 8_193, 1), "too-wide"))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("image_dimensions_too_large");
     }
 
     @Test
@@ -80,8 +101,17 @@ class CoverStoreTest {
                 .isNull();
         assertThat(store.store("file:///etc/passwd", "file"))
                 .isNull();
+        assertThat(store.store("https://8.8.8.8/cover.jpg", "not-allowed"))
+                .isNull();
         try (var files = Files.list(directory)) {
             assertThat(files).isEmpty();
         }
+    }
+
+    private byte[] image(String format, int width, int height) throws Exception {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        assertThat(ImageIO.write(image, format, output)).isTrue();
+        return output.toByteArray();
     }
 }

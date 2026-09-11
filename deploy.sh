@@ -471,7 +471,7 @@ compose ps
 
 if (( FIRST_RUN == 1 )); then
     echo
-    info "First run: register the administrator account, then disable registration in .env."
+    info "First run: temporarily enable registration, create the administrator, then disable it again."
 fi
 
 echo

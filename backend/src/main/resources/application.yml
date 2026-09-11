@@ -65,8 +65,16 @@ management:
         enabled: true
 
 app:
-  registration-enabled: ${APP_REGISTRATION_ENABLED:true}
+  # Closed by default: opening registration is an explicit bootstrap/admin
+  # decision, never something a missing environment variable should do.
+  registration-enabled: ${APP_REGISTRATION_ENABLED:false}
   covers-dir: /app/data/covers
+  covers:
+    # Remote downloads are restricted to AniList's image CDN. Other sources
+    # must be uploaded, avoiding arbitrary server-side requests.
+    allowed-hosts: ${APP_COVERS_ALLOWED_HOSTS:s4.anilist.co}
+  security:
+    registration-attempts-per-hour: 5
   metadata:
     anilist-url: https://graphql.anilist.co
     # AniList allows 90 requests a minute and also enforces a burst limiter.

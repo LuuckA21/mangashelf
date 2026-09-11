@@ -230,7 +230,7 @@ export default function MangaForm({
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept="image/jpeg,image/png,image/gif"
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0]

@@ -36,7 +36,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>The price is cleaning up by hand between tests, which
  * {@link #resetDatabase()} does.
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "app.registration-enabled=true",
+        "app.security.registration-attempts-per-hour=10000"
+})
 @AutoConfigureMockMvc
 public abstract class IntegrationTest {
 

@@ -31,6 +31,7 @@ Modifica `.env`, impostando almeno:
 - `BIND_ADDRESS` con l'IP LAN del server MangaShelf;
 - `TRUSTED_PROXY` con l'IP o la rete del reverse proxy;
 - `APP_COOKIE_SECURE=true` quando l'applicazione è pubblicata in HTTPS.
+- temporaneamente `APP_REGISTRATION_ENABLED=true` per creare il primo account.
 
 Avvia e costruisci i container:
 
@@ -39,7 +40,9 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Il primo account registrato diventa amministratore. Dopo averlo creato, imposta `APP_REGISTRATION_ENABLED=false` in `.env` e applica la configurazione:
+La registrazione è chiusa per impostazione predefinita. Il primo account
+registrato diventa amministratore; dopo averlo creato, ripristina subito
+`APP_REGISTRATION_ENABLED=false` in `.env` e applica la configurazione:
 
 ```bash
 docker compose up -d --wait

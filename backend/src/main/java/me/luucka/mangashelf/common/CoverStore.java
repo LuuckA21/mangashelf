@@ -8,6 +8,12 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -17,7 +23,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Downloads cover images and keeps them on local disk.
@@ -33,22 +42,34 @@ public class CoverStore {
 
     /** Covers are a few hundred kilobytes; anything larger is not a cover. */
     private static final int MAX_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_DIMENSION = 8_192;
+    private static final long MAX_PIXELS = 16_000_000;
 
     /** Public path the files are served from — see the nginx config. */
     private static final String PUBLIC_PREFIX = "/covers/";
 
     private final Path directory;
     private final RestClient http;
+    private final Set<String> allowedHosts;
 
     @Autowired
-    public CoverStore(@Value("${app.covers-dir}") String coversDir) {
-        this(coversDir, downloadClient());
+    public CoverStore(@Value("${app.covers-dir}") String coversDir,
+                      @Value("${app.covers.allowed-hosts:s4.anilist.co}")
+                      List<String> allowedHosts) {
+        this(coversDir, downloadClient(), Set.copyOf(allowedHosts));
     }
 
-    /** Test seam for downloads backed by Spring's mock HTTP server. */
-    CoverStore(String coversDir, RestClient http) {
+    /** Test seams for local image validation and mock HTTP downloads. */
+    CoverStore(String coversDir) {
+        this(coversDir, downloadClient(), Set.of("s4.anilist.co"));
+    }
+
+    CoverStore(String coversDir, RestClient http, Set<String> allowedHosts) {
         this.directory = Path.of(coversDir);
         this.http = http;
+        this.allowedHosts = allowedHosts.stream()
+                .map(host -> host.toLowerCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     /**
@@ -86,16 +107,9 @@ public class CoverStore {
                 return null;
             }
 
-            Files.createDirectories(directory);
-            String fileName = name + imageExtension(bytes);
-
-            // Written beside the target and moved into place: a download cut
-            // short would otherwise leave a truncated image that looks valid
-            // to the browser until it tries to decode it.
-            Path temp = directory.resolve(fileName + ".part");
-            Files.write(temp, bytes);
-            Files.move(temp, directory.resolve(fileName),
-                    StandardCopyOption.REPLACE_EXISTING);
+            StoredImage image = validatedImage(bytes);
+            String fileName = safeName(name) + image.extension();
+            writeAtomically(fileName, image.bytes());
 
             return PUBLIC_PREFIX + fileName;
 
@@ -116,14 +130,10 @@ public class CoverStore {
         if (bytes.length > MAX_BYTES) {
             throw ApiException.badRequest("file_too_large");
         }
-        String extension = imageExtension(bytes);
         try {
-            Files.createDirectories(directory);
-            String fileName = name + extension;
-            Path temp = directory.resolve(fileName + ".part");
-            Files.write(temp, bytes);
-            Files.move(temp, directory.resolve(fileName),
-                    StandardCopyOption.REPLACE_EXISTING);
+            StoredImage image = validatedImage(bytes);
+            String fileName = safeName(name) + image.extension();
+            writeAtomically(fileName, image.bytes());
             return PUBLIC_PREFIX + fileName;
         } catch (IOException e) {
             log.warn("Could not store the uploaded cover: {}", e.getMessage());
@@ -132,29 +142,82 @@ public class CoverStore {
         }
     }
 
-    private String imageExtension(byte[] bytes) {
-        if (startsWith(bytes, 0xff, 0xd8, 0xff)) return ".jpg";
-        if (startsWith(bytes, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) {
-            return ".png";
+    /**
+     * Parses and fully decodes the first frame before re-encoding it. This
+     * rejects files that merely prepend an image signature to arbitrary
+     * content, and the dimension ceiling stops small decompression bombs from
+     * allocating an unbounded bitmap. WebP is deliberately not accepted:
+     * the JDK has no built-in decoder with which to perform the same check.
+     */
+    private StoredImage validatedImage(byte[] bytes) throws IOException {
+        try (ImageInputStream input = ImageIO.createImageInputStream(
+                new ByteArrayInputStream(bytes))) {
+            if (input == null) throw ApiException.badRequest("not_an_image");
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) throw ApiException.badRequest("not_an_image");
+
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width < 1 || height < 1
+                        || width > MAX_DIMENSION || height > MAX_DIMENSION
+                        || (long) width * height > MAX_PIXELS) {
+                    throw ApiException.badRequest("image_dimensions_too_large");
+                }
+
+                String format = normalisedFormat(reader.getFormatName());
+                BufferedImage decoded = reader.read(0);
+                if (decoded == null) throw ApiException.badRequest("not_an_image");
+
+                ByteArrayOutputStream output = new ByteArrayOutputStream(bytes.length);
+                if (!ImageIO.write(decoded, format, output)) {
+                    throw ApiException.badRequest("not_an_image");
+                }
+                byte[] normalised = output.toByteArray();
+                if (normalised.length > MAX_BYTES) {
+                    throw ApiException.badRequest("file_too_large");
+                }
+                return new StoredImage(normalised,
+                        format.equals("jpeg") ? ".jpg" : "." + format);
+            } finally {
+                reader.dispose();
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw ApiException.badRequest("not_an_image");
         }
-        if (startsWith(bytes, 'G', 'I', 'F', '8', '7', 'a')
-                || startsWith(bytes, 'G', 'I', 'F', '8', '9', 'a')) {
-            return ".gif";
-        }
-        if (startsWith(bytes, 'R', 'I', 'F', 'F')
-                && bytes.length >= 12
-                && startsWith(Arrays.copyOfRange(bytes, 8, 12), 'W', 'E', 'B', 'P')) {
-            return ".webp";
-        }
-        throw ApiException.badRequest("not_an_image");
     }
 
-    private boolean startsWith(byte[] bytes, int... signature) {
-        if (bytes.length < signature.length) return false;
-        for (int i = 0; i < signature.length; i++) {
-            if (Byte.toUnsignedInt(bytes[i]) != signature[i]) return false;
+    private String normalisedFormat(String formatName) {
+        return switch (formatName.toLowerCase(Locale.ROOT)) {
+            case "jpg", "jpeg" -> "jpeg";
+            case "png" -> "png";
+            case "gif" -> "gif";
+            default -> throw ApiException.badRequest("not_an_image");
+        };
+    }
+
+    private String safeName(String name) {
+        if (name == null || !name.matches("[a-zA-Z0-9._-]+")) {
+            throw ApiException.badRequest("invalid_cover_name");
         }
-        return true;
+        return name;
+    }
+
+    private void writeAtomically(String fileName, byte[] bytes) throws IOException {
+        Files.createDirectories(directory);
+        Path temp = Files.createTempFile(directory, fileName + "-", ".part");
+        try {
+            Files.write(temp, bytes);
+            Files.move(temp, directory.resolve(fileName),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
     }
 
     private static RestClient downloadClient() {
@@ -184,18 +247,22 @@ public class CoverStore {
      * fetch whatever it is handed — including addresses only it can reach.
      * On a self-hosted box that means the database, the proxy's admin panel
      * and everything else on the LAN, turned into a probe by pasting a link.
-     * Covers live on the public internet, so nothing legitimate is lost by
-     * refusing the rest.
+     * Only explicitly trusted image hosts are accepted. Besides reducing the
+     * attack surface, the allow-list removes the DNS-rebinding gap between
+     * validation and the HTTP client's own hostname resolution.
      */
     private boolean isFetchable(String url) {
         try {
             URI uri = URI.create(url);
             String scheme = uri.getScheme();
-            if (scheme == null
-                    || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            if (scheme == null || !scheme.equalsIgnoreCase("https")) {
                 return false;
             }
-            if (uri.getHost() == null) return false;
+            if (uri.getHost() == null || uri.getUserInfo() != null
+                    || (uri.getPort() != -1 && uri.getPort() != 443)
+                    || !allowedHosts.contains(uri.getHost().toLowerCase(Locale.ROOT))) {
+                return false;
+            }
 
             InetAddress[] addresses = InetAddress.getAllByName(uri.getHost());
             if (addresses.length == 0) return false;
@@ -240,6 +307,9 @@ public class CoverStore {
         // fc00::/7 is IPv6 unique-local space. Java's site-local check only
         // recognises the deprecated fec0::/10 range, so it must be explicit.
         return bytes.length == 16 && (Byte.toUnsignedInt(bytes[0]) & 0xfe) == 0xfc;
+    }
+
+    private record StoredImage(byte[] bytes, String extension) {
     }
 
 }
