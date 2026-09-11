@@ -75,6 +75,64 @@ class AccountManagementIT extends IntegrationTest {
     }
 
     @Test
+    void accountChangesProduceAnAdministratorOnlyAuditTrail() throws Exception {
+        mvc.perform(put("/api/admin/users/" + member.id())
+                        .with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"role": "ADMIN", "enabled": false}
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/admin/audit").with(user(other)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("admin_required"));
+
+        mvc.perform(get("/api/admin/audit").with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].actorUserId").value(admin.id()))
+                .andExpect(jsonPath("$[0].actorUsername").value("admin"))
+                .andExpect(jsonPath("$[0].targetUserId").value(member.id()))
+                .andExpect(jsonPath("$[0].targetUsername").value("member"))
+                .andExpect(jsonPath("$[0].createdAt").isNotEmpty())
+                .andExpect(jsonPath("$[*].action")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "ROLE_CHANGED", "STATUS_CHANGED")))
+                .andExpect(jsonPath("$[?(@.action == 'ROLE_CHANGED')].oldValue")
+                        .value(org.hamcrest.Matchers.contains("USER")))
+                .andExpect(jsonPath("$[?(@.action == 'ROLE_CHANGED')].newValue")
+                        .value(org.hamcrest.Matchers.contains("ADMIN")))
+                .andExpect(jsonPath("$[?(@.action == 'STATUS_CHANGED')].oldValue")
+                        .value(org.hamcrest.Matchers.contains("ENABLED")))
+                .andExpect(jsonPath("$[?(@.action == 'STATUS_CHANGED')].newValue")
+                        .value(org.hamcrest.Matchers.contains("DISABLED")));
+    }
+
+    @Test
+    void noOpAndRejectedAccountChangesAreNotAudited() throws Exception {
+        mvc.perform(put("/api/admin/users/" + member.id())
+                        .with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"role": "USER", "enabled": true}
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(put("/api/admin/users/" + admin.id())
+                        .with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"role": "USER", "enabled": true}
+                                """))
+                .andExpect(status().isConflict());
+
+        mvc.perform(get("/api/admin/audit").with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void currentAdministratorCannotChangeTheirOwnAccess() throws Exception {
         mvc.perform(put("/api/admin/users/" + admin.id())
                         .with(user(admin)).with(csrf())

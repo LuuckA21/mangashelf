@@ -17,10 +17,13 @@ public class AdminUserService {
 
     private final AppUserRepository users;
     private final EntityManager entityManager;
+    private final AdminAuditService audit;
 
-    public AdminUserService(AppUserRepository users, EntityManager entityManager) {
+    public AdminUserService(AppUserRepository users, EntityManager entityManager,
+                            AdminAuditService audit) {
         this.users = users;
         this.entityManager = entityManager;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -56,9 +59,20 @@ public class AdminUserService {
             throw ApiException.conflict("last_admin_required");
         }
 
+        Role oldRole = user.getRole();
+        boolean oldEnabled = user.isEnabled();
         user.setRole(request.role());
         user.setEnabled(request.enabled());
         user.setSessionVersion(user.getSessionVersion() + 1);
+
+        // The audit inserts share this transaction. A database failure cannot
+        // leave behind an unrecorded authorisation change, or vice versa.
+        if (roleChanged) {
+            audit.recordRoleChange(principal, user, oldRole, request.role());
+        }
+        if (enabledChanged) {
+            audit.recordStatusChange(principal, user, oldEnabled, request.enabled());
+        }
         return user;
     }
 

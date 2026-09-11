@@ -60,6 +60,11 @@ modifiche invalidano immediatamente le sessioni dell'utente interessato. Non è
 possibile modificare il proprio ruolo o stato, né rimuovere l'ultimo
 amministratore attivo.
 
+Ogni effettivo cambio di ruolo o stato viene salvato nello storico **Audit**, con
+amministratore, utente interessato, valori precedente e nuovo e data. Il
+registro è consultabile soltanto dagli amministratori e mostra i 100 eventi più
+recenti; le operazioni rifiutate o prive di modifiche non producono eventi.
+
 Gli account non vengono cancellati definitivamente: la disattivazione conserva
 collezioni, liste acquisti e storico associati all'utente.
 

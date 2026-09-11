@@ -11,6 +11,18 @@ export interface AdminUser extends User {
   createdAt: string
 }
 
+export interface AdminAuditEvent {
+  id: number
+  actorUserId: number | null
+  actorUsername: string
+  targetUserId: number | null
+  targetUsername: string
+  action: 'ROLE_CHANGED' | 'STATUS_CHANGED'
+  oldValue: string
+  newValue: string
+  createdAt: string
+}
+
 export type PublicationStatus =
   'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS'
 
