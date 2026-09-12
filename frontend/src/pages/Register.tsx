@@ -11,6 +11,7 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [registered, setRegistered] = useState(false)
   const [busy, setBusy] = useState(false)
 
   async function handleSubmit(event: FormEvent) {
@@ -18,13 +19,18 @@ export default function Register() {
     setBusy(true)
     setError(null)
     try {
-      await auth.register(username, email, password, language)
-      // Sign upon does not open a session, so sign in straight after.
-      setUser(await auth.login(username, password))
+      const result = await auth.register(username, email, password, language)
+      if (result.emailVerificationRequired) {
+        setRegistered(true)
+        setPassword('')
+      } else {
+        setUser(await auth.login(username, password))
+      }
     } catch (e) {
       setError(
         e instanceof ApiError
           ? ({
+              email_unavailable: t('email.unavailable'),
               username_taken: t('register.usernameTaken'),
               email_taken: t('register.emailTaken'),
               registration_closed: t('register.closed'),
@@ -37,6 +43,23 @@ export default function Register() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (registered) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <h1>{t('email.checkInbox')}</h1>
+          <p role="status">{t('email.registered')}</p>
+          <p>
+            <Link to="/resend-verification">{t('email.resend')}</Link>
+          </p>
+          <p>
+            <Link to="/login">{t('register.login')}</Link>
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

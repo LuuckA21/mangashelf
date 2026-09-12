@@ -2,6 +2,15 @@ import { api } from './http'
 import type { AdminAuditEvent, AdminUser, User } from './types'
 
 export const auth = {
+  emailOptions: () => api.get<{ enabled: boolean }>('/api/auth/email-options'),
+  requestPasswordReset: (email: string) =>
+    api.post<void>('/api/auth/forgot-password', { email }),
+  resendVerification: (email: string) =>
+    api.post<void>('/api/auth/resend-verification', { email }),
+  verifyEmail: (token: string) =>
+    api.post<void>('/api/auth/verify-email', { token }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<void>('/api/auth/reset-password', { token, newPassword }),
   me: () => api.get<User>('/api/auth/me'),
   login: (login: string, password: string) =>
     api.post<User>('/api/auth/login', { login, password }),
@@ -11,12 +20,15 @@ export const auth = {
     password: string,
     language: 'it' | 'en',
   ) =>
-    api.post<User>('/api/auth/register', {
-      username,
-      email,
-      password,
-      language,
-    }),
+    api.post<User & { emailVerificationRequired: boolean }>(
+      '/api/auth/register',
+      {
+        username,
+        email,
+        password,
+        language,
+      },
+    ),
   logout: () => api.post<void>('/api/auth/logout'),
   updateLanguage: (language: 'it' | 'en') =>
     api.put<User>('/api/auth/me/language', { language }),

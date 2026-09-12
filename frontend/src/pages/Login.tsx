@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ApiError, auth } from '../api/client'
 import { useSession } from '../api/session'
@@ -8,6 +8,13 @@ export default function Login() {
   const { setUser } = useSession()
   const location = useLocation()
   const { language, setLanguage, t } = useI18n()
+  const [emailEnabled, setEmailEnabled] = useState(false)
+  useEffect(() => {
+    auth
+      .emailOptions()
+      .then((options) => setEmailEnabled(options.enabled))
+      .catch(() => {})
+  }, [])
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +100,17 @@ export default function Login() {
           {busy ? t('login.submitting') : t('login.submit')}
         </button>
 
+        {emailEnabled && (
+          <>
+            <p className="switch">
+              <Link to="/forgot-password">{t('email.forgot')}</Link>
+            </p>
+            <p className="switch">
+              <Link to="/resend-verification">{t('email.resend')}</Link>
+            </p>
+            <p className="subtitle">{t('email.loginHint')}</p>
+          </>
+        )}
         <p className="switch">
           {t('login.noAccount')}{' '}
           <Link to="/register">{t('login.register')}</Link>

@@ -40,6 +40,7 @@ public class AccountStateFilter extends OncePerRequestFilter {
         AppUser current = users.findById(principal.id()).orElse(null);
         boolean valid = current != null
                 && current.isEnabled()
+                && current.isEmailVerified()
                 && current.getRole() == principal.role()
                 && current.getSessionVersion() == principal.sessionVersion();
         if (valid) {

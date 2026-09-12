@@ -11,6 +11,32 @@ import {
 export type Language = 'it' | 'en'
 
 const italian = {
+  'email.forgot': 'Password dimenticata?',
+  'email.resend': 'Reinvia email di conferma',
+  'email.verify': 'Conferma indirizzo email',
+  'email.reset': 'Reimposta password',
+  'email.checkInbox': 'Controlla la tua email',
+  'email.registered':
+    'Account creato. Apri il link ricevuto via email per confermare l’indirizzo e accedere. Controlla anche la cartella spam.',
+  'email.loginHint':
+    'Hai appena creato un account? Conferma prima l’indirizzo tramite il link ricevuto via email.',
+  'email.unavailable':
+    'Il servizio email non è disponibile. Riprova più tardi o contatta l’amministratore.',
+  'email.requested':
+    'Se l’indirizzo corrisponde a un account idoneo, riceverai un’email con le istruzioni. Controlla anche lo spam. Per richiedere un nuovo invio attendi almeno un minuto.',
+  'email.verified': 'Indirizzo confermato. Ora puoi accedere.',
+  'email.confirmHint':
+    'Premi il pulsante per confermare il tuo indirizzo email.',
+  'email.invalidToken':
+    'Link non valido, scaduto o già utilizzato. Richiedi un nuovo link.',
+  'email.passwordMismatch': 'Le password non coincidono.',
+  'email.passwordUnchanged': 'Scegli una password diversa da quella attuale.',
+  'email.confirmPassword': 'Conferma nuova password',
+  'email.send': 'Invia email',
+  'email.newLink': 'Richiedi un nuovo link',
+  'email.tooMany': 'Troppi tentativi. Riprova tra un’ora.',
+  'email.failed': 'Operazione non riuscita. Riprova.',
+
   'common.loading': 'Carico…',
   'common.search': 'Cerca',
   'common.searching': 'Cerco…',
@@ -430,6 +456,32 @@ const italian = {
 type Messages = { [K in keyof typeof italian]: string }
 
 const english: Messages = {
+  'email.forgot': 'Forgot password?',
+  'email.resend': 'Resend confirmation email',
+  'email.verify': 'Confirm email address',
+  'email.reset': 'Reset password',
+  'email.checkInbox': 'Check your email',
+  'email.registered':
+    'Account created. Open the link in your email to confirm your address and sign in. Check your spam folder too.',
+  'email.loginHint':
+    'Just created an account? Confirm your address using the link in your email before signing in.',
+  'email.unavailable':
+    'Email is unavailable. Try again later or contact the administrator.',
+  'email.requested':
+    'If the address belongs to an eligible account, you will receive an email with instructions. Check your spam folder too. Wait at least one minute before requesting another email.',
+  'email.verified': 'Email confirmed. You can now sign in.',
+  'email.confirmHint': 'Press the button to confirm your email address.',
+  'email.invalidToken':
+    'This link is invalid, expired or already used. Request a new link.',
+  'email.passwordMismatch': 'The passwords do not match.',
+  'email.passwordUnchanged':
+    'Choose a password different from your current password.',
+  'email.confirmPassword': 'Confirm new password',
+  'email.send': 'Send email',
+  'email.newLink': 'Request a new link',
+  'email.tooMany': 'Too many attempts. Try again in an hour.',
+  'email.failed': 'Something went wrong. Please try again.',
+
   'common.loading': 'Loading…',
   'common.search': 'Search',
   'common.searching': 'Searching…',

@@ -27,7 +27,7 @@ public record UserPrincipal(Long id, String username, String password,
 
     public static UserPrincipal from(AppUser user) {
         return new UserPrincipal(user.getId(), user.getUsername(),
-                user.getPasswordHash(), user.getRole(), user.isEnabled(),
+                user.getPasswordHash(), user.getRole(), user.isEnabled() && user.isEmailVerified(),
                 user.getSessionVersion());
     }
 

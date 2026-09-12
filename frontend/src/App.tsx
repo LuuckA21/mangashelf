@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useSession } from './api/session'
 import Library from './pages/Library'
 import Login from './pages/Login'
+import AccountEmail from './pages/AccountEmail'
 import MangaDetail from './pages/MangaDetail'
 import MyCollection from './pages/MyCollection'
 import PurchaseDetail from './pages/PurchaseDetail'
@@ -42,6 +43,16 @@ export default function App() {
   if (!user) {
     return (
       <Routes>
+        <Route
+          path="/forgot-password"
+          element={<AccountEmail mode="forgot" />}
+        />
+        <Route
+          path="/resend-verification"
+          element={<AccountEmail mode="resend" />}
+        />
+        <Route path="/verify-email" element={<AccountEmail mode="verify" />} />
+        <Route path="/reset-password" element={<AccountEmail mode="reset" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
@@ -51,6 +62,8 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/verify-email" element={<AccountEmail mode="verify" />} />
+      <Route path="/reset-password" element={<AccountEmail mode="reset" />} />
       <Route path="/" element={<Library />} />
       <Route path="/manga/:id" element={<MangaDetail />} />
       <Route path="/edition/:id" element={<SeriesDetail />} />

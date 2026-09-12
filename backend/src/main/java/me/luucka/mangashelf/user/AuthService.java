@@ -24,13 +24,15 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AppProperties properties;
     private final EntityManager entityManager;
+    private final AccountEmailService accountEmails;
 
     public AuthService(AppUserRepository users, PasswordEncoder encoder,
-                       AppProperties properties, EntityManager entityManager) {
+                       AppProperties properties, EntityManager entityManager, AccountEmailService accountEmails) {
         this.users = users;
         this.encoder = encoder;
         this.properties = properties;
         this.entityManager = entityManager;
+        this.accountEmails = accountEmails;
     }
 
     /**
@@ -86,7 +88,9 @@ public class AuthService {
             user.setRole(Role.ADMIN);
         }
 
-        return users.save(user);
+        users.saveAndFlush(user);
+        accountEmails.prepareRegistration(user);
+        return user;
     }
 
     @Transactional

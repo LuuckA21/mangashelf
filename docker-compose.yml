@@ -36,6 +36,16 @@ services:
       APP_REGISTRATION_ENABLED: ${APP_REGISTRATION_ENABLED:-false}
       APP_COVERS_ALLOWED_HOSTS: ${APP_COVERS_ALLOWED_HOSTS:-s4.anilist.co}
       APP_COOKIE_SECURE: ${APP_COOKIE_SECURE:-true}
+      APP_EMAIL_ENABLED: ${APP_EMAIL_ENABLED:-false}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_SSL: ${SMTP_SSL:-false}
       TZ: Europe/Rome
     volumes:
       - covers:/app/data/covers
