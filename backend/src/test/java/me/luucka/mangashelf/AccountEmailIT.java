@@ -38,6 +38,12 @@ class AccountEmailIT extends IntegrationTest {
     private static final String NEW_PASSWORD = "replacement-password-456";
 
     @Test
+    void healthDoesNotDependOnExternalSmtp() throws Exception {
+        mvc.perform(get("/actuator/health")).andExpect(status().isOk());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
     void registrationRequiresConfirmationAndTokenIsSingleUse() throws Exception {
         register();
         AppUser account = account();

@@ -71,6 +71,11 @@ server:
         max-age: 30d
 
 management:
+  health:
+    mail:
+      # SMTP is optional; a provider outage must not take the catalogue offline
+      # or make container probes open SMTP connections on every health check.
+      enabled: false
   endpoints:
     web:
       exposure:

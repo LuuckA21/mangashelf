@@ -335,7 +335,9 @@ costruiti dagli header della richiesta. Per SMTP con TLS implicito sulla porta 4
 impostare `SMTP_PORT=465`, `SMTP_STARTTLS=false`, `SMTP_SSL=true`. Per un server di
 cattura email locale come Mailpit si possono disabilitare autenticazione e TLS;
 non usare questa configurazione per un servizio SMTP pubblico. Le connessioni SMTP
-hanno timeout di 5 secondi e verifica dell'identità del server TLS.
+hanno timeout di 5 secondi e verifica dell'identità del server TLS. I controlli
+salute dell'applicazione non dipendono dal provider SMTP, così un suo disservizio
+non blocca il catalogo o il deploy.
 
 Dopo la configurazione ricreare i container con lo script di deploy:
 
