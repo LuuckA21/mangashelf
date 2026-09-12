@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ApiError, auth } from '../api/client'
 import { useSession } from '../api/session'
@@ -8,6 +8,13 @@ export default function Login() {
   const { setUser } = useSession()
   const location = useLocation()
   const { language, setLanguage, t } = useI18n()
+  const [emailEnabled, setEmailEnabled] = useState(false)
+  useEffect(() => {
+    auth
+      .emailOptions()
+      .then((options) => setEmailEnabled(options.enabled))
+      .catch(() => {})
+  }, [])
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +96,12 @@ export default function Login() {
           />
         </div>
 
+        {emailEnabled && (
+          <p className="auth-recovery">
+            <Link to="/forgot-password">{t('email.forgot')}</Link>
+          </p>
+        )}
+
         <button type="submit" disabled={busy}>
           {busy ? t('login.submitting') : t('login.submit')}
         </button>
@@ -97,6 +110,12 @@ export default function Login() {
           {t('login.noAccount')}{' '}
           <Link to="/register">{t('login.register')}</Link>
         </p>
+        {emailEnabled && (
+          <div className="auth-confirmation">
+            <span>{t('email.confirmationHelp')}</span>{' '}
+            <Link to="/resend-verification">{t('email.resendShort')}</Link>
+          </div>
+        )}
       </form>
     </div>
   )

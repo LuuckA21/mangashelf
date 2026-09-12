@@ -47,6 +47,24 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = true;
+
+    @Column(name = "verification_hash", length = 64)
+    private String verificationHash;
+
+    @Column(name = "verification_expires_at")
+    private Instant verificationExpiresAt;
+
+    @Column(name = "reset_hash", length = 64)
+    private String resetHash;
+
+    @Column(name = "reset_expires_at")
+    private Instant resetExpiresAt;
+
+    @Column(name = "reset_session_version")
+    private Integer resetSessionVersion;
+
     /**
      * Incremented whenever credentials or authorisation change. Sessions
      * carry the value they authenticated with and are rejected as soon as it

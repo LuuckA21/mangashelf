@@ -304,3 +304,94 @@ non è necessario reimportare le opere. Il recupero esclude link simbolici,
 file temporanei e sottodirectory.
 
 Non eseguire `docker compose down -v`: l'opzione `-v` elimina entrambi i volumi e quindi i dati persistenti.
+
+### Email di registrazione e recupero password
+
+L'invio SMTP è opzionale e disattivato per impostazione predefinita. Per attivarlo,
+aggiungere al `.env` del server (vedi anche `.env.example`):
+
+```dotenv
+APP_EMAIL_ENABLED=true
+APP_PUBLIC_URL=https://manga.example.com
+MAIL_FROM=noreply@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-user
+SMTP_PASSWORD='your-smtp-password'
+SMTP_AUTH=true
+SMTP_STARTTLS=true
+SMTP_SSL=false
+```
+
+Sostituire dominio, mittente e credenziali con quelli del proprio servizio SMTP.
+`MAIL_FROM` deve essere un indirizzo autorizzato dal provider; configurare anche
+SPF/DKIM secondo le sue istruzioni. Non committare `.env` né pubblicare credenziali
+SMTP nei log o nelle issue. In Compose le virgolette singole proteggono eventuali
+caratteri `$` della password dall'interpolazione.
+
+`APP_PUBLIC_URL` è l'origine HTTPS pubblica di MangaShelf, senza percorsi, query o
+frammenti; per prove locali è ammesso `http://localhost:porta`. I link non vengono
+costruiti dagli header della richiesta. Per SMTP con TLS implicito sulla porta 465
+impostare `SMTP_PORT=465`, `SMTP_STARTTLS=false`, `SMTP_SSL=true`. Per un server di
+cattura email locale come Mailpit si possono disabilitare autenticazione e TLS;
+non usare questa configurazione per un servizio SMTP pubblico. Le connessioni SMTP
+hanno timeout di 5 secondi e verifica dell'identità del server TLS. I controlli
+salute dell'applicazione non dipendono dal provider SMTP, così un suo disservizio
+non blocca il catalogo o il deploy.
+
+Dopo la configurazione ricreare i container con lo script di deploy:
+
+```bash
+./deploy.sh feature/account-emails
+```
+
+Comportamento con email abilitate:
+
+- I nuovi account ricevono una conferma nella lingua scelta (italiano/inglese) e
+  possono accedere solo dopo averla completata. Il link vale 24 ore. L'apertura del
+  link mostra un pulsante di conferma: una scansione automatica dell'email non lo
+  consuma. Il primo account conserva la regola di assegnazione amministratore.
+- La migrazione V9 considera già verificati gli account esistenti, mantenendone
+  l'accesso. Nessuna email viene inviata automaticamente agli utenti esistenti.
+- Da login sono disponibili «Password dimenticata?» e «Reinvia email di conferma».
+  Il recupero vale per account abilitati e verificati; per un account in attesa
+  bisogna prima reinviare/completare la conferma. La chiusura delle registrazioni
+  non impedisce il recupero o la conferma di account già creati.
+- I reset scadono dopo 30 minuti. Ogni link è monouso; un nuovo invio riuscito
+  sostituisce il precedente. Cambi password o modifiche amministrative che
+  incrementano la versione delle sessioni rendono inutilizzabili i vecchi reset.
+  Il reset invalida tutte le sessioni e richiede un nuovo accesso.
+- Il database conserva solo hash SHA-256 di token casuali da 256 bit. Il token
+  viene passato nel frammento del link, che non raggiunge gli access log HTTP,
+  rimosso dalla voce corrente della cronologia e inviato via POST con protezione
+  CSRF. Ricaricando una pagina di conferma/reset occorre riaprire il link originale.
+- Richieste di recupero e reinvio restituiscono sempre la stessa risposta per
+  indirizzi assenti, disabilitati o non idonei. L'invio avviene in background per
+  non rivelare l'esistenza dell'account attraverso il tempo di risposta SMTP.
+  Limiti per istanza: 20 richieste/tentativi di conferma/reset per IP ogni ora e
+  un invio per indirizzo al minuto, con massimo 100 richieste in coda e 2 worker.
+- La coda in memoria non sopravvive a un riavvio e non effettua retry automatici:
+  l'utente può richiedere un nuovo invio dopo un minuto. Un errore SMTP conserva
+  il link precedente e produce un avviso privo di indirizzi/token nei log del
+  backend. Se fallisce l'email iniziale, la registrazione viene annullata con 503.
+
+Con `APP_EMAIL_ENABLED=false` la registrazione mantiene il comportamento precedente
+(accesso senza conferma) e non sono disponibili nuovi invii email. Gli account già
+in attesa di conferma restano in attesa: disabilitare SMTP non li verifica. I link
+validi già consegnati possono ancora essere completati.
+
+Verifiche dopo il deploy:
+
+1. Accedere con un account esistente e verificare che collezione e impostazioni
+   siano disponibili.
+2. Con registrazioni aperte, creare un account di prova con una propria email:
+   prima della conferma il login deve fallire; dopo il click deve riuscire.
+3. Richiedere un reset, impostare una password nuova, controllare l'accesso e
+   verificare che le sessioni precedenti e il vecchio link non funzionino più.
+4. Provare il reinvio della conferma con un secondo account non verificato e
+   controllare che il link precedente non sia più valido.
+5. Controllare ricezione/spam e lingua dei messaggi. Gli automated test usano un
+   trasporto SMTP simulato: non verificano la consegna del provider reale.
+
+Riferimento per lo starter SMTP e i timeout:
+[Spring Boot — Sending Email](https://docs.spring.io/spring-boot/reference/io/email.html).

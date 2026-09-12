@@ -2,6 +2,22 @@ spring:
   application:
     name: mangashelf
 
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      "[mail.smtp.auth]": ${SMTP_AUTH:true}
+      "[mail.smtp.starttls.enable]": ${SMTP_STARTTLS:true}
+      "[mail.smtp.starttls.required]": ${SMTP_STARTTLS:true}
+      "[mail.smtp.ssl.enable]": ${SMTP_SSL:false}
+      "[mail.smtp.ssl.checkserveridentity]": true
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
+
   data:
     web:
       pageable:
@@ -55,6 +71,11 @@ server:
         max-age: 30d
 
 management:
+  health:
+    mail:
+      # SMTP is optional; a provider outage must not take the catalogue offline
+      # or make container probes open SMTP connections on every health check.
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -65,6 +86,10 @@ management:
         enabled: true
 
 app:
+  email:
+    enabled: ${APP_EMAIL_ENABLED:false}
+    base-url: ${APP_PUBLIC_URL:}
+    from: ${MAIL_FROM:}
   # Closed by default: opening registration is an explicit bootstrap/admin
   # decision, never something a missing environment variable should do.
   registration-enabled: ${APP_REGISTRATION_ENABLED:false}

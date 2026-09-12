@@ -16,6 +16,9 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     Optional<AppUser> findByEmailIgnoreCase(String email);
 
+    @Query("select u.id from AppUser u where lower(u.email) = lower(:email)")
+    Optional<Long> findIdByEmail(@Param("email") String email);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     boolean existsByEmailIgnoreCase(String email);
@@ -23,6 +26,12 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     List<AppUser> findAllByOrderByUsernameAsc();
 
     long countByRoleAndEnabledTrue(Role role);
+
+    @Query("select u.id from AppUser u where u.verificationHash = :hash")
+    Optional<Long> findIdByVerificationHash(@Param("hash") String hash);
+
+    @Query("select u.id from AppUser u where u.resetHash = :hash")
+    Optional<Long> findIdByResetHash(@Param("hash") String hash);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from AppUser user where user.id = :id")

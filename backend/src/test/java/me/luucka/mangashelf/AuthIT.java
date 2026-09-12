@@ -39,6 +39,11 @@ class AuthIT extends IntegrationTest {
     private LoginAttempts attempts;
 
     @Test
+    void healthRemainsAvailableWithoutSmtpConfigured() throws Exception {
+        mvc.perform(get("/actuator/health")).andExpect(status().isOk());
+    }
+
+    @Test
     void registrationAssignsRolesAndReportsDuplicates() throws Exception {
         users.deleteAll();
         users.flush();

@@ -6,10 +6,10 @@ import me.luucka.mangashelf.user.UiLanguage;
 
 /** Public view of an account: never carries the password hash. */
 public record UserResponse(Long id, String username, String email, Role role,
-                           UiLanguage language) {
+                           UiLanguage language, boolean emailVerificationRequired) {
 
     public static UserResponse from(AppUser user) {
         return new UserResponse(user.getId(), user.getUsername(),
-                user.getEmail(), user.getRole(), user.getLanguage());
+                user.getEmail(), user.getRole(), user.getLanguage(), !user.isEmailVerified());
     }
 }
