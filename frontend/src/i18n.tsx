@@ -171,6 +171,20 @@ const italian = {
   'anilist.alreadyPresent': 'Già presente',
   'anilist.searchFailed': 'Ricerca non riuscita.',
   'anilist.importFailed': 'Importazione non riuscita.',
+  'anilist.unavailable':
+    'AniList è temporaneamente non disponibile. Riprova più tardi.',
+  'anilist.rateLimited':
+    'Il limite di richieste ad AniList è stato raggiunto. Attendi prima di riprovare.',
+  'anilist.notFound':
+    'Questa opera non è più disponibile su AniList. Esegui una nuova ricerca.',
+  'anilist.invalidSearch': 'Inserisci un titolo di massimo 200 caratteri.',
+  'anilist.adminRequired':
+    'La ricerca e l’importazione sono riservate agli amministratori.',
+  'anilist.sessionExpired': 'La sessione è scaduta. Accedi nuovamente.',
+  'anilist.retryIn': 'Puoi riprovare tra',
+  'anilist.seconds': 'secondi.',
+  'anilist.manualHelp':
+    'Puoi continuare a usare il catalogo o scegliere “Inserisci a mano”.',
 
   'mangaForm.romaji': 'Titolo romaji',
   'mangaForm.title': 'Titolo',
@@ -564,6 +578,20 @@ const english: Messages = {
   'anilist.alreadyPresent': 'Already present',
   'anilist.searchFailed': 'Search failed.',
   'anilist.importFailed': 'Import failed.',
+  'anilist.unavailable':
+    'AniList is temporarily unavailable. Please try again later.',
+  'anilist.rateLimited':
+    'The AniList request limit has been reached. Wait before trying again.',
+  'anilist.notFound':
+    'This work is no longer available on AniList. Run a new search.',
+  'anilist.invalidSearch': 'Enter a title of up to 200 characters.',
+  'anilist.adminRequired':
+    'Search and import are restricted to administrators.',
+  'anilist.sessionExpired': 'Your session has expired. Sign in again.',
+  'anilist.retryIn': 'You can try again in',
+  'anilist.seconds': 'seconds.',
+  'anilist.manualHelp':
+    'You can continue using the catalog or choose “Add manually”.',
   'mangaForm.romaji': 'Romaji title',
   'mangaForm.title': 'Title',
   'mangaForm.author': 'Author',

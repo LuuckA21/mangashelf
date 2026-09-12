@@ -10,6 +10,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly fields?: Record<string, string>,
+    readonly retryAfterSeconds?: number,
   ) {
     super(code)
   }
@@ -37,6 +38,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       response.status,
       payload?.error ?? 'unknown_error',
       payload?.fields,
+      typeof payload?.retryAfterSeconds === 'number' &&
+        Number.isFinite(payload.retryAfterSeconds) &&
+        payload.retryAfterSeconds > 0
+        ? payload.retryAfterSeconds
+        : undefined,
     )
   }
   return payload as T

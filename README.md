@@ -8,6 +8,26 @@ L'interfaccia è disponibile in italiano e inglese. Ogni account può scegliere
 la propria lingua dalle impostazioni; la preferenza viene conservata sul server
 e quindi segue l'utente anche su altri dispositivi.
 
+## Ricerca e importazione AniList
+
+Le ricerche riuscite (anche senza risultati) sono conservate in memoria per
+5 minuti, fino a 500 combinazioni di titolo e limite. Spazi iniziali/finali e
+maiuscole non creano voci duplicate. La cache è condivisa dagli amministratori
+della stessa istanza e si svuota al riavvio; lo stato “Già presente” viene sempre
+ricalcolato dal catalogo. L’importazione continua a richiedere metadati aggiornati.
+
+In caso di indisponibilità, errore GraphQL o risposta non valida, l’interfaccia
+mostra un errore distinto da “nessun risultato”. Un HTTP 429 avvia una pausa
+condivisa fra ricerche e importazioni, rispettando Retry-After (secondi o data
+HTTP, massimo un giorno; 60 secondi se assente/non valido). Gli altri errori
+avviano una pausa di 30 secondi, o quella indicata da Retry-After.
+Le ricerche già in cache restano disponibili tramite API durante la pausa.
+
+Il limite locale risponde subito invece di tenere richieste in attesa.
+L’interfaccia indica il tempo rimanente e riabilita i pulsanti alla scadenza:
+il nuovo tentativo è manuale, senza ripetizioni automatiche delle importazioni.
+Catalogo e inserimento manuale restano utilizzabili.
+
 ## Requisiti
 
 - Docker Engine con il plugin `docker compose`;

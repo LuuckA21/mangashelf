@@ -1,45 +1,53 @@
 package me.luucka.mangashelf.metadata;
 
+import com.github.benmanes.caffeine.cache.Ticker;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/**
- * Blocks callers so that no more than a fixed number of requests leave in
- * any sixty-second window.
- *
- * <p>A sliding window rather than a simple counter reset: AniList also runs
- * a burst limiter, and a counter that clears on the minute boundary would
- * let the whole allowance go out in one second and trip it.
- */
+/** Non-blocking sliding window and cooldown shared by searches and imports. */
 public class RateLimiter {
-
-    private static final long WINDOW_MILLIS = 60_000L;
-
+    private static final long WINDOW = Duration.ofMinutes(1).toNanos();
     private final int permitsPerWindow;
+    private final Ticker ticker;
     private final Deque<Long> issued = new ArrayDeque<>();
+    private Long pausedUntil;
+    private String pausedCode;
 
     public RateLimiter(int permitsPerWindow) {
-        this.permitsPerWindow = permitsPerWindow;
+        this(permitsPerWindow, Ticker.systemTicker());
     }
 
-    /** Waits until a permit is free, then takes it. */
+    RateLimiter(int permitsPerWindow, Ticker ticker) {
+        if (permitsPerWindow < 1) throw new IllegalArgumentException("Rate limit must be positive");
+        this.permitsPerWindow = permitsPerWindow;
+        this.ticker = ticker;
+    }
+
     public synchronized void acquire() {
-        while (true) {
-            long now = System.currentTimeMillis();
-            while (!issued.isEmpty() && now - issued.peekFirst() >= WINDOW_MILLIS) {
-                issued.pollFirst();
-            }
-            if (issued.size() < permitsPerWindow) {
-                issued.addLast(now);
-                return;
-            }
-            long waitFor = WINDOW_MILLIS - (now - issued.peekFirst()) + 50;
-            try {
-                wait(waitFor);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Interrotto in attesa del rate limiter", e);
-            }
+        long now = ticker.read();
+        if (pausedUntil != null && pausedUntil - now > 0) {
+            throw new AniListException(pausedCode, seconds(pausedUntil - now));
         }
+        pausedUntil = null;
+        while (!issued.isEmpty() && now - issued.peekFirst() >= WINDOW) issued.removeFirst();
+        if (issued.size() >= permitsPerWindow) {
+            throw new AniListException("anilist_rate_limited", seconds(WINDOW - (now - issued.peekFirst())));
+        }
+        issued.addLast(now);
+    }
+
+    public synchronized AniListException pause(String code, int seconds) {
+        long now = ticker.read();
+        long deadline = now + Duration.ofSeconds(seconds).toNanos();
+        if (pausedUntil == null || deadline - pausedUntil > 0) {
+            pausedUntil = deadline;
+            pausedCode = code;
+        }
+        return new AniListException(pausedCode, seconds(pausedUntil - now));
+    }
+
+    private int seconds(long nanos) {
+        return (int) Math.max(1, (nanos + 999_999_999L) / 1_000_000_000L);
     }
 }
