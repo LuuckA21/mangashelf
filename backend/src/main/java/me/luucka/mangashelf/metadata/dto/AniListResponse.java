@@ -14,7 +14,10 @@ import java.util.List;
  * <p>Jackson annotations still live under {@code com.fasterxml.jackson} in
  * Jackson 3; only the databind classes moved to {@code tools.jackson}.
  */
-public record AniListResponse(Data data) {
+public record AniListResponse(Data data, List<GraphQlError> errors) {
+
+    public record GraphQlError(Integer status) {
+    }
 
     public record Data(@JsonProperty("Page") PageResult page) {
     }

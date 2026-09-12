@@ -16,6 +16,14 @@ import java.util.Map;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(me.luucka.mangashelf.metadata.AniListException.class)
+    public ResponseEntity<Map<String, Object>> handleAniList(
+            me.luucka.mangashelf.metadata.AniListException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .header("Retry-After", Integer.toString(ex.getRetryAfterSeconds()))
+                .body(Map.of("error", ex.getMessage(), "retryAfterSeconds", ex.getRetryAfterSeconds()));
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApi(ApiException ex) {
         return ResponseEntity.status(ex.getStatus())

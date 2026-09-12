@@ -66,6 +66,18 @@ class MetadataServiceTest {
     }
 
     @Test
+    void repeatedMetadataStillRechecksCatalogueMembership() {
+        AniListResponse.Media media = media(new AniListResponse.Title("Berserk", null, null), null);
+        Manga existing = mock(Manga.class);
+        when(existing.getId()).thenReturn(17L);
+        when(anilist.search("Berserk", 10)).thenReturn(List.of(media));
+        when(mangaRepository.findByAnilistId(42))
+                .thenReturn(Optional.empty(), Optional.of(existing));
+        assertThat(service.search("Berserk", 10).getFirst().alreadyInCatalogue()).isFalse();
+        assertThat(service.search("Berserk", 10).getFirst().mangaId()).isEqualTo(17L);
+    }
+
+    @Test
     void importCreatesAndNormalisesTheCatalogueRow() {
         AniListResponse.Media media = media(
                 new AniListResponse.Title("Berserk", "Berserk", "ベルセルク"),

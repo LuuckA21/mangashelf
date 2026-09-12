@@ -77,9 +77,8 @@ app:
     registration-attempts-per-hour: 5
   metadata:
     anilist-url: https://graphql.anilist.co
-    # AniList allows 90 requests a minute and also enforces a burst limiter.
-    # Staying under the ceiling leaves headroom: crossing it costs a minute
-    # of timeout on every call.
+    # Local ceiling per instance. Upstream may enforce a lower limit:
+    # HTTP/GraphQL errors trigger a shared cooldown and expose Retry-After.
     anilist-requests-per-minute: 60
 
 logging:
