@@ -32,6 +32,8 @@ jobs:
       - run: ./scripts/test-backup-restore.sh
       - run: ./scripts/test-deploy.sh
       - run: ./scripts/test-scheduled-backup.sh
+      - run: docker pull nginx:1.31.4-alpine
+      - run: python3 scripts/test-proxy-headers.py
 
   backend:
     runs-on: ubuntu-latest

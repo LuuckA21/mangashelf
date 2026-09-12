@@ -16,7 +16,7 @@ import java.util.List;
  *
  * @param id       primary key of the account
  * @param username login name
- * @param password BCrypt hash, erased by Spring after authentication
+ * @param password BCrypt hash during authentication; null in persisted sessions
  * @param role     granted role
  * @param enabled  whether the account may log in
  * @param sessionVersion version of the account state at authentication time
@@ -29,6 +29,17 @@ public record UserPrincipal(Long id, String username, String password,
         return new UserPrincipal(user.getId(), user.getUsername(),
                 user.getPasswordHash(), user.getRole(), user.isEnabled() && user.isEmailVerified(),
                 user.getSessionVersion());
+    }
+
+    /** Immutable records cannot have their credentials erased by Spring. */
+    public UserPrincipal withoutCredentials() {
+        return new UserPrincipal(id, username, null, role, enabled, sessionVersion);
+    }
+
+    @Override
+    public String toString() {
+        return "UserPrincipal[id=" + id + ", role=" + role
+                + ", enabled=" + enabled + ", sessionVersion=" + sessionVersion + "]";
     }
 
     @Override

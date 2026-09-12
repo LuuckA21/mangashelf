@@ -6,7 +6,9 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Slows down repeated failed logins for the same account.
@@ -26,6 +28,7 @@ public class LoginAttempts {
     private static final int MAX_ACCOUNT_FAILURES = 5;
     private static final int MAX_ADDRESS_FAILURES = 30;
     private static final int MAX_TRACKED_KEYS = 10_000;
+    private static final int MAX_CONCURRENT_LOGINS = 16;
     private static final Duration LOCKOUT = Duration.ofMinutes(15);
 
     private record Record(int failures, long blockedUntilNanos) {
@@ -34,6 +37,11 @@ public class LoginAttempts {
     private final Cache<String, Record> byAccount;
     private final Cache<String, Record> byAddress;
     private final Ticker ticker;
+    // Never evicted while a password check is running. The global ceiling
+    // bounds both these maps and concurrent BCrypt CPU work.
+    private final Map<String, Integer> activeAccounts = new HashMap<>();
+    private final Map<String, Integer> activeAddresses = new HashMap<>();
+    private int active;
 
     public LoginAttempts() {
         this(Ticker.systemTicker());
@@ -63,9 +71,61 @@ public class LoginAttempts {
      * key is canonical (the database id), so alternating between username
      * and email cannot obtain a second set of guesses.
      */
-    public boolean isBlocked(String accountKey, String clientAddress) {
+    public synchronized boolean isBlocked(String accountKey, String clientAddress) {
         return blocked(byAccount, key(accountKey))
                 || blocked(byAddress, key(clientAddress));
+    }
+
+    /** Reserve capacity BEFORE BCrypt: parallel requests count as guesses too. */
+    public synchronized Attempt tryAcquire(String accountKey, String clientAddress) {
+        String account = key(accountKey);
+        String address = key(clientAddress);
+        if (isBlocked(account, address) || active >= MAX_CONCURRENT_LOGINS
+                || failures(byAccount, account) + activeAccounts.getOrDefault(account, 0)
+                    >= MAX_ACCOUNT_FAILURES
+                || failures(byAddress, address) + activeAddresses.getOrDefault(address, 0)
+                    >= MAX_ADDRESS_FAILURES) {
+            return null;
+        }
+        active++;
+        activeAccounts.merge(account, 1, Integer::sum);
+        activeAddresses.merge(address, 1, Integer::sum);
+        return new Attempt(account, address);
+    }
+
+    private int failures(Cache<String, Record> cache, String key) {
+        Record record = cache.getIfPresent(key);
+        return record == null ? 0 : record.failures();
+    }
+
+    /** Request-scoped permit; closing on every exit also records failed checks. */
+    public final class Attempt implements AutoCloseable {
+        private final String account;
+        private final String address;
+        private boolean success;
+        private boolean closed;
+
+        private Attempt(String account, String address) {
+            this.account = account;
+            this.address = address;
+        }
+
+        public void succeeded() {
+            success = true;
+        }
+
+        @Override
+        public void close() {
+            synchronized (LoginAttempts.this) {
+                if (closed) return;
+                closed = true;
+                if (success) recordSuccess(account);
+                else recordFailure(account, address);
+                active--;
+                activeAccounts.compute(account, (key, count) -> count == 1 ? null : count - 1);
+                activeAddresses.compute(address, (key, count) -> count == 1 ? null : count - 1);
+            }
+        }
     }
 
     private boolean blocked(Cache<String, Record> cache, String key) {
@@ -78,7 +138,7 @@ public class LoginAttempts {
         return true;
     }
 
-    public void recordFailure(String accountKey, String clientAddress) {
+    public synchronized void recordFailure(String accountKey, String clientAddress) {
         long now = ticker.read();
         record(byAccount, key(accountKey), MAX_ACCOUNT_FAILURES, now);
         record(byAddress, key(clientAddress), MAX_ADDRESS_FAILURES, now);
@@ -93,7 +153,7 @@ public class LoginAttempts {
     }
 
     /** A successful login clears that account's count, so a typo costs nothing later. */
-    public void recordSuccess(String accountKey) {
+    public synchronized void recordSuccess(String accountKey) {
         byAccount.invalidate(key(accountKey));
     }
 

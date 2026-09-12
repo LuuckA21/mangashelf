@@ -4,11 +4,13 @@ import me.luucka.mangashelf.user.AppUser;
 import me.luucka.mangashelf.user.AuthService;
 import me.luucka.mangashelf.user.LoginAttempts;
 import me.luucka.mangashelf.user.Role;
+import me.luucka.mangashelf.user.UserPrincipal;
 import me.luucka.mangashelf.user.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -130,6 +132,12 @@ class AuthIT extends IntegrationTest {
                 (MockHttpSession) loggedIn.getRequest().getSession(false);
         assertThat(authenticated).isNotNull();
         assertThat(authenticated.getId()).isNotEqualTo(anonymousId);
+        SecurityContext saved = (SecurityContext) authenticated.getAttribute("SPRING_SECURITY_CONTEXT");
+        assertThat(saved.getAuthentication().getCredentials()).isNull();
+        UserPrincipal savedPrincipal = (UserPrincipal) saved.getAuthentication().getPrincipal();
+        assertThat(savedPrincipal.getPassword()).isNull();
+        assertThat(savedPrincipal.password()).isNull();
+        assertThat(savedPrincipal.toString()).doesNotContain(PASSWORD, "$2");
 
         mvc.perform(get("/api/auth/me").session(authenticated))
                 .andExpect(status().isOk())

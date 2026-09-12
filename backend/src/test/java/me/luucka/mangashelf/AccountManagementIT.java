@@ -7,6 +7,8 @@ import me.luucka.mangashelf.user.Role;
 import me.luucka.mangashelf.user.UserPrincipal;
 import me.luucka.mangashelf.user.dto.AdminUserUpdateRequest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
@@ -18,6 +20,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -162,12 +165,28 @@ class AccountManagementIT extends IntegrationTest {
             List<String> outcomes = List.of(
                     first.get(30, TimeUnit.SECONDS),
                     secondUpdate.get(30, TimeUnit.SECONDS));
-            assertThat(outcomes).containsExactlyInAnyOrder("updated", "last_admin_required");
+            assertThat(outcomes).containsExactlyInAnyOrder("updated", "session_invalid");
         } finally {
             executor.shutdownNow();
         }
 
         assertThat(users.countByRoleAndEnabledTrueAndEmailVerifiedTrue(Role.ADMIN)).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void anActorRevokedAfterTheHttpCheckCannotGrantAnotherAccountAdmin(boolean demote) {
+        AppUser second = new AppUser("second-admin", "second-admin@localhost", "x".repeat(60));
+        second.setRole(Role.ADMIN);
+        UserPrincipal secondAdmin = UserPrincipal.from(users.saveAndFlush(second));
+        // 'admin' is the snapshot a request obtained before waiting on the lock.
+        accounts.updateUser(admin.id(), new AdminUserUpdateRequest(
+                demote ? Role.USER : Role.ADMIN, demote), secondAdmin);
+
+        assertThatThrownBy(() -> accounts.updateUser(other.id(),
+                new AdminUserUpdateRequest(Role.ADMIN, true), admin))
+                .isInstanceOf(ApiException.class).hasMessage("session_invalid");
+        assertThat(users.findById(other.id()).orElseThrow().getRole()).isEqualTo(Role.USER);
     }
 
     private String updateAfterStart(CountDownLatch start, Long targetId,
