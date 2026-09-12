@@ -9,7 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.internet.MimeMessage;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -36,6 +37,11 @@ class AccountEmailIT extends IntegrationTest {
     @Autowired LoginAttempts attempts;
     private static final String PASSWORD = "original-password-123";
     private static final String NEW_PASSWORD = "replacement-password-456";
+
+    @BeforeEach
+    void prepareMimeMessages() {
+        MailTestSupport.prepare(sender);
+    }
 
     @Test
     void healthDoesNotDependOnExternalSmtp() throws Exception {
@@ -125,14 +131,15 @@ class AccountEmailIT extends IntegrationTest {
 
     @Test
     void smtpFailureRollsBackRegistrationAndPreservesPreviouslyDeliveredLink() throws Exception {
-        doThrow(new MailSendException("SMTP unavailable")).when(sender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("SMTP unavailable")).when(sender).send(any(MimeMessage.class));
         register(503);
         assertThat(users.findByEmailIgnoreCase("reader@example.test")).isEmpty();
         reset(sender);
+        MailTestSupport.prepare(sender);
         verifiedAccount();
         emails.requestEmail("reader@example.test", false);
         String token = lastToken();
-        doThrow(new MailSendException("SMTP unavailable")).when(sender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("SMTP unavailable")).when(sender).send(any(MimeMessage.class));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> emails.requestEmail("reader@example.test", false))
                 .isInstanceOf(MailSendException.class);
         consume("reset-password", token, NEW_PASSWORD, 204);
@@ -198,10 +205,10 @@ class AccountEmailIT extends IntegrationTest {
 
     private AppUser account() { return users.findByEmailIgnoreCase("reader@example.test").orElseThrow(); }
 
-    private String lastToken() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+    private String lastToken() throws Exception {
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(sender, atLeastOnce()).send(captor.capture());
-        String body = captor.getValue().getText();
+        String body = MailTestSupport.body(MailTestSupport.delivered(captor.getValue()), "text/plain");
         assertThat(body).contains("https://manga.example.test/").contains("#token=");
         return body.split("#token=")[1].split("\\s")[0];
     }

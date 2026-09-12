@@ -2,7 +2,16 @@ package me.luucka.mangashelf.user;
 
 import jakarta.mail.internet.InternetAddress;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.MessagingException;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.mail.MailPreparationException;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.web.util.HtmlUtils;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.regex.Pattern;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +20,8 @@ import java.net.URI;
 /** SMTP transport; links only use the configured origin, never request headers. */
 @Component
 public class AccountMailer {
+    private static final String TEMPLATE = loadTemplate();
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-z]+)\\}\\}");
     private final JavaMailSender sender;
     private final boolean enabled;
     private final String baseUrl;
@@ -54,17 +65,53 @@ public class AccountMailer {
                 ? (italian ? "Conferma il tuo indirizzo email" : "Confirm your email address")
                 : (italian ? "Reimposta la tua password" : "Reset your password");
         String instructions = verification
-                ? (italian ? "Conferma il tuo indirizzo per accedere a MangaShelf. Il link scade tra 24 ore."
-                : "Confirm your email address to sign in to MangaShelf. This link expires in 24 hours.")
-                : (italian ? "Usa questo link per scegliere una nuova password. Il link scade tra 30 minuti."
-                : "Use this link to choose a new password. This link expires in 30 minutes.");
+                ? (italian ? "La tua libreria ti aspetta. Conferma il tuo indirizzo email per iniziare a usare MangaShelf."
+                : "Your library is waiting. Confirm your email address to get started with MangaShelf.")
+                : (italian ? "Hai richiesto una nuova password per il tuo account MangaShelf. Scegline una nuova usando il pulsante qui sotto."
+                : "You requested a new password for your MangaShelf account. Choose a new one using the button below.");
+        String expiry = verification
+                ? (italian ? "Questo link è monouso e scade tra 24 ore." : "This link can be used once and expires in 24 hours.")
+                : (italian ? "Questo link è monouso e scade tra 30 minuti." : "This link can be used once and expires in 30 minutes.");
+        String button = verification
+                ? (italian ? "Conferma email" : "Confirm email")
+                : (italian ? "Reimposta password" : "Reset password");
         String footer = italian ? "Se non hai richiesto questa email, puoi ignorarla."
                 : "If you did not request this email, you can ignore it.";
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(from);
-        message.setTo(user.getEmail());
-        message.setSubject("MangaShelf — " + subject);
-        message.setText(instructions + "\n\n" + link + "\n\n" + footer);
-        sender.send(message);
+        String plain = subject + "\n\n" + instructions + "\n\n" + link + "\n\n" + expiry + "\n\n" + footer;
+        String html = render(Map.of(
+                "language", italian ? "it" : "en", "subject", subject,
+                "preheader", subject + ". " + expiry,
+                "eyebrow", verification ? (italian ? "Benvenuto nella tua libreria" : "Welcome to your library")
+                        : (italian ? "Il tuo account" : "Your account"),
+                "instructions", instructions, "button", button, "expiry", expiry,
+                "link", link, "footer", footer,
+                "fallback", italian ? "Se il pulsante non funziona, copia questo link nel browser:"
+                        : "If the button does not work, copy this link into your browser:"),
+                italian ? "La tua collezione, volume dopo volume." : "Your collection, one volume at a time.");
+        try {
+            var message = sender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(from, "MangaShelf", StandardCharsets.UTF_8.name()));
+            helper.setTo(user.getEmail());
+            helper.setSubject("MangaShelf — " + subject);
+            helper.setText(plain, html);
+            sender.send(message);
+        } catch (MessagingException | java.io.UnsupportedEncodingException ex) {
+            throw new MailPreparationException("Unable to prepare account email", ex);
+        }
+    }
+
+    private static String render(Map<String, String> values, String tagline) {
+        // One pass prevents replacement text from becoming another placeholder.
+        return PLACEHOLDER.matcher(TEMPLATE).replaceAll(match -> java.util.regex.Matcher.quoteReplacement(
+                HtmlUtils.htmlEscape(match.group(1).equals("tagline") ? tagline : values.get(match.group(1)))));
+    }
+
+    private static String loadTemplate() {
+        try {
+            return new ClassPathResource("mail/account-email.html").getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Unable to load account email template", ex);
+        }
     }
 }

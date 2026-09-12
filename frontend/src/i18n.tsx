@@ -18,8 +18,8 @@ const italian = {
   'email.checkInbox': 'Controlla la tua email',
   'email.registered':
     'Account creato. Apri il link ricevuto via email per confermare l’indirizzo e accedere. Controlla anche la cartella spam.',
-  'email.loginHint':
-    'Hai appena creato un account? Conferma prima l’indirizzo tramite il link ricevuto via email.',
+  'email.confirmationHelp': 'Email da confermare?',
+  'email.resendShort': 'Reinvia il link',
   'email.unavailable':
     'Il servizio email non è disponibile. Riprova più tardi o contatta l’amministratore.',
   'email.requested':
@@ -463,8 +463,8 @@ const english: Messages = {
   'email.checkInbox': 'Check your email',
   'email.registered':
     'Account created. Open the link in your email to confirm your address and sign in. Check your spam folder too.',
-  'email.loginHint':
-    'Just created an account? Confirm your address using the link in your email before signing in.',
+  'email.confirmationHelp': 'Email not confirmed?',
+  'email.resendShort': 'Resend the link',
   'email.unavailable':
     'Email is unavailable. Try again later or contact the administrator.',
   'email.requested':

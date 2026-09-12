@@ -9,7 +9,10 @@ const session = vi.hoisted(() => ({ setUser: vi.fn() }))
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
-  return { ...actual, auth: { ...actual.auth, login: vi.fn() } }
+  return {
+    ...actual,
+    auth: { ...actual.auth, login: vi.fn(), emailOptions: vi.fn() },
+  }
 })
 
 vi.mock('../api/session', () => ({
@@ -39,6 +42,7 @@ async function fillAndSubmit(password: string) {
 describe('Login', () => {
   beforeEach(() => {
     login.mockReset()
+    vi.mocked(auth.emailOptions).mockResolvedValue({ enabled: true })
     session.setUser.mockReset()
   })
 

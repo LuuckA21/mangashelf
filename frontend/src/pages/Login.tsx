@@ -96,25 +96,26 @@ export default function Login() {
           />
         </div>
 
+        {emailEnabled && (
+          <p className="auth-recovery">
+            <Link to="/forgot-password">{t('email.forgot')}</Link>
+          </p>
+        )}
+
         <button type="submit" disabled={busy}>
           {busy ? t('login.submitting') : t('login.submit')}
         </button>
 
-        {emailEnabled && (
-          <>
-            <p className="switch">
-              <Link to="/forgot-password">{t('email.forgot')}</Link>
-            </p>
-            <p className="switch">
-              <Link to="/resend-verification">{t('email.resend')}</Link>
-            </p>
-            <p className="subtitle">{t('email.loginHint')}</p>
-          </>
-        )}
         <p className="switch">
           {t('login.noAccount')}{' '}
           <Link to="/register">{t('login.register')}</Link>
         </p>
+        {emailEnabled && (
+          <div className="auth-confirmation">
+            <span>{t('email.confirmationHelp')}</span>{' '}
+            <Link to="/resend-verification">{t('email.resendShort')}</Link>
+          </div>
+        )}
       </form>
     </div>
   )
