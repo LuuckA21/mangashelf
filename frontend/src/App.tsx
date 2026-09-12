@@ -3,6 +3,7 @@ import { useSession } from './api/session'
 import Library from './pages/Library'
 import Login from './pages/Login'
 import AccountEmail from './pages/AccountEmail'
+import DeleteAccount from './pages/DeleteAccount'
 import MangaDetail from './pages/MangaDetail'
 import MyCollection from './pages/MyCollection'
 import PurchaseDetail from './pages/PurchaseDetail'
@@ -51,6 +52,7 @@ export default function App() {
           path="/resend-verification"
           element={<AccountEmail mode="resend" />}
         />
+        <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/verify-email" element={<AccountEmail mode="verify" />} />
         <Route path="/reset-password" element={<AccountEmail mode="reset" />} />
         <Route path="/login" element={<Login />} />
@@ -62,6 +64,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/delete-account" element={<DeleteAccount />} />
       <Route path="/verify-email" element={<AccountEmail mode="verify" />} />
       <Route path="/reset-password" element={<AccountEmail mode="reset" />} />
       <Route path="/" element={<Library />} />

@@ -12,6 +12,24 @@ import static org.mockito.Mockito.*;
 
 class AccountMailerTest {
     @Test
+    void deletionEmailExplainsConsequencesAndUsesADistinctLink() throws Exception {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        MailTestSupport.prepare(sender);
+        AccountMailer mailer = new AccountMailer(sender, true, "https://manga.example.test", "sender@example.test", "smtp.example.test");
+        AppUser account = new AppUser("reader", "reader@example.test", "hash");
+        mailer.sendDeletion(account, "token");
+        account.setLanguage(UiLanguage.EN);
+        mailer.sendDeletion(account, "token");
+        var capture = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(sender, times(2)).send(capture.capture());
+        var italian = MailTestSupport.delivered(capture.getAllValues().get(0));
+        var english = MailTestSupport.delivered(capture.getValue());
+        assertThat(MailTestSupport.body(italian, "text/plain")).contains("reader@example.test", "eliminati definitivamente", "30 minuti", "/delete-account#token=token");
+        assertThat(MailTestSupport.body(english, "text/plain")).contains("permanently deleted", "30 minutes");
+        assertThat(MailTestSupport.body(english, "text/html")).contains("Review account deletion", "/delete-account#token=token").doesNotContain("{{");
+    }
+
+    @Test
     void validatesEnabledConfiguration() {
         JavaMailSender sender = mock(JavaMailSender.class);
         for (String url : new String[]{"", "http://example.test", "https://user@example.test",

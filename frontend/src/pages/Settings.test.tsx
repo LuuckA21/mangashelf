@@ -10,7 +10,14 @@ const setUser = vi.fn()
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
-  return { ...actual, auth: { ...actual.auth, updatePassword: vi.fn() } }
+  return {
+    ...actual,
+    auth: {
+      ...actual.auth,
+      updatePassword: vi.fn(),
+      emailOptions: vi.fn().mockResolvedValue({ enabled: false }),
+    },
+  }
 })
 
 vi.mock('../api/session', () => ({

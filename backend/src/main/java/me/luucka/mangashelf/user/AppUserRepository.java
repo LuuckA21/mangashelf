@@ -25,7 +25,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     List<AppUser> findAllByOrderByUsernameAsc();
 
-    long countByRoleAndEnabledTrue(Role role);
+    long countByRoleAndEnabledTrueAndEmailVerifiedTrue(Role role);
+
+    @Query("select u.id from AppUser u where u.deletionHash = :hash")
+    Optional<Long> findIdByDeletionHash(@Param("hash") String hash);
 
     @Query("select u.id from AppUser u where u.verificationHash = :hash")
     Optional<Long> findIdByVerificationHash(@Param("hash") String hash);
