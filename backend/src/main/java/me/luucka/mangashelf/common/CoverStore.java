@@ -86,7 +86,8 @@ public class CoverStore {
      */
     @PostConstruct
     void repairExistingCoverPermissions() throws IOException {
-        Files.createDirectories(directory);
+        // A fresh installation has no covers to repair; writes create the directory.
+        if (!Files.isDirectory(directory)) return;
         if (!Files.getFileStore(directory).supportsFileAttributeView("posix")) return;
         int repaired = 0;
         try (var files = Files.newDirectoryStream(directory)) {

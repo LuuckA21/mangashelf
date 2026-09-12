@@ -107,6 +107,15 @@ class CoverStoreTest {
         assertThat(Files.isSymbolicLink(directory.resolve("linked.png"))).isTrue();
     }
 
+    @Test
+    void startupDoesNotCreateAMissingCoverDirectory() throws Exception {
+        Path missing = directory.resolve("not-created-yet");
+
+        new CoverStore(missing.toString()).repairExistingCoverPermissions();
+
+        assertThat(missing).doesNotExist();
+    }
+
     private void assertPublicReadPermissions(Path file) throws Exception {
         if (Files.getFileStore(file).supportsFileAttributeView("posix")) {
             assertThat(Files.getPosixFilePermissions(file))
