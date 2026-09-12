@@ -167,7 +167,7 @@ class AccountManagementIT extends IntegrationTest {
             executor.shutdownNow();
         }
 
-        assertThat(users.countByRoleAndEnabledTrue(Role.ADMIN)).isEqualTo(1);
+        assertThat(users.countByRoleAndEnabledTrueAndEmailVerifiedTrue(Role.ADMIN)).isEqualTo(1);
     }
 
     private String updateAfterStart(CountDownLatch start, Long targetId,

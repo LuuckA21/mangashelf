@@ -2,6 +2,15 @@ import { api } from './http'
 import type { AdminAuditEvent, AdminUser, User } from './types'
 
 export const auth = {
+  requestAccountDeletion: (currentPassword: string) =>
+    api.post<void>('/api/auth/me/deletion-request', { currentPassword }),
+  accountDeletionDetails: (token: string) =>
+    api.post<{ username: string; email: string }>(
+      '/api/auth/deletion-details',
+      { token },
+    ),
+  deleteAccount: (token: string) =>
+    api.post<void>('/api/auth/delete-account', { token, confirmed: true }),
   emailOptions: () => api.get<{ enabled: boolean }>('/api/auth/email-options'),
   requestPasswordReset: (email: string) =>
     api.post<void>('/api/auth/forgot-password', { email }),

@@ -12,12 +12,10 @@ import me.luucka.mangashelf.common.BaseEntity;
 import java.time.Instant;
 
 /**
- * Immutable application-level record of an administrator changing an account.
+ * Record of an administrator changing an account.
  *
- * <p>User ids keep the relationship queryable while the username snapshots
- * preserve a useful record if hard account deletion is introduced later.
- * This entity deliberately exposes no setters: events are inserted once and
- * never updated by application code.
+ * <p>Events expose no setters. Account deletion anonymizes the affected username
+ * snapshots, while foreign keys become null and the action history is retained.
  */
 @Entity
 @Table(name = "admin_audit_event")

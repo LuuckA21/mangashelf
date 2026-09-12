@@ -39,6 +39,15 @@ class AuthIT extends IntegrationTest {
     private LoginAttempts attempts;
 
     @Test
+    void accountDeletionCannotStartWithoutEmailDelivery() throws Exception {
+        mvc.perform(post("/api/auth/me/deletion-request").with(user(member)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"currentPassword\":\"some-password-123\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("email_unavailable"));
+        assertThat(users.existsById(member.id())).isTrue();
+    }
+
+    @Test
     void healthRemainsAvailableWithoutSmtpConfigured() throws Exception {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
     }

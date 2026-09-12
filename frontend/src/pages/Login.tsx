@@ -54,6 +54,13 @@ export default function Login() {
           </div>
         )}
 
+        {(location.state as { accountDeleted?: boolean } | null)
+          ?.accountDeleted && (
+          <div className="success" role="status">
+            {t('deletion.completed')}
+          </div>
+        )}
+
         <label className="auth-language">
           <span>{t('language.label')}</span>
           <select

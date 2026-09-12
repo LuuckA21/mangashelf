@@ -58,13 +58,37 @@ public class AccountMailer {
         return enabled;
     }
 
+    private enum Kind { VERIFICATION, RESET, DELETION }
+
     public void send(AppUser user, String token, boolean verification) {
+        send(user, token, verification ? Kind.VERIFICATION : Kind.RESET);
+    }
+
+    public void sendDeletion(AppUser user, String token) {
+        send(user, token, Kind.DELETION);
+    }
+
+    private void send(AppUser user, String token, Kind kind) {
         boolean italian = user.getLanguage() == UiLanguage.IT;
-        String link = baseUrl + (verification ? "/verify-email" : "/reset-password") + "#token=" + token;
-        String subject = verification
+        boolean verification = kind == Kind.VERIFICATION;
+        boolean deletion = kind == Kind.DELETION;
+        String path = switch (kind) {
+            case VERIFICATION -> "/verify-email";
+            case RESET -> "/reset-password";
+            case DELETION -> "/delete-account";
+        };
+        String link = baseUrl + path + "#token=" + token;
+        String subject = deletion
+                ? (italian ? "Conferma l’eliminazione del tuo account" : "Confirm your account deletion")
+                : verification
                 ? (italian ? "Conferma il tuo indirizzo email" : "Confirm your email address")
                 : (italian ? "Reimposta la tua password" : "Reset your password");
-        String instructions = verification
+        String instructions = deletion
+                ? (italian ? "Hai richiesto di eliminare l’account " + user.getUsername() + " (" + user.getEmail()
+                        + "). Apri il link per confermare: account, collezione e liste acquisti personali saranno eliminati definitivamente."
+                : "You requested deletion of account " + user.getUsername() + " (" + user.getEmail()
+                        + "). Open the link to confirm: your account, collection and personal purchase lists will be permanently deleted.")
+                : verification
                 ? (italian ? "La tua libreria ti aspetta. Conferma il tuo indirizzo email per iniziare a usare MangaShelf."
                 : "Your library is waiting. Confirm your email address to get started with MangaShelf.")
                 : (italian ? "Hai richiesto una nuova password per il tuo account MangaShelf. Scegline una nuova usando il pulsante qui sotto."
@@ -72,7 +96,9 @@ public class AccountMailer {
         String expiry = verification
                 ? (italian ? "Questo link è monouso e scade tra 24 ore." : "This link can be used once and expires in 24 hours.")
                 : (italian ? "Questo link è monouso e scade tra 30 minuti." : "This link can be used once and expires in 30 minutes.");
-        String button = verification
+        String button = deletion
+                ? (italian ? "Rivedi ed elimina account" : "Review account deletion")
+                : verification
                 ? (italian ? "Conferma email" : "Confirm email")
                 : (italian ? "Reimposta password" : "Reset password");
         String footer = italian ? "Se non hai richiesto questa email, puoi ignorarla."

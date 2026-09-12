@@ -395,3 +395,61 @@ Verifiche dopo il deploy:
 
 Riferimento per lo starter SMTP e i timeout:
 [Spring Boot — Sending Email](https://docs.spring.io/spring-boot/reference/io/email.html).
+
+### Eliminazione del proprio account con conferma email
+
+Con SMTP attivo, **Impostazioni → Elimina account** permette di richiedere una
+conferma all'indirizzo dell'account. La richiesta richiede una sessione valida e
+la password attuale; non accetta un utente o un indirizzo destinatario scelti dal
+client. L'email è disponibile in italiano e inglese, con lo stesso formato HTML
+(e alternativa testuale) delle altre email account.
+
+Il link monouso è valido 30 minuti. Aprirlo mostra username/email e le conseguenze;
+la cancellazione avviene solo dopo aver selezionato la casella di conferma e premuto
+**Elimina definitivamente il mio account**. Il link può essere aperto su un altro
+dispositivo senza sessione, ma viene rifiutato se il browser è autenticato con un
+account diverso. Il token resta nel frammento URL e nel corpo POST, mai nella query
+string; la pagina lo rimuove dalla voce corrente della cronologia. Dopo un refresh
+occorre riaprire il link originale.
+
+La migrazione V10 aggiunge hash del token, scadenza, versione delle sessioni e data
+dell'ultimo invio. Un nuovo invio riuscito (massimo uno al minuto per account)
+sostituisce il precedente. Un errore SMTP annulla la sostituzione e il cooldown.
+Cambi password, reset e modifiche amministrative di ruolo/stato invalidano i link
+pendenti. Le richieste e le conferme usano anche il limite IP delle email e CSRF.
+Disattivare SMTP impedisce nuove richieste; i link validi già ricevuti restano usabili.
+
+La cancellazione rimuove dalla banca dati attiva:
+
+- l'account, le credenziali e i token;
+- i volumi della collezione personale;
+- le liste acquisti personali e le relative righe.
+
+Il catalogo, le copertine condivise e i dati degli altri utenti restano intatti.
+Gli eventi dell'audit amministrativo restano come storico delle azioni, ma i
+riferimenti all'account eliminato diventano null e i relativi username vengono
+sostituiti da `[deleted]`. Le sessioni esistenti vengono rifiutate alla richiesta
+successiva. I backup già creati mantengono i dati fino alla normale rotazione;
+questa funzione non riscrive gli archivi di backup.
+
+L'ultimo amministratore abilitato e con email verificata non può eliminarsi: occorre
+prima nominare un altro amministratore con accesso funzionante. Il controllo viene
+ripetuto alla conferma e condivide il lock PostgreSQL con le modifiche di ruolo e
+stato, evitando che richieste simultanee lascino l'istanza senza amministratore.
+
+Deploy del branch di prova:
+
+```bash
+./deploy.sh feature/account-deletion
+```
+
+Test manuale con un **account di prova**, dopo aver verificato il backup:
+
+1. Aprire Impostazioni, richiedere l'email con la password attuale e verificare che
+   l'account resti utilizzabile prima della conferma.
+2. Aprire il link e controllare account mostrato e avviso; chiudere la pagina senza
+   confermare deve lasciare tutti i dati invariati.
+3. Riaprire il link, confermare la cancellazione e verificare il ritorno al login,
+   il rifiuto delle vecchie sessioni e l'inutilizzabilità del link già consumato.
+4. Con un altro utente controllare catalogo, collezione e liste acquisti; devono
+   restare disponibili. L'ultimo amministratore deve ricevere un blocco esplicito.

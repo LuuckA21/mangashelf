@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import AccountDeletionRequest from '../components/AccountDeletionRequest'
 import { useSession } from '../api/session'
 import { ApiError, auth } from '../api/client'
 import { useI18n, type Language } from '../i18n'
@@ -159,6 +160,7 @@ export default function Settings() {
             : t('settings.changePassword')}
         </button>
       </form>
+      <AccountDeletionRequest />
     </Layout>
   )
 }

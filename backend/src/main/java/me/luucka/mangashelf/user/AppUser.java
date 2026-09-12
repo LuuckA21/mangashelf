@@ -65,6 +65,18 @@ public class AppUser extends BaseEntity {
     @Column(name = "reset_session_version")
     private Integer resetSessionVersion;
 
+    @Column(name = "deletion_hash", length = 64)
+    private String deletionHash;
+
+    @Column(name = "deletion_expires_at")
+    private Instant deletionExpiresAt;
+
+    @Column(name = "deletion_session_version")
+    private Integer deletionSessionVersion;
+
+    @Column(name = "deletion_requested_at")
+    private Instant deletionRequestedAt;
+
     /**
      * Incremented whenever credentials or authorisation change. Sessions
      * carry the value they authenticated with and are rejected as soon as it

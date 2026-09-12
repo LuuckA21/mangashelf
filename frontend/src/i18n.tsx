@@ -11,6 +11,34 @@ import {
 export type Language = 'it' | 'en'
 
 const italian = {
+  'deletion.title': 'Elimina account',
+  'deletion.explanation':
+    'L’eliminazione è definitiva: perderai il tuo account, la collezione e le liste acquisti personali. Il catalogo condiviso e i dati degli altri utenti resteranno disponibili.',
+  'deletion.requestHelp':
+    'Inserisci la password attuale per ricevere un link di conferma al tuo indirizzo email. L’account verrà eliminato solo dopo la conferma nella pagina aperta dal link.',
+  'deletion.password': 'Password attuale per eliminare l’account',
+  'deletion.send': 'Invia conferma via email',
+  'deletion.sending': 'Invio conferma…',
+  'deletion.sent':
+    'Email di conferma inviata. Il link è valido per 30 minuti. Nessun dato è stato eliminato. Per un nuovo invio attendi almeno un minuto.',
+  'deletion.unavailable':
+    'Per eliminare l’account è necessario il servizio email. Contatta l’amministratore per attivarlo.',
+  'deletion.lastAdmin':
+    'Non puoi eliminare l’ultimo amministratore attivo. Prima assegna il ruolo a un altro utente con email confermata.',
+  'deletion.cooldown': 'Attendi un minuto prima di richiedere un nuovo link.',
+  'deletion.sessionInvalid': 'La sessione non è più valida. Accedi nuovamente.',
+  'deletion.invalidToken':
+    'Il link di eliminazione non è valido, è scaduto o è già stato utilizzato. Richiedine uno nuovo dalle Impostazioni.',
+  'deletion.wrongAccount':
+    'Questo link appartiene a un altro account. Esci dall’account attuale e riapri il link ricevuto via email.',
+  'deletion.confirmation':
+    'Confermo di voler eliminare definitivamente questo account e i suoi dati personali.',
+  'deletion.confirm': 'Elimina definitivamente il mio account',
+  'deletion.deleting': 'Eliminazione…',
+  'deletion.completed':
+    'Il tuo account e i tuoi dati personali sono stati eliminati.',
+  'deletion.back': 'Torna alle impostazioni',
+
   'email.forgot': 'Password dimenticata?',
   'email.resend': 'Reinvia email di conferma',
   'email.verify': 'Conferma indirizzo email',
@@ -456,6 +484,34 @@ const italian = {
 type Messages = { [K in keyof typeof italian]: string }
 
 const english: Messages = {
+  'deletion.title': 'Delete account',
+  'deletion.explanation':
+    'Deletion is permanent: you will lose your account, collection and personal purchase lists. The shared catalogue and other users’ data will remain available.',
+  'deletion.requestHelp':
+    'Enter your current password to receive a confirmation link at your email address. Your account will only be deleted after you confirm on the page opened from that link.',
+  'deletion.password': 'Current password to delete your account',
+  'deletion.send': 'Send email confirmation',
+  'deletion.sending': 'Sending confirmation…',
+  'deletion.sent':
+    'Confirmation email sent. The link is valid for 30 minutes. No data has been deleted. Wait at least one minute before requesting another email.',
+  'deletion.unavailable':
+    'Account deletion requires email delivery. Contact the administrator to enable it.',
+  'deletion.lastAdmin':
+    'You cannot delete the last active administrator. First assign the role to another user with a confirmed email address.',
+  'deletion.cooldown': 'Wait one minute before requesting another link.',
+  'deletion.sessionInvalid':
+    'Your session is no longer valid. Please sign in again.',
+  'deletion.invalidToken':
+    'This deletion link is invalid, expired or already used. Request a new one from Settings.',
+  'deletion.wrongAccount':
+    'This link belongs to another account. Sign out of the current account and reopen the link from your email.',
+  'deletion.confirmation':
+    'I confirm that I want to permanently delete this account and its personal data.',
+  'deletion.confirm': 'Permanently delete my account',
+  'deletion.deleting': 'Deleting…',
+  'deletion.completed': 'Your account and personal data have been deleted.',
+  'deletion.back': 'Back to settings',
+
   'email.forgot': 'Forgot password?',
   'email.resend': 'Resend confirmation email',
   'email.verify': 'Confirm email address',

@@ -1397,3 +1397,26 @@ button.danger:hover:not(:disabled) {
     padding-top: var(--s) !important;
   }
 }
+
+/* Account deletion: separate from ordinary preferences. */
+.account-danger {
+  border-left: 3px solid var(--vermilion);
+}
+.deletion-identity {
+  padding: 12px;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  overflow-wrap: anywhere;
+}
+.deletion-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 24px 0;
+  font-size: 14px;
+}
+.deletion-check input {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 5px;
+}
