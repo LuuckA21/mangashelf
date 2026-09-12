@@ -297,4 +297,10 @@ Docker Compose usa due volumi nominati:
 - `db-data`: database PostgreSQL;
 - `covers`: copertine locali.
 
+Le copertine vengono pubblicate con permessi `0644`, così il processo Nginx
+può leggerle dal volume condiviso. All'avvio il backend ripara anche i permessi
+delle immagini già presenti salvate dalle versioni precedenti con `0600`;
+non è necessario reimportare le opere. Il recupero esclude link simbolici,
+file temporanei e sottodirectory.
+
 Non eseguire `docker compose down -v`: l'opzione `-v` elimina entrambi i volumi e quindi i dati persistenti.

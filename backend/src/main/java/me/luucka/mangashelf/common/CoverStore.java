@@ -1,5 +1,6 @@
 package me.luucka.mangashelf.common;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.LinkOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +51,9 @@ public class CoverStore {
 
     /** Public path the files are served from — see the nginx config. */
     private static final String PUBLIC_PREFIX = "/covers/";
+    // Nginx uses a different UID on the shared, read-only cover volume.
+    private static final Set<PosixFilePermission> PUBLIC_FILE_PERMISSIONS =
+            PosixFilePermissions.fromString("rw-r--r--");
 
     private final Path directory;
     private final RestClient http;
@@ -70,6 +77,35 @@ public class CoverStore {
         this.allowedHosts = allowedHosts.stream()
                 .map(host -> host.toLowerCase(Locale.ROOT))
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Repairs covers written with createTempFile's owner-only permissions by
+     * earlier versions. Only regular image files directly in the cover
+     * directory are touched: no symlinks, temporary files or other data.
+     */
+    @PostConstruct
+    void repairExistingCoverPermissions() throws IOException {
+        Files.createDirectories(directory);
+        if (!Files.getFileStore(directory).supportsFileAttributeView("posix")) return;
+        int repaired = 0;
+        try (var files = Files.newDirectoryStream(directory)) {
+            for (Path file : files) {
+                if (!file.getFileName().toString().matches("[a-zA-Z0-9._-]+\\.(png|jpg|jpeg|gif|webp)")
+                        || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) continue;
+                try {
+                    if (!Files.getPosixFilePermissions(file, LinkOption.NOFOLLOW_LINKS)
+                            .containsAll(PUBLIC_FILE_PERMISSIONS)) {
+                        Files.setPosixFilePermissions(file, PUBLIC_FILE_PERMISSIONS);
+                        repaired++;
+                    }
+                } catch (IOException e) {
+                    log.warn("Could not repair cover permissions for {}: {}",
+                            file.getFileName(), e.getMessage());
+                }
+            }
+        }
+        if (repaired > 0) log.info("Repaired read permissions for {} existing covers", repaired);
     }
 
     /**
@@ -212,6 +248,11 @@ public class CoverStore {
         Path temp = Files.createTempFile(directory, fileName + "-", ".part");
         try {
             Files.write(temp, bytes);
+            // The completed image must be readable by the Nginx worker before
+            // publication. Renaming a 0600 temporary file preserves that mode.
+            if (Files.getFileStore(temp).supportsFileAttributeView("posix")) {
+                Files.setPosixFilePermissions(temp, PUBLIC_FILE_PERMISSIONS);
+            }
             Files.move(temp, directory.resolve(fileName),
                     StandardCopyOption.REPLACE_EXISTING,
                     StandardCopyOption.ATOMIC_MOVE);
