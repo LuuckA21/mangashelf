@@ -4,10 +4,91 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LoginAttemptsTest {
+
+    @Test
+    void concurrentGuessesReserveTheAccountLimitBeforeAnyCheckFinishes() throws Exception {
+        LoginAttempts attempts = new LoginAttempts();
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(32)) {
+            List<Future<LoginAttempts.Attempt>> futures = new ArrayList<>();
+            for (int i = 0; i < 32; i++) {
+                final int address = i;
+                futures.add(executor.submit(() -> {
+                    start.await();
+                    return attempts.tryAcquire("user:1", "address:" + address);
+                }));
+            }
+            start.countDown();
+            List<LoginAttempts.Attempt> admitted = new ArrayList<>();
+            for (var future : futures) {
+                var attempt = future.get(5, TimeUnit.SECONDS);
+                if (attempt != null) admitted.add(attempt);
+            }
+            assertThat(admitted).hasSize(5);
+            admitted.forEach(LoginAttempts.Attempt::close);
+            assertThat(attempts.tryAcquire("USER:1", "another-address")).isNull();
+        }
+    }
+
+    @Test
+    void inFlightGuessesCountAlongsideEarlierFailuresForAnAddress() {
+        LoginAttempts attempts = new LoginAttempts();
+        for (int i = 0; i < 29; i++) attempts.recordFailure("old:" + i, "address");
+        try (var last = attempts.tryAcquire("new:1", "address")) {
+            assertThat(last).isNotNull();
+            assertThat(attempts.tryAcquire("new:2", "address")).isNull();
+        }
+        assertThat(attempts.isBlocked("new:3", "address")).isTrue();
+    }
+
+    @Test
+    void globalCapacityIsBoundedAndSuccessfulPermitsAreReleasedOnlyOnce() {
+        LoginAttempts attempts = new LoginAttempts();
+        List<LoginAttempts.Attempt> admitted = new ArrayList<>();
+        for (int i = 0; i < 16; i++) {
+            var attempt = attempts.tryAcquire("user:" + i, "address:" + i);
+            assertThat(attempt).isNotNull();
+            admitted.add(attempt);
+        }
+        assertThat(attempts.tryAcquire("extra", "extra")).isNull();
+        admitted.forEach(attempt -> {
+            attempt.succeeded();
+            attempt.close();
+            attempt.close();
+        });
+        assertThat(attempts.trackedUsers()).isZero();
+        assertThat(attempts.trackedAddresses()).isZero();
+        try (var next = attempts.tryAcquire("extra", "extra")) {
+            assertThat(next).isNotNull();
+            next.succeeded();
+        }
+    }
+
+    @Test
+    void activeGuessesSurviveCacheExpiryAndAnExceptionReleasesCapacity() {
+        MutableTicker ticker = new MutableTicker();
+        LoginAttempts attempts = new LoginAttempts(ticker);
+        List<LoginAttempts.Attempt> admitted = new ArrayList<>();
+        for (int i = 0; i < 5; i++) admitted.add(attempts.tryAcquire("account", "address"));
+        ticker.advance(Duration.ofMinutes(16));
+        assertThat(attempts.tryAcquire("account", "address")).isNull();
+        admitted.forEach(LoginAttempts.Attempt::close);
+        ticker.advance(Duration.ofMinutes(16));
+        try (var next = attempts.tryAcquire("account", "address")) {
+            assertThat(next).isNotNull();
+            next.succeeded();
+        }
+    }
 
     @Test
     void fiveFailuresBlockAnAccountForFifteenMinutes() {

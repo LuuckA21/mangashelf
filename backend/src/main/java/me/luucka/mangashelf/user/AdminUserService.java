@@ -35,6 +35,16 @@ public class AdminUserService {
     public AppUser updateUser(Long userId, AdminUserUpdateRequest request,
                               UserPrincipal principal) {
         administration.lock();
+        // A request may have passed the security filter before waiting for
+        // another administrator to revoke its actor. Recheck under the same
+        // lock as role/status changes and deletion, before touching a target.
+        AppUser actor = users.findByIdForUpdate(principal.id()).orElse(null);
+        if (actor == null || !actor.isEnabled() || !actor.isEmailVerified()
+                || actor.getRole() != Role.ADMIN
+                || actor.getSessionVersion() != principal.sessionVersion()) {
+            throw new ApiException(org.springframework.http.HttpStatus.UNAUTHORIZED,
+                    "session_invalid");
+        }
         AppUser user = users.findByIdForUpdate(userId)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
 

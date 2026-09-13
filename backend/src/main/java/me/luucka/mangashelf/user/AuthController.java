@@ -72,26 +72,30 @@ public class AuthController {
 
         String accountKey = loginAttemptKey(request.login());
         String clientAddress = httpRequest.getRemoteAddr();
-        if (attempts.isBlocked(accountKey, clientAddress)) {
+        LoginAttempts.Attempt attempt = attempts.tryAcquire(accountKey, clientAddress);
+        if (attempt == null) {
             throw new ApiException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
                     "too_many_attempts");
         }
 
-        if (AuthService.passwordTooLong(request.password())) {
-            attempts.recordFailure(accountKey, clientAddress);
-            throw new BadCredentialsException("Password exceeds BCrypt limit");
-        }
-
         Authentication authentication;
-        try {
+        try (attempt) {
+            if (AuthService.passwordTooLong(request.password())) {
+                throw new BadCredentialsException("Password exceeds BCrypt limit");
+            }
             authentication = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             request.login(), request.password()));
-        } catch (RuntimeException e) {
-            attempts.recordFailure(accountKey, clientAddress);
-            throw e;
+            attempt.succeeded();
         }
-        attempts.recordSuccess(accountKey);
+
+        // Keep neither the submitted password nor the BCrypt hash in a
+        // potentially 30-day session. ProviderManager only clears the token's
+        // credentials, not the immutable UserDetails record's password field.
+        UserPrincipal principal = ((UserPrincipal) authentication.getPrincipal())
+                .withoutCredentials();
+        authentication = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
 
         // Rotating the session id is what prevents session fixation: an id
         // an attacker planted before login stops being valid the moment the
@@ -113,7 +117,6 @@ public class AuthController {
         // yields a login that appears to succeed and a session that does not.
         contextRepository.saveContext(context, httpRequest, httpResponse);
 
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         return users.findById(principal.id())
                 .map(UserResponse::from)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));

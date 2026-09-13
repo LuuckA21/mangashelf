@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -46,7 +47,8 @@ public class SecurityConfig {
                                                        PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(uds);
         provider.setPasswordEncoder(encoder);
-        return provider::authenticate;
+        // ProviderManager also erases the submitted password after success.
+        return new ProviderManager(provider);
     }
 
     /**
