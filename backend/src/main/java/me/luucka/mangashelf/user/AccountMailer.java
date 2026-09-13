@@ -58,6 +58,35 @@ public class AccountMailer {
         return enabled;
     }
 
+    /** Security alerts contain neither enrollment secrets nor recovery codes. */
+    public void sendSecurityNotice(String recipient, UiLanguage language, TwoFactorNotifications.Action action) {
+        boolean it = language == UiLanguage.IT;
+        String subject = switch (action) {
+            case ENABLED -> it ? "Autenticazione a due fattori attivata" : "Two-factor authentication enabled";
+            case DISABLED -> it ? "Autenticazione a due fattori disattivata" : "Two-factor authentication disabled";
+            case RECOVERY_REGENERATED -> it ? "Codici di recupero 2FA rigenerati" : "2FA recovery codes regenerated";
+        };
+        String instructions = it ? "Le impostazioni di sicurezza del tuo account MangaShelf sono state modificate. Se non sei stato tu, cambia subito la password e contatta l’amministratore."
+                : "Your MangaShelf account security settings changed. If this was not you, change your password immediately and contact your administrator.";
+        String link = baseUrl + "/settings";
+        String html = render(Map.of("language", it ? "it" : "en", "subject", subject,
+                "preheader", subject, "eyebrow", "MangaShelf", "instructions", instructions,
+                "button", it ? "Controlla account" : "Review account", "expiry", "",
+                "link", link, "footer", it ? "Questo è un avviso di sicurezza automatico." : "This is an automatic security notice.",
+                "fallback", it ? "Apri le impostazioni del tuo account:" : "Open your account settings:"), "MangaShelf");
+        try {
+            var message = sender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(from, "MangaShelf", StandardCharsets.UTF_8.name()));
+            helper.setTo(recipient);
+            helper.setSubject("MangaShelf — " + subject);
+            helper.setText(subject + "\n\n" + instructions + "\n\n" + link, html);
+            sender.send(message);
+        } catch (MessagingException | java.io.UnsupportedEncodingException ex) {
+            throw new MailPreparationException("Unable to prepare security notice", ex);
+        }
+    }
+
     private enum Kind { VERIFICATION, RESET, DELETION }
 
     public void send(AppUser user, String token, boolean verification) {

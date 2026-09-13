@@ -17,9 +17,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -35,20 +33,22 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
-    private final SecurityContextRepository contextRepository;
+    private final LoginSession loginSession;
+    private final TwoFactorService twoFactor;
     private final AppUserRepository users;
     private final LoginAttempts attempts;
     private final RegistrationAttempts registrationAttempts;
 
     public AuthController(AuthService authService,
                           AuthenticationManager authenticationManager,
-                          SecurityContextRepository contextRepository,
+                          LoginSession loginSession, TwoFactorService twoFactor,
                           AppUserRepository users,
                           LoginAttempts attempts,
                           RegistrationAttempts registrationAttempts) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
-        this.contextRepository = contextRepository;
+        this.loginSession = loginSession;
+        this.twoFactor = twoFactor;
         this.users = users;
         this.attempts = attempts;
         this.registrationAttempts = registrationAttempts;
@@ -66,7 +66,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public UserResponse login(@Valid @RequestBody LoginRequest request,
+    public Object login(@Valid @RequestBody LoginRequest request,
                               HttpServletRequest httpRequest,
                               HttpServletResponse httpResponse) {
 
@@ -89,37 +89,12 @@ public class AuthController {
             attempt.succeeded();
         }
 
-        // Keep neither the submitted password nor the BCrypt hash in a
-        // potentially 30-day session. ProviderManager only clears the token's
-        // credentials, not the immutable UserDetails record's password field.
-        UserPrincipal principal = ((UserPrincipal) authentication.getPrincipal())
-                .withoutCredentials();
-        authentication = UsernamePasswordAuthenticationToken.authenticated(
-                principal, null, principal.getAuthorities());
-
-        // Rotating the session id is what prevents session fixation: an id
-        // an attacker planted before login stops being valid the moment the
-        // session becomes authenticated. But changeSessionId() throws when
-        // there is no session to rotate, which is the normal case for a
-        // browser arriving with no cookie at all — there the fresh session
-        // created below is already unguessable, so nothing needs rotating.
-        if (httpRequest.getSession(false) != null) {
-            httpRequest.changeSessionId();
-        } else {
-            httpRequest.getSession(true);
+        AppUser current = twoFactor.current((UserPrincipal) authentication.getPrincipal());
+        if (current.getTwoFactorSecret() != null) {
+            loginSession.challenge(current, httpRequest);
+            return java.util.Map.of("twoFactorRequired", true);
         }
-
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-        // Explicit save: as of Spring Security 6 nothing persists the context
-        // for us outside the authentication filters, so skipping this line
-        // yields a login that appears to succeed and a session that does not.
-        contextRepository.saveContext(context, httpRequest, httpResponse);
-
-        return users.findById(principal.id())
-                .map(UserResponse::from)
-                .orElseThrow(() -> ApiException.notFound("user_not_found"));
+        return loginSession.authenticate(current, httpRequest, httpResponse);
     }
 
     /** Stable key shared by the username and email aliases of one account. */
@@ -162,8 +137,11 @@ public class AuthController {
             @Valid @RequestBody PasswordChangeRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
-        authService.updatePassword(
-                principal.id(), request.currentPassword(), request.newPassword());
+        try (var permit = twoFactor.reserve(principal.id(), httpRequest.getRemoteAddr())) {
+            authService.updatePassword(
+                    principal.id(), request.currentPassword(), request.newPassword(), request.code());
+            permit.succeeded();
+        }
 
         HttpSession session = httpRequest.getSession(false);
         if (session != null) {

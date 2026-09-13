@@ -4,6 +4,20 @@ import { MemoryRouter } from 'react-router-dom'
 import { expect, it, vi } from 'vitest'
 import { auth } from '../api/client'
 import Settings from './Settings'
+vi.mock('../api/users', async (original) => {
+  const actual = await original<typeof import('../api/users')>()
+  return {
+    ...actual,
+    twoFactor: {
+      ...actual.twoFactor,
+      status: vi.fn().mockResolvedValue({
+        available: true,
+        enabled: false,
+        recoveryCodesRemaining: 0,
+      }),
+    },
+  }
+})
 
 const updateLanguage = vi.fn().mockResolvedValue(undefined)
 const setUser = vi.fn()

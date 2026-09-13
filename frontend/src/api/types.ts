@@ -4,6 +4,7 @@ export interface User {
   email: string
   role: 'USER' | 'ADMIN'
   language: 'it' | 'en'
+  twoFactorEnabled?: boolean
 }
 
 export interface AdminUser extends User {

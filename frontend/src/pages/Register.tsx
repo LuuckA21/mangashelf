@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, auth } from '../api/client'
 import { useSession } from '../api/session'
 import { useI18n } from '../i18n'
 
 export default function Register() {
   const { setUser } = useSession()
+  const navigate = useNavigate()
   const { language, setLanguage, t } = useI18n()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -24,7 +25,11 @@ export default function Register() {
         setRegistered(true)
         setPassword('')
       } else {
-        setUser(await auth.login(username, password))
+        const loggedIn = await auth.login(username, password)
+        setPassword('')
+        if ('twoFactorRequired' in loggedIn)
+          navigate('/login', { replace: true })
+        else setUser(loggedIn)
       }
     } catch (e) {
       setError(

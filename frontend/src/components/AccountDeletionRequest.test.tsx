@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { ApiError, auth } from '../api/client'
 import AccountDeletionRequest from './AccountDeletionRequest'
+vi.mock('../api/session', () => ({
+  useSession: () => ({ user: { twoFactorEnabled: false } }),
+}))
 
 vi.mock('../api/client', async (original) => {
   const actual = await original<typeof import('../api/client')>()
