@@ -453,3 +453,9 @@ Test manuale con un **account di prova**, dopo aver verificato il backup:
    il rifiuto delle vecchie sessioni e l'inutilizzabilità del link già consumato.
 4. Con un altro utente controllare catalogo, collezione e liste acquisti; devono
    restare disponibili. L'ultimo amministratore deve ricevere un blocco esplicito.
+
+## Autenticazione a due fattori
+
+La 2FA tramite app di autenticazione e codici di recupero è disponibile nelle
+impostazioni account dopo aver configurato `APP_2FA_ENCRYPTION_KEY` sul server.
+Vedi [configurazione, sicurezza e test 2FA](docs/two-factor-authentication.md).

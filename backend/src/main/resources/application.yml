@@ -99,6 +99,7 @@ app:
     # must be uploaded, avoiding arbitrary server-side requests.
     allowed-hosts: ${APP_COVERS_ALLOWED_HOSTS:s4.anilist.co}
   security:
+    two-factor-key: ${APP_2FA_ENCRYPTION_KEY:}
     registration-attempts-per-hour: 5
   metadata:
     anilist-url: https://graphql.anilist.co

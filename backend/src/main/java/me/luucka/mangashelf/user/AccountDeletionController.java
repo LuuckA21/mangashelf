@@ -17,13 +17,17 @@ import org.springframework.web.bind.annotation.*;
 public class AccountDeletionController {
     private final AccountDeletionService service;
     private final AccountEmailRequests limits;
+    private final TwoFactorService twoFactor;
 
-    public AccountDeletionController(AccountDeletionService service, AccountEmailRequests limits) {
+    public AccountDeletionController(AccountDeletionService service, AccountEmailRequests limits,
+                                      TwoFactorService twoFactor) {
         this.service = service;
         this.limits = limits;
+        this.twoFactor = twoFactor;
     }
 
-    public record Request(@NotBlank @Size(max = 200) String currentPassword) {}
+    public record Request(@NotBlank @Size(max = 200) String currentPassword,
+                          @Size(max = 64) String code) {}
     public record Confirmation(@NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{43}") String token,
                                @NotNull @AssertTrue Boolean confirmed) {}
 
@@ -32,7 +36,10 @@ public class AccountDeletionController {
                                         @AuthenticationPrincipal UserPrincipal principal,
                                         HttpServletRequest request) {
         limits.limit(request.getRemoteAddr());
-        service.request(principal, body.currentPassword());
+        try (var permit = twoFactor.reserve(principal.id(), request.getRemoteAddr())) {
+            service.request(principal, body.currentPassword(), body.code());
+            permit.succeeded();
+        }
         return ResponseEntity.accepted().build();
     }
 

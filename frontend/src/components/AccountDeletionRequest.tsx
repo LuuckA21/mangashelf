@@ -1,9 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, auth } from '../api/client'
 import { useI18n } from '../i18n'
+import { useSession } from '../api/session'
+import TwoFactorCode from './TwoFactorCode'
 
 export default function AccountDeletionRequest() {
   const { t } = useI18n()
+  const { user } = useSession()
+  const [code, setCode] = useState('')
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -31,7 +35,9 @@ export default function AccountDeletionRequest() {
     setSent(false)
     setError(null)
     try {
-      await auth.requestAccountDeletion(password)
+      if (user?.twoFactorEnabled)
+        await auth.requestAccountDeletion(password, code.trim())
+      else await auth.requestAccountDeletion(password)
       setPassword('')
       setSent(true)
     } catch (e) {
@@ -44,11 +50,14 @@ export default function AccountDeletionRequest() {
               too_many_attempts: t('email.tooMany'),
               email_unavailable: t('email.unavailable'),
               session_invalid: t('deletion.sessionInvalid'),
+              two_factor_invalid: t('twoFactor.invalid'),
+              two_factor_unavailable: t('twoFactor.unavailable'),
             }[e.code] ?? t('email.failed'))
           : t('common.serverUnavailable'),
       )
     } finally {
       setBusy(false)
+      setCode('')
     }
   }
 
@@ -88,6 +97,13 @@ export default function AccountDeletionRequest() {
               onChange={(event) => setPassword(event.target.value)}
             />
           </div>
+          {user?.twoFactorEnabled && (
+            <TwoFactorCode
+              id="deletion-factor"
+              value={code}
+              onChange={setCode}
+            />
+          )}
           <button type="submit" className="danger" disabled={busy}>
             {busy ? t('deletion.sending') : t('deletion.send')}
           </button>

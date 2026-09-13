@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import AccountDeletionRequest from '../components/AccountDeletionRequest'
+import TwoFactorSettings from '../components/TwoFactorSettings'
+import TwoFactorCode from '../components/TwoFactorCode'
 import { useSession } from '../api/session'
 import { ApiError, auth } from '../api/client'
 import { useI18n, type Language } from '../i18n'
@@ -18,6 +20,7 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordBusy, setPasswordBusy] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [code, setCode] = useState('')
 
   async function handleLanguage(language: Language) {
     setBusy(true)
@@ -43,7 +46,9 @@ export default function Settings() {
 
     setPasswordBusy(true)
     try {
-      await auth.updatePassword(currentPassword, newPassword)
+      if (user?.twoFactorEnabled)
+        await auth.updatePassword(currentPassword, newPassword, code.trim())
+      else await auth.updatePassword(currentPassword, newPassword)
       setUser(null)
       navigate('/login', { replace: true, state: { passwordChanged: true } })
     } catch (error) {
@@ -54,11 +59,15 @@ export default function Settings() {
               password_unchanged: t('settings.passwordUnchanged'),
               password_too_long: t('settings.passwordTooLong'),
               validation_failed: t('settings.passwordValidation'),
+              two_factor_invalid: t('twoFactor.invalid'),
+              too_many_attempts: t('login.blocked'),
+              two_factor_unavailable: t('twoFactor.unavailable'),
             }[error.code] ?? t('settings.passwordFailed'))
           : t('common.serverUnavailable'),
       )
     } finally {
       setPasswordBusy(false)
+      setCode('')
     }
   }
 
@@ -99,6 +108,7 @@ export default function Settings() {
         </div>
       </section>
 
+      <TwoFactorSettings />
       <form
         className="panel settings-panel settings-section"
         onSubmit={handlePassword}
@@ -154,6 +164,9 @@ export default function Settings() {
             required
           />
         </div>
+        {user?.twoFactorEnabled && (
+          <TwoFactorCode id="password-factor" value={code} onChange={setCode} />
+        )}
         <button type="submit" disabled={passwordBusy}>
           {passwordBusy
             ? t('settings.changingPassword')

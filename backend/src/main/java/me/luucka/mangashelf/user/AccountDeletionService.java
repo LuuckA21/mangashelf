@@ -3,7 +3,6 @@ package me.luucka.mangashelf.user;
 import me.luucka.mangashelf.common.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,32 +15,36 @@ import java.util.Objects;
 @Service
 public class AccountDeletionService {
     private final AppUserRepository users;
-    private final PasswordEncoder encoder;
     private final AccountMailer mailer;
     private final AccountAdministration administration;
     private final AdminAuditEventRepository audit;
+    private final TwoFactorService twoFactor;
     private final SecureRandom random = new SecureRandom();
 
-    public AccountDeletionService(AppUserRepository users, PasswordEncoder encoder, AccountMailer mailer,
-                                  AccountAdministration administration, AdminAuditEventRepository audit) {
+    public AccountDeletionService(AppUserRepository users, AccountMailer mailer,
+                                  AccountAdministration administration, AdminAuditEventRepository audit,
+                                  TwoFactorService twoFactor) {
         this.users = users;
-        this.encoder = encoder;
         this.mailer = mailer;
         this.administration = administration;
         this.audit = audit;
+        this.twoFactor = twoFactor;
     }
 
     @Transactional
     public void request(UserPrincipal principal, String password) {
+        request(principal, password, null);
+    }
+
+    @Transactional
+    public void request(UserPrincipal principal, String password, String code) {
         if (!mailer.enabled()) throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "email_unavailable");
         administration.lock();
         AppUser user = users.findByIdForUpdate(principal.id()).orElseThrow(AccountDeletionService::invalidToken);
         if (!user.isEnabled() || !user.isEmailVerified() || user.getSessionVersion() != principal.sessionVersion()) {
             throw ApiException.forbidden("session_invalid");
         }
-        if (AuthService.passwordTooLong(password) || !encoder.matches(password, user.getPasswordHash())) {
-            throw ApiException.badRequest("current_password_invalid");
-        }
+        twoFactor.checkCredentials(user, password, code);
         administration.requireAnotherAdministrator(user);
         Instant now = Instant.now();
         if (user.getDeletionRequestedAt() != null && user.getDeletionRequestedAt().plusSeconds(60).isAfter(now)) {

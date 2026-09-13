@@ -1420,3 +1420,33 @@ button.danger:hover:not(:disabled) {
   width: auto;
   margin-top: 5px;
 }
+/* Account security: readable secrets on narrow screens, generated QR stays local. */
+.two-factor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.two-factor-qr {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+.two-factor-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  user-select: all;
+  margin-bottom: 1rem;
+}
+.recovery-codes {
+  list-style: none;
+  padding: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+.recovery-codes li {
+  padding: 0.3rem 0;
+  overflow-wrap: anywhere;
+}

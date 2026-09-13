@@ -25,14 +25,17 @@ public class AuthService {
     private final AppProperties properties;
     private final EntityManager entityManager;
     private final AccountEmailService accountEmails;
+    private final TwoFactorService twoFactor;
 
     public AuthService(AppUserRepository users, PasswordEncoder encoder,
-                       AppProperties properties, EntityManager entityManager, AccountEmailService accountEmails) {
+                       AppProperties properties, EntityManager entityManager, AccountEmailService accountEmails,
+                       TwoFactorService twoFactor) {
         this.users = users;
         this.encoder = encoder;
         this.properties = properties;
         this.entityManager = entityManager;
         this.accountEmails = accountEmails;
+        this.twoFactor = twoFactor;
     }
 
     /**
@@ -104,13 +107,16 @@ public class AuthService {
     /** Changes the password and expires every session for the account. */
     @Transactional
     public void updatePassword(Long userId, String currentPassword, String newPassword) {
+        updatePassword(userId, currentPassword, newPassword, null);
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, String currentPassword, String newPassword, String code) {
         AppUser user = users.findByIdForUpdate(userId)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
 
-        if (passwordTooLong(currentPassword)
-                || !encoder.matches(currentPassword, user.getPasswordHash())) {
-            throw ApiException.badRequest("current_password_invalid");
-        }
+        if (!user.isEnabled() || !user.isEmailVerified()) throw ApiException.forbidden("session_invalid");
+        twoFactor.checkCredentials(user, currentPassword, code);
         if (passwordTooLong(newPassword)) {
             throw ApiException.badRequest("password_too_long");
         }

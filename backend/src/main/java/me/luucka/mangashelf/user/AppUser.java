@@ -77,6 +77,21 @@ public class AppUser extends BaseEntity {
     @Column(name = "deletion_requested_at")
     private Instant deletionRequestedAt;
 
+    @Column(name = "two_factor_secret", length = 256)
+    private String twoFactorSecret;
+
+    @Column(name = "two_factor_last_step", nullable = false)
+    private long twoFactorLastStep = -1;
+
+    @Column(name = "two_factor_pending_secret", length = 256)
+    private String twoFactorPendingSecret;
+
+    @Column(name = "two_factor_pending_expires_at")
+    private Instant twoFactorPendingExpiresAt;
+
+    @Column(name = "two_factor_pending_version")
+    private Integer twoFactorPendingVersion;
+
     /**
      * Incremented whenever credentials or authorisation change. Sessions
      * carry the value they authenticated with and are rejected as soon as it

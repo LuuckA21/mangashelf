@@ -2,8 +2,8 @@ import { api } from './http'
 import type { AdminAuditEvent, AdminUser, User } from './types'
 
 export const auth = {
-  requestAccountDeletion: (currentPassword: string) =>
-    api.post<void>('/api/auth/me/deletion-request', { currentPassword }),
+  requestAccountDeletion: (currentPassword: string, code?: string) =>
+    api.post<void>('/api/auth/me/deletion-request', { currentPassword, code }),
   accountDeletionDetails: (token: string) =>
     api.post<{ username: string; email: string }>(
       '/api/auth/deletion-details',
@@ -22,7 +22,13 @@ export const auth = {
     api.post<void>('/api/auth/reset-password', { token, newPassword }),
   me: () => api.get<User>('/api/auth/me'),
   login: (login: string, password: string) =>
-    api.post<User>('/api/auth/login', { login, password }),
+    api.post<User | { twoFactorRequired: true }>('/api/auth/login', {
+      login,
+      password,
+    }),
+  twoFactorLogin: (code: string) =>
+    api.post<User>('/api/auth/2fa/login', { code }),
+  cancelTwoFactorLogin: () => api.post<void>('/api/auth/2fa/cancel'),
   register: (
     username: string,
     email: string,
@@ -41,8 +47,42 @@ export const auth = {
   logout: () => api.post<void>('/api/auth/logout'),
   updateLanguage: (language: 'it' | 'en') =>
     api.put<User>('/api/auth/me/language', { language }),
-  updatePassword: (currentPassword: string, newPassword: string) =>
-    api.put<void>('/api/auth/me/password', { currentPassword, newPassword }),
+  updatePassword: (
+    currentPassword: string,
+    newPassword: string,
+    code?: string,
+  ) =>
+    api.put<void>('/api/auth/me/password', {
+      currentPassword,
+      newPassword,
+      code,
+    }),
+}
+
+export interface TwoFactorStatus {
+  available: boolean
+  enabled: boolean
+  recoveryCodesRemaining: number
+}
+
+export const twoFactor = {
+  status: () => api.get<TwoFactorStatus>('/api/auth/2fa'),
+  setup: (currentPassword: string) =>
+    api.post<{ secret: string; uri: string }>('/api/auth/2fa/setup', {
+      currentPassword,
+    }),
+  cancelSetup: () => api.delete<void>('/api/auth/2fa/setup'),
+  enable: (code: string) =>
+    api.post<{ recoveryCodes: string[]; user: User }>('/api/auth/2fa/enable', {
+      code,
+    }),
+  disable: (currentPassword: string, code: string) =>
+    api.post<User>('/api/auth/2fa/disable', { currentPassword, code }),
+  regenerate: (currentPassword: string, code: string) =>
+    api.post<{ recoveryCodes: string[]; user: User }>(
+      '/api/auth/2fa/recovery-codes',
+      { currentPassword, code },
+    ),
 }
 
 export const adminAccounts = {

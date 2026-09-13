@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .sessionFixation(fixation -> fixation.changeSessionId()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login",
+                                "/api/auth/2fa/login", "/api/auth/2fa/cancel",
                                 "/api/auth/email-options", "/api/auth/verify-email",
                                 "/api/auth/resend-verification", "/api/auth/forgot-password",
                                 "/api/auth/reset-password", "/api/auth/deletion-details",

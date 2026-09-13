@@ -11,7 +11,13 @@ vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
   return {
     ...actual,
-    auth: { ...actual.auth, login: vi.fn(), emailOptions: vi.fn() },
+    auth: {
+      ...actual.auth,
+      login: vi.fn(),
+      emailOptions: vi.fn(),
+      twoFactorLogin: vi.fn(),
+      cancelTwoFactorLogin: vi.fn(),
+    },
   }
 })
 
@@ -73,5 +79,47 @@ describe('Login', () => {
 
     expect(login).toHaveBeenCalledWith('luca', 'correct password')
     expect(session.setUser).toHaveBeenCalledWith(authenticated)
+  })
+
+  it('does not authenticate or retain the password until the second factor succeeds', async () => {
+    login.mockResolvedValue({ twoFactorRequired: true })
+    vi.mocked(auth.twoFactorLogin).mockResolvedValue({
+      id: 7,
+      username: 'luca',
+      email: 'luca@example.test',
+      role: 'USER',
+      language: 'it',
+      twoFactorEnabled: true,
+    })
+    renderLogin()
+    await fillAndSubmit('correct password')
+    expect(session.setUser).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+    const code = await screen.findByLabelText('Codice app o codice di recupero')
+    await userEvent.type(code, '123456')
+    await userEvent.click(screen.getByRole('button', { name: 'Accedi' }))
+    expect(auth.twoFactorLogin).toHaveBeenCalledWith('123456')
+    expect(session.setUser).toHaveBeenCalledWith(
+      expect.objectContaining({ twoFactorEnabled: true }),
+    )
+  })
+
+  it('returns to an empty password form when the challenge expires', async () => {
+    login.mockResolvedValue({ twoFactorRequired: true })
+    vi.mocked(auth.twoFactorLogin).mockRejectedValue(
+      new ApiError(401, 'two_factor_challenge_expired'),
+    )
+    renderLogin()
+    await fillAndSubmit('correct password')
+    await userEvent.type(
+      await screen.findByLabelText('Codice app o codice di recupero'),
+      '123456',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Accedi' }))
+    expect(await screen.findByLabelText('Password')).toHaveValue('')
+    expect(session.setUser).not.toHaveBeenCalled()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Verifica scaduta',
+    )
   })
 })
