@@ -17,6 +17,10 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
 WORKDIR /app
 
+# The pinned image predates the available Alpine fixes. Keep repository
+# signature verification enabled and stay on the image's Alpine branch.
+RUN apk upgrade --no-cache libcrypto3 libssl3 openssl libexpat
+
 RUN addgroup -S app && adduser -S app -G app \
     && mkdir -p /app/data/covers && chown -R app:app /app
 

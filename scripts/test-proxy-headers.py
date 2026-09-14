@@ -13,9 +13,6 @@ import uuid
 
 
 ROOT = Path(__file__).resolve().parents[1]
-# Always exercise the image actually shipped, including its pinned digest.
-IMAGE = next(line.split()[1] for line in (ROOT / 'frontend/Dockerfile').read_text().splitlines()
-             if line.startswith('FROM nginx:'))
 
 
 def docker(*args):
@@ -33,6 +30,12 @@ class ResponseSocket:
 
 
 class ProxyHeadersTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Exercise exactly the production nginx runtime and its OS fixes.
+        # This target does not require building the frontend's Node stage.
+        cls.image = docker("build", "--quiet", "--target", "runtime-base", str(ROOT / "frontend"))
+
     @contextmanager
     def container(self, trusted):
         name = "mangashelf-proxy-test-" + uuid.uuid4().hex
@@ -43,7 +46,7 @@ class ProxyHeadersTest(unittest.TestCase):
             "--env", "NGINX_ENVSUBST_FILTER=^MS_",
             "--volume", f"{ROOT / 'frontend/default.conf.template'}:/etc/nginx/templates/default.conf.template:ro",
             "--volume", f"{ROOT / 'scripts/tests/proxy-backend.conf'}:/etc/nginx/conf.d/backend.conf:ro",
-            IMAGE,
+            self.image,
         )
         try:
             # No host ports and no production volumes or credentials are used.
@@ -67,10 +70,21 @@ class ProxyHeadersTest(unittest.TestCase):
             "X-Forwarded-Host: forged.example\r\n"
             "Forwarded: for=203.0.113.99;proto=https\r\nContent-Length: 0\r\n\r\n"
         )
-        raw = subprocess.run(
+        # Keep stdin open until the server closes the HTTP connection. BusyBox
+        # nc can otherwise exit on stdin EOF before reading the response.
+        with subprocess.Popen(
             ["docker", "exec", "-i", name, "nc", "-w", "3", "127.0.0.1", "80"],
-            input=request.encode(), capture_output=True, check=True, timeout=10,
-        ).stdout
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        ) as process:
+            process.stdin.write(request.encode())
+            process.stdin.flush()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                raise
+            raw = process.stdout.read()
+            self.assertEqual(process.returncode, 0, process.stderr.read().decode())
         response = HTTPResponse(ResponseSocket(raw))
         response.begin()
         return response.status, dict(response.getheaders()), response.read().decode()

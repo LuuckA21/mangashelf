@@ -139,3 +139,39 @@ I digest delle immagini sono stati letti il 14 settembre 2026 dall'API Docker Hu
 `/v2/repositories/library/<immagine>/tags/<tag>`; gli SHA delle Actions provengono
 dai riferimenti Git del repository ufficiale, dereferenziando il tag annotato
 Trivy v0.36.0 fino al commit.
+
+## Riscontro delle prime scansioni CI
+
+La prima esecuzione ha superato backend (anche integrazione e 2FA) e frontend,
+ma ha individuato pacchetti preesistenti nelle immagini per cui esistono fix:
+OpenSSL 3.5.7 → 3.5.8, libexpat 2.8.2/2.8.3 → 2.8.4 e libuuid 2.42.1 → 2.42.3-r1.
+Sono stati aggiunti aggiornamenti mirati nelle immagini applicative, mantenendo
+il ramo Alpine e la verifica delle firme dei repository. La base rimane pinnata;
+i pacchetti correttivi sono ottenuti dal repository del ramo al momento del build,
+quindi il digest della base non implica che l'intera build sia riproducibile byte
+per byte. Quando le immagini ufficiali incorporeranno i fix si potranno togliere
+questi aggiornamenti dopo aver ricontrollato la scansione.
+
+Tomcat embedded 11.0.24 è stato aggiornato alla patch 11.0.25 tramite la proprietà
+BOM comune a tutti i moduli Tomcat, dopo verifica degli advisory Apache. Le tre
+segnalazioni CRITICAL dello scanner riguardano CVE-2026-65182, CVE-2026-65905 e
+CVE-2026-68525. La gravità attribuita da Apache e i prerequisiti differiscono da
+quelli dello scanner: MangaShelf usa Spring Security e non gli autenticatore
+DIGEST/FORM del container, quindi questi numeri non dimostrano da soli un bypass
+sfruttabile nell'app. L'aggiornamento di manutenzione elimina comunque quei
+componenti obsoleti. La proprietà andrà rimossa quando il BOM Boot li includerà.
+Fonte: https://tomcat.apache.org/security-11.html
+
+Il database ufficiale ha riportato 9 segnalazioni OS e 22 sulla libreria Go
+incorporata in `gosu`. La presenza di una versione Go non prova che le funzioni
+vulnerabili siano raggiungibili nel programma: il progetto upstream richiede
+una verifica con `govulncheck` prima di attribuire tali CVE a gosu.
+Fonte: https://github.com/tianon/gosu/blob/master/SECURITY.md
+Queste segnalazioni restano visibili nella scansione del DB; non sono state
+aggiunte esclusioni o dichiarazioni di non sfruttabilità non dimostrate.
+
+Il test nginx inizialmente ha incontrato un errore intermittente di `nc`, che
+poteva terminare alla chiusura dello stdin prima di leggere la risposta.
+Il fixture mantiene ora stdin aperto fino alla chiusura HTTP dal server, senza
+ritentare o ignorare le richieste fallite. Usa inoltre lo stage `runtime-base`
+del Dockerfile, includendo gli aggiornamenti OS realmente distribuiti.

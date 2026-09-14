@@ -18,6 +18,8 @@
 
     <properties>
         <java.version>25</java.version>
+        <!-- Remove this override once the Boot BOM includes this security release. -->
+        <tomcat.version>11.0.25</tomcat.version>
     </properties>
 
     <dependencyManagement>
