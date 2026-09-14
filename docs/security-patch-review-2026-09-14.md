@@ -18,7 +18,7 @@ con implementazione, chiamanti, configurazione di deployment e test esistenti.
 | 7a. CSP e permessi browser | Le anteprime provengono da AniList, le copertine salvate sono locali, il QR 2FA usa dati locali. | Limitato `img-src` a self/AniList/data, aggiunti `object-src 'none'` e Permissions-Policy, anche sugli asset. Omettiamo l'obsoleta direttiva `interest-cohort`. |
 | 7b. SameSite Strict | Esistono ora link email e protezione CSRF Spring sulle scritture. | Conservato `Lax`; non è stata dimostrata una vulnerabilità che richieda questo cambio di comportamento. |
 | 7c. Digest Docker | I tag erano modificabili. | Pinnate tutte le immagini: PostgreSQL, Maven, JRE, Node e nginx, usando i digest degli indici multiarch del registry ufficiale. |
-| 7d. Dependabot | Configurazione assente. La proposta copriva solo il Dockerfile backend. | Aggiunti Maven, npm, entrambi i Dockerfile, Docker Compose e Actions; esclusi gli aggiornamenti automatici di major PostgreSQL. |
+| 7d. Dependabot | Configurazione assente. La proposta copriva solo il Dockerfile backend. | Aggiunti Maven, npm, i tre Dockerfile e Actions; esclusi gli aggiornamenti automatici di major PostgreSQL. |
 | 7e. Scansione CI | `npm audit --audit-level=high` era già eseguito. `trivy-action@master` sarebbe modificabile. | Conservato npm audit, aggiunte scansioni Trivy per backend, frontend e DB. Action Trivy e Actions esistenti fissate a SHA completi. |
 | 8. Branch/verifiche | Nessuna esigenza di modificare `master` o avviare il Compose di produzione. | Branch separato e verifiche isolate; nessun merge o deploy automatico. |
 
@@ -167,11 +167,28 @@ incorporata in `gosu`. La presenza di una versione Go non prova che le funzioni
 vulnerabili siano raggiungibili nel programma: il progetto upstream richiede
 una verifica con `govulncheck` prima di attribuire tali CVE a gosu.
 Fonte: https://github.com/tianon/gosu/blob/master/SECURITY.md
-Queste segnalazioni restano visibili nella scansione del DB; non sono state
-aggiunte esclusioni o dichiarazioni di non sfruttabilità non dimostrate.
+È stata quindi introdotta una derivazione minima dell'immagine ufficiale in
+`db/Dockerfile`: aggiorna libcrypto3/libssl3/libuuid e sostituisce il binario gosu
+standalone con il pacchetto firmato del ramo Alpine corrente (almeno 1.19-r5).
+L'entrypoint ufficiale chiama `gosu` tramite PATH: eliminando la copia obsoleta in
+/usr/local/bin viene usata quella mantenuta in /usr/bin. Non vengono introdotti
+repository edge, compilatori runtime o esclusioni CVE. Compose costruisce e usa
+questa stessa immagine, che viene anche scansionata in CI. Dependabot segue ora
+il Dockerfile DB con esclusione degli aggiornamenti major PostgreSQL.
+Fonte del pacchetto: https://github.com/alpinelinux/aports/blob/3.24-stable/community/gosu/APKBUILD
+
+La verifica DB usa container e volumi casuali senza pubblicare porte: crea dati
+con la base originale, riapre lo stesso volume con l'immagine corretta, controlla
+lettura/scrittura, pg_dump e UID del processo; verifica anche l'inizializzazione
+di un volume vuoto con la nuova immagine. I volumi sono eliminati al termine.
+Major PostgreSQL, entrypoint, variabili, healthcheck e volume Compose non cambiano.
 
 Il test nginx inizialmente ha incontrato un errore intermittente di `nc`, che
 poteva terminare alla chiusura dello stdin prima di leggere la risposta.
-Il fixture mantiene ora stdin aperto fino alla chiusura HTTP dal server, senza
-ritentare o ignorare le richieste fallite. Usa inoltre lo stage `runtime-base`
-del Dockerfile, includendo gli aggiornamenti OS realmente distribuiti.
+Mantenere stdin aperto ha eliminato quell'errore ma introdotto un'attesa di tre
+secondi a richiesta: il limite di 20/minuto si ricaricava tra i tentativi e due
+test fallivano senza mai vedere 429. Il client di test ora usa curl, già presente
+nell'immagine ufficiale, e termina al completamento della risposta HTTP. Non
+sono stati modificati i limiti di produzione o aggiunti retry ai test.
+Il fixture usa lo stage `runtime-base` del Dockerfile, includendo gli stessi
+aggiornamenti OS dell'immagine distribuita.

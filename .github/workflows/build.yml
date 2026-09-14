@@ -78,17 +78,13 @@ jobs:
         component: [backend, frontend, db]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Build application image or pull database image
+      - name: Build runtime image
         env:
           COMPONENT: ${{ matrix.component }}
-        run: |
-          if [ "$COMPONENT" = db ]; then
-            image=$(awk '$1 == "image:" && $2 ~ /^postgres:/ { print $2 }' docker-compose.yml)
-            docker pull "$image"
-            docker tag "$image" "mangashelf-$COMPONENT:ci"
-          else
-            docker build -t "mangashelf-$COMPONENT:ci" "./$COMPONENT"
-          fi
+        run: docker build -t "mangashelf-$COMPONENT:ci" "./$COMPONENT"
+      - name: Verify database startup and existing data
+        if: matrix.component == 'db'
+        run: python3 scripts/test-database-image.py mangashelf-db:ci
       - name: Scan runtime OS and application dependencies
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

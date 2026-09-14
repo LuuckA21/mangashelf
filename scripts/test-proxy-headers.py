@@ -64,27 +64,21 @@ class ProxyHeadersTest(unittest.TestCase):
             docker("rm", "--force", name)
 
     def request(self, name, path, xff="203.0.113.7", method="GET"):
-        request = (
-            f"{method} {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n"
-            f"X-Forwarded-For: {xff}\r\nX-Forwarded-Proto: https\r\n"
-            "X-Forwarded-Host: forged.example\r\n"
-            "Forwarded: for=203.0.113.99;proto=https\r\nContent-Length: 0\r\n\r\n"
-        )
-        # Keep stdin open until the server closes the HTTP connection. BusyBox
-        # nc can otherwise exit on stdin EOF before reading the response.
-        with subprocess.Popen(
-            ["docker", "exec", "-i", name, "nc", "-w", "3", "127.0.0.1", "80"],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        ) as process:
-            process.stdin.write(request.encode())
-            process.stdin.flush()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                raise
-            raw = process.stdout.read()
-            self.assertEqual(process.returncode, 0, process.stderr.read().decode())
+        # curl stops at the HTTP message boundary. Waiting for nc's idle
+        # timeout spaces requests far enough apart to refill the login quota.
+        raw = subprocess.run(
+            ["docker", "exec", name, "curl", "--silent", "--show-error",
+             "--http1.1", "--raw", "--include", "--max-time", "5",
+             "--request", method,
+             "--header", "Connection: close",
+             "--header", f"X-Forwarded-For: {xff}",
+             "--header", "X-Forwarded-Proto: https",
+             "--header", "X-Forwarded-Host: forged.example",
+             "--header", "Forwarded: for=203.0.113.99;proto=https",
+             "--header", "Content-Length: 0",
+             f"http://127.0.0.1{path}"],
+            check=True, capture_output=True, timeout=10,
+        ).stdout
         response = HTTPResponse(ResponseSocket(raw))
         response.begin()
         return response.status, dict(response.getheaders()), response.read().decode()
