@@ -8,6 +8,7 @@ import me.luucka.mangashelf.common.CoverStore;
 import me.luucka.mangashelf.metadata.dto.AniListResponse;
 import me.luucka.mangashelf.metadata.dto.MangaSearchResult;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 /** Turns AniList results into catalogue rows. */
 @Service
+@PreAuthorize("hasRole('ADMIN')")
 public class MetadataService {
 
     private final AniListClient anilist;

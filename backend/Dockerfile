@@ -1,5 +1,5 @@
 # ---- build ----
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM maven:3.9-eclipse-temurin-25@sha256:31618505df21177d2baa3dc574be2d0b0b32614c8539baca1f23a9136b766eb0 AS build
 WORKDIR /build
 
 # Dependency cache: copy only the pom first, so a source change does not
@@ -14,7 +14,7 @@ COPY src ./src
 RUN mvn -B clean package -DskipTests
 
 # ---- runtime ----
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
 WORKDIR /app
 
 RUN addgroup -S app && adduser -S app -G app \

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -67,6 +68,7 @@ public class CatalogService {
                 .orElseThrow(() -> ApiException.notFound("manga_not_found"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Manga createManga(MangaRequest request) {
         Manga manga = new Manga(request.titleRomaji());
@@ -78,6 +80,7 @@ public class CatalogService {
         return saved;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Manga updateManga(Long id, MangaRequest request) {
         Manga manga = getManga(id);
@@ -103,6 +106,7 @@ public class CatalogService {
     }
 
     /** Replaces the cover with an uploaded file. */
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Manga setCover(Long id, byte[] bytes) {
         Manga manga = getManga(id);
@@ -132,6 +136,7 @@ public class CatalogService {
      * refused whenever any copy is owned, and only an administrator may
      * delete at all.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteManga(Long id, UserPrincipal principal) {
         requireAdmin(principal);
@@ -161,6 +166,7 @@ public class CatalogService {
                 .orElseThrow(() -> ApiException.notFound("series_not_found"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Series createSeries(Long mangaId, SeriesRequest request) {
         Manga manga = getManga(mangaId);
@@ -180,6 +186,7 @@ public class CatalogService {
         return seriesRepository.save(series);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Series updateSeries(Long id, SeriesRequest request) {
         Series series = getSeries(id);
@@ -205,6 +212,7 @@ public class CatalogService {
         return series;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteSeries(Long id, UserPrincipal principal) {
         requireAdmin(principal);

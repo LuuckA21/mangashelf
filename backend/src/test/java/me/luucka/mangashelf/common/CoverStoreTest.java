@@ -149,6 +149,36 @@ class CoverStoreTest {
     }
 
     @Test
+    void rejectsTraversalNamesWithoutWritingOutsideTheCoverDirectory() throws Exception {
+        Path covers = directory.resolve("covers");
+        CoverStore store = new CoverStore(covers.toString());
+        byte[] bytes = image("png", 10, 12);
+        for (String name : new String[]{"../escape", "nested/../../escape", "..\\escape",
+                directory.resolve("absolute").toString()}) {
+            assertThatThrownBy(() -> store.storeBytes(bytes, name))
+                    .isInstanceOf(ApiException.class).hasMessage("invalid_cover_name");
+        }
+        assertThat(covers).doesNotExist();
+        try (var files = Files.list(directory)) {
+            assertThat(files).isEmpty();
+        }
+    }
+
+    @Test
+    void replacingASymlinkDoesNotOverwriteItsTarget() throws Exception {
+        Path outside = Files.writeString(directory.resolve("private.txt"), "untouched");
+        Path covers = Files.createDirectory(directory.resolve("covers"));
+        Files.createSymbolicLink(covers.resolve("manga-7.png"), outside);
+
+        new CoverStore(covers.resolve("../covers").toString())
+                .storeBytes(image("png", 10, 12), "manga-7");
+
+        assertThat(Files.readString(outside)).isEqualTo("untouched");
+        assertThat(Files.isSymbolicLink(covers.resolve("manga-7.png"))).isFalse();
+        assertThat(ImageIO.read(covers.resolve("manga-7.png").toFile()).getWidth()).isEqualTo(10);
+    }
+
+    @Test
     void refusesLocalAndUnsupportedRemoteAddresses() throws Exception {
         CoverStore store = new CoverStore(directory.toString());
 
