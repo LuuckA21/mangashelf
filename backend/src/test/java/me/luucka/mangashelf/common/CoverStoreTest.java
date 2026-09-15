@@ -2,9 +2,6 @@ package me.luucka.mangashelf.common;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -17,8 +14,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class CoverStoreTest {
 
@@ -29,12 +24,11 @@ class CoverStoreTest {
     void downloadsACoverToAnAtomicLocalFile() throws Exception {
         String remote = "https://8.8.8.8/cover.png?size=large";
         byte[] bytes = image("png", 20, 30);
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        server.expect(requestTo(remote))
-                .andRespond(withSuccess(bytes, MediaType.IMAGE_PNG));
         CoverStore store = new CoverStore(
-                directory.toString(), builder.build(), Set.of("8.8.8.8"));
+                directory.toString(), url -> {
+                    assertThat(url).isEqualTo(remote);
+                    return bytes;
+                }, Set.of("8.8.8.8"));
 
         String path = store.store(remote, "anilist-42");
 
@@ -48,7 +42,6 @@ class CoverStoreTest {
             assertThat(files.map(pathEntry -> pathEntry.getFileName().toString()))
                     .noneMatch(name -> name.endsWith(".part"));
         }
-        server.verify();
     }
 
     @Test
@@ -146,6 +139,36 @@ class CoverStoreTest {
                 image("png", 8_193, 1), "too-wide"))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("image_dimensions_too_large");
+    }
+
+    @Test
+    void rejectsTraversalNamesWithoutWritingOutsideTheCoverDirectory() throws Exception {
+        Path covers = directory.resolve("covers");
+        CoverStore store = new CoverStore(covers.toString());
+        byte[] bytes = image("png", 10, 12);
+        for (String name : new String[]{"../escape", "nested/../../escape", "..\\escape",
+                directory.resolve("absolute").toString()}) {
+            assertThatThrownBy(() -> store.storeBytes(bytes, name))
+                    .isInstanceOf(ApiException.class).hasMessage("invalid_cover_name");
+        }
+        assertThat(covers).doesNotExist();
+        try (var files = Files.list(directory)) {
+            assertThat(files).isEmpty();
+        }
+    }
+
+    @Test
+    void replacingASymlinkDoesNotOverwriteItsTarget() throws Exception {
+        Path outside = Files.writeString(directory.resolve("private.txt"), "untouched");
+        Path covers = Files.createDirectory(directory.resolve("covers"));
+        Files.createSymbolicLink(covers.resolve("manga-7.png"), outside);
+
+        new CoverStore(covers.resolve("../covers").toString())
+                .storeBytes(image("png", 10, 12), "manga-7");
+
+        assertThat(Files.readString(outside)).isEqualTo("untouched");
+        assertThat(Files.isSymbolicLink(covers.resolve("manga-7.png"))).isFalse();
+        assertThat(ImageIO.read(covers.resolve("manga-7.png").toFile()).getWidth()).isEqualTo(10);
     }
 
     @Test

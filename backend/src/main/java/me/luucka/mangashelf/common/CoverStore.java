@@ -1,13 +1,13 @@
 package me.luucka.mangashelf.common;
 
 import jakarta.annotation.PostConstruct;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -19,14 +19,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.LinkOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -56,24 +54,31 @@ public class CoverStore {
             PosixFilePermissions.fromString("rw-r--r--");
 
     private final Path directory;
-    private final RestClient http;
+    private final Download download;
     private final Set<String> allowedHosts;
 
     @Autowired
     public CoverStore(@Value("${app.covers-dir}") String coversDir,
                       @Value("${app.covers.allowed-hosts:s4.anilist.co}")
-                      List<String> allowedHosts) {
-        this(coversDir, downloadClient(), Set.copyOf(allowedHosts));
+                      List<String> allowedHosts,
+                      @Qualifier("coverHttpClient") CloseableHttpClient client) {
+        this(coversDir, new CoverDownloader(client, MAX_BYTES)::fetch, Set.copyOf(allowedHosts));
     }
 
-    /** Test seams for local image validation and mock HTTP downloads. */
+    /** Test seams for local image validation and isolated download fixtures. */
     CoverStore(String coversDir) {
-        this(coversDir, downloadClient(), Set.of("s4.anilist.co"));
+        this(coversDir, url -> { throw new AssertionError("Unexpected download in local-image test"); },
+                Set.of("s4.anilist.co"));
     }
 
-    CoverStore(String coversDir, RestClient http, Set<String> allowedHosts) {
-        this.directory = Path.of(coversDir);
-        this.http = http;
+    @FunctionalInterface
+    interface Download {
+        byte[] fetch(String url) throws IOException;
+    }
+
+    CoverStore(String coversDir, Download download, Set<String> allowedHosts) {
+        this.directory = Path.of(coversDir).toAbsolutePath().normalize();
+        this.download = download;
         this.allowedHosts = allowedHosts.stream()
                 .map(host -> host.toLowerCase(Locale.ROOT))
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -126,14 +131,7 @@ public class CoverStore {
         }
 
         try {
-            byte[] bytes = http.get().uri(remoteUrl).exchange((request, response) -> {
-                if (!response.getStatusCode().is2xxSuccessful()) {
-                    throw new IOException("Remote server returned " + response.getStatusCode());
-                }
-                // Reading one byte beyond the ceiling detects an oversized
-                // body without first allocating the attacker's whole reply.
-                return response.getBody().readNBytes(MAX_BYTES + 1);
-            });
+            byte[] bytes = download.fetch(remoteUrl);
 
             if (bytes == null || bytes.length == 0) {
                 log.warn("Empty cover from {}", remoteUrl);
@@ -245,6 +243,7 @@ public class CoverStore {
     }
 
     private void writeAtomically(String fileName, byte[] bytes) throws IOException {
+        Path destination = resolveInside(fileName);
         Files.createDirectories(directory);
         Path temp = Files.createTempFile(directory, fileName + "-", ".part");
         try {
@@ -254,7 +253,7 @@ public class CoverStore {
             if (Files.getFileStore(temp).supportsFileAttributeView("posix")) {
                 Files.setPosixFilePermissions(temp, PUBLIC_FILE_PERMISSIONS);
             }
-            Files.move(temp, directory.resolve(fileName),
+            Files.move(temp, destination,
                     StandardCopyOption.REPLACE_EXISTING,
                     StandardCopyOption.ATOMIC_MOVE);
         } finally {
@@ -262,16 +261,12 @@ public class CoverStore {
         }
     }
 
-    private static RestClient downloadClient() {
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
-                // A redirect is another user-controlled destination. Refuse
-                // it instead of bypassing the private-address check above.
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
-        JdkClientHttpRequestFactory requests = new JdkClientHttpRequestFactory(client);
-        requests.setReadTimeout(Duration.ofSeconds(10));
-        return RestClient.builder().requestFactory(requests).build();
+    private Path resolveInside(String fileName) {
+        Path destination = directory.resolve(fileName).normalize();
+        if (!destination.startsWith(directory) || destination.equals(directory)) {
+            throw ApiException.badRequest("invalid_cover_name");
+        }
+        return destination;
     }
 
     /**
@@ -290,8 +285,9 @@ public class CoverStore {
      * On a self-hosted box that means the database, the proxy's admin panel
      * and everything else on the LAN, turned into a probe by pasting a link.
      * Only explicitly trusted image hosts are accepted. Besides reducing the
-     * attack surface, the allow-list removes the DNS-rebinding gap between
-     * validation and the HTTP client's own hostname resolution.
+     * attack surface, the allow-list prevents users from choosing arbitrary
+     * DNS zones. CoverHttpConfiguration also validates the actual addresses
+     * returned to the connection manager, closing the DNS-rebinding gap.
      */
     private boolean isFetchable(String url) {
         try {
@@ -320,7 +316,7 @@ public class CoverStore {
         }
     }
 
-    private boolean isUnsafeAddress(InetAddress address) {
+    static boolean isUnsafeAddress(InetAddress address) {
         if (address.isLoopbackAddress()
                 || address.isSiteLocalAddress()
                 || address.isLinkLocalAddress()

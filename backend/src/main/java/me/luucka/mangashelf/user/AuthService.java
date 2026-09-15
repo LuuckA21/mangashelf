@@ -98,7 +98,10 @@ public class AuthService {
 
     @Transactional
     public AppUser updateLanguage(Long userId, UiLanguage language) {
-        AppUser user = users.findById(userId)
+        // Hibernate updates the whole entity. Use the same row lock as
+        // password, role and MFA changes so a stale preference write cannot
+        // restore old credentials or undo session revocation.
+        AppUser user = users.findByIdForUpdate(userId)
                 .orElseThrow(() -> ApiException.notFound("user_not_found"));
         user.setLanguage(language);
         return user;
