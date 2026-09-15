@@ -192,3 +192,61 @@ nell'immagine ufficiale, e termina al completamento della risposta HTTP. Non
 sono stati modificati i limiti di produzione o aggiunti retry ai test.
 Il fixture usa lo stage `runtime-base` del Dockerfile, includendo gli stessi
 aggiornamenti OS dell'immagine distribuita.
+
+## Seconda revisione — 15 settembre 2026
+
+Base della nuova verifica: `a2675d3` sullo stesso branch della PR #20.
+Riesaminati autenticazione, challenge 2FA, revoca delle sessioni, token email,
+autorizzazioni HTTP/metodo, isolamento dei dati personali, gestione delle
+copertine, proxy, configurazione runtime e pipeline.
+
+### Correzioni ulteriori
+
+1. **Scrittura concorrente della lingua e dello stato di sicurezza.**
+   `AuthService.updateLanguage` caricava l'utente senza lock. L'entità non usa
+   optimistic locking né aggiornamenti dinamici: Hibernate può riscrivere
+   anche password, ruolo, flag enabled, versione delle sessioni e campi 2FA
+   letti prima di una modifica concorrente. Le altre scritture dell'utente
+   esistente già acquisiscono un lock di riga. Anche il cambio lingua usa ora
+   `findByIdForUpdate`, serializzandosi con quelle operazioni. Nessuna migrazione
+   è richiesta. Il test PostgreSQL tiene aperto un aggiornamento di sicurezza,
+   avvia il cambio lingua, osserva il blocco tramite `pg_blocking_pids`, poi
+   verifica che la preferenza sia salvata senza ripristinare i valori precedenti.
+
+2. **Lettura residua delle risposte delle copertine rifiutate.**
+   Il tetto di 5 MiB limitava l'array letto esplicitamente, ma il wrapper Spring
+   di HttpClient consumava il resto del corpo durante la chiusura, per riusare
+   la connessione. Una risposta enorme o un errore con corpo interminabile
+   poteva quindi occupare banda e connessioni anche dopo il rifiuto. Il nuovo
+   `CoverDownloader` gestisce esplicitamente la risposta Apache e cancella la
+   richiesta prima della chiusura se il corpo non è stato interamente accettato.
+   Le risposte valide mantengono il riuso delle connessioni. I test usano un
+   server HTTP locale reale che non invia EOF finché il client non è tornato:
+   coprono chunked, gzip, Content-Length eccessivo, 302, 500 e il caso valido
+   esattamente al limite. Allowlist, resolver, TLS e divieto di redirect restano
+   invariati. La sfruttabilità richiede comunque una sorgente ammessa/compromessa;
+   questo non dimostra SSRF arbitraria con la configurazione predefinita.
+
+### Riscontri senza ulteriori modifiche
+
+- Il challenge 2FA è privo di autenticazione, scade e ha un budget proprio;
+  consumo di TOTP e codici di recupero è protetto da transazione e lock.
+- Reset password e modifiche di sicurezza mantengono il 2FA e invalidano
+  sessioni/challenge tramite versione; la chiave TOTP mancante fallisce chiusa.
+- Le scritture condivise sono admin-only, mentre collezione e acquisti filtrano
+  per il proprietario autenticato. CSRF resta richiesto sulle mutazioni.
+- I token email sono casuali, conservati come hash, hanno scadenza e consumo
+  sotto lock; i link usano fragment e origine configurata. I template email
+  applicano escaping HTML e il frontend non inserisce HTML arbitrario.
+- Il proxy conserva il confine di fiducia esplicito degli IP; immagini e Actions
+  sono fissate a digest/SHA, con scansione delle immagini realmente costruite.
+
+Questa revisione non è una garanzia di assenza di vulnerabilità. Restano i limiti
+operativi già descritti: quote in memoria per istanza, possibile blocco mirato
+account, copertine pubbliche per progetto e verifiche manuali dei flussi browser.
+I timeout HTTP sono timeout delle singole fasi/inattività, non una scadenza
+assoluta dell'intero trasferimento da una sorgente che continua a inviare dati.
+
+Riferimenti sul comportamento verificato:
+- https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
+- https://github.com/spring-projects/spring-framework/blob/main/spring-web/src/main/java/org/springframework/http/client/HttpComponentsClientHttpResponse.java

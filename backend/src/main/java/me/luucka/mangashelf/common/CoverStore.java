@@ -7,9 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -56,7 +54,7 @@ public class CoverStore {
             PosixFilePermissions.fromString("rw-r--r--");
 
     private final Path directory;
-    private final RestClient http;
+    private final Download download;
     private final Set<String> allowedHosts;
 
     @Autowired
@@ -64,19 +62,23 @@ public class CoverStore {
                       @Value("${app.covers.allowed-hosts:s4.anilist.co}")
                       List<String> allowedHosts,
                       @Qualifier("coverHttpClient") CloseableHttpClient client) {
-        this(coversDir, RestClient.builder()
-                .requestFactory(new HttpComponentsClientHttpRequestFactory(client))
-                .build(), Set.copyOf(allowedHosts));
+        this(coversDir, new CoverDownloader(client, MAX_BYTES)::fetch, Set.copyOf(allowedHosts));
     }
 
-    /** Test seams for local image validation and mock HTTP downloads. */
+    /** Test seams for local image validation and isolated download fixtures. */
     CoverStore(String coversDir) {
-        this(coversDir, RestClient.create(), Set.of("s4.anilist.co"));
+        this(coversDir, url -> { throw new AssertionError("Unexpected download in local-image test"); },
+                Set.of("s4.anilist.co"));
     }
 
-    CoverStore(String coversDir, RestClient http, Set<String> allowedHosts) {
+    @FunctionalInterface
+    interface Download {
+        byte[] fetch(String url) throws IOException;
+    }
+
+    CoverStore(String coversDir, Download download, Set<String> allowedHosts) {
         this.directory = Path.of(coversDir).toAbsolutePath().normalize();
-        this.http = http;
+        this.download = download;
         this.allowedHosts = allowedHosts.stream()
                 .map(host -> host.toLowerCase(Locale.ROOT))
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -129,14 +131,7 @@ public class CoverStore {
         }
 
         try {
-            byte[] bytes = http.get().uri(remoteUrl).exchange((request, response) -> {
-                if (!response.getStatusCode().is2xxSuccessful()) {
-                    throw new IOException("Remote server returned " + response.getStatusCode());
-                }
-                // Reading one byte beyond the ceiling detects an oversized
-                // body without first allocating the attacker's whole reply.
-                return response.getBody().readNBytes(MAX_BYTES + 1);
-            });
+            byte[] bytes = download.fetch(remoteUrl);
 
             if (bytes == null || bytes.length == 0) {
                 log.warn("Empty cover from {}", remoteUrl);

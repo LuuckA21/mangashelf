@@ -2,9 +2,6 @@ package me.luucka.mangashelf.common;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -17,8 +14,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class CoverStoreTest {
 
@@ -29,12 +24,11 @@ class CoverStoreTest {
     void downloadsACoverToAnAtomicLocalFile() throws Exception {
         String remote = "https://8.8.8.8/cover.png?size=large";
         byte[] bytes = image("png", 20, 30);
-        RestClient.Builder builder = RestClient.builder();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        server.expect(requestTo(remote))
-                .andRespond(withSuccess(bytes, MediaType.IMAGE_PNG));
         CoverStore store = new CoverStore(
-                directory.toString(), builder.build(), Set.of("8.8.8.8"));
+                directory.toString(), url -> {
+                    assertThat(url).isEqualTo(remote);
+                    return bytes;
+                }, Set.of("8.8.8.8"));
 
         String path = store.store(remote, "anilist-42");
 
@@ -48,7 +42,6 @@ class CoverStoreTest {
             assertThat(files.map(pathEntry -> pathEntry.getFileName().toString()))
                     .noneMatch(name -> name.endsWith(".part"));
         }
-        server.verify();
     }
 
     @Test
