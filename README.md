@@ -149,7 +149,7 @@ il percorso dell'ultima copia completa; la rotazione tocca soltanto cartelle
 create e marcate dal nuovo script. Le precedenti `daily/`, `weekly/`, `secrets/`
 e i backup nel vecchio formato restano conservati.
 
-Su `prd-apps-01`, dopo aver verificato il nuovo branch, eseguire come `appsvc`:
+Su `prd-apps-01`, con il checkout aggiornato, eseguire come `appsvc`:
 
 ```bash
 cd /srv/apps/mangashelf
@@ -187,16 +187,20 @@ istanza completa dell'applicazione.
 Vedi [installazione, migrazione, struttura e recupero](docs/backups.md) per i
 comandi da `opsadmin`, i limiti e la disattivazione del cloud.
 
-Gli script storici `scripts/backup.sh`, `scripts/backup-scheduled.sh` e
-`scripts/restore.sh` restano disponibili per compatibilita. Solo il vecchio
-backup minimale esclude `.env`; il nuovo `backup.sh` lo include sempre.
+`scripts/backup.sh` e il componente interno che salva database e copertine:
+viene richiamato da `backup.sh` e dal ripristino per la copia di sicurezza.
+Da solo non include `.env`; per i backup operativi usare `backup.sh` nella
+directory principale, che include anche la configurazione.
+`scripts/restore.sh` esegue il ripristino effettivo di database e copertine,
+anche dalle copie nel formato precedente. La vecchia pianificazione con
+cartelle `daily/weekly` e stata rimossa; resta un solo sistema di pianificazione.
 
 ## Ripristino
 
 Il ripristino sostituisce completamente database e copertine correnti. Per impostazione predefinita lo script crea prima un ulteriore backup di sicurezza in `backups/pre-restore`.
 
 ```bash
-./scripts/restore.sh backups/mangashelf-AAAAMMGGTHHMMSSZ
+./scripts/restore.sh /srv/backups/mangashelf/daily-AAAAMMGG-HHMMSS-NANOSECONDI
 ```
 
 Lo script:
@@ -211,10 +215,14 @@ Lo script:
 In un recupero di emergenza, se il database corrente è illeggibile e il backup di sicurezza non può essere creato, è disponibile l'opzione esplicita:
 
 ```bash
-./scripts/restore.sh backups/mangashelf-AAAAMMGGTHHMMSSZ --skip-safety-backup
+./scripts/restore.sh /srv/backups/mangashelf/daily-AAAAMMGG-HHMMSS-NANOSECONDI --skip-safety-backup
 ```
 
 Per un'esecuzione automatizzata già supervisionata si può aggiungere `--yes`; questa opzione elimina soltanto la conferma testuale, non le verifiche.
+
+Eseguire come utente runtime con l'ambiente Docker rootless impostato.
+Lo script non ripristina automaticamente `.env` o Compose: configurare prima
+l'istanza di destinazione seguendo [la guida di recupero](docs/backups.md).
 
 ## Controlli dopo un ripristino
 
@@ -250,7 +258,6 @@ Script operativi, senza modificare Docker o dati reali:
 ```bash
 ./scripts/test-backup-restore.sh
 ./scripts/test-deploy.sh
-./scripts/test-scheduled-backup.sh
 python3 scripts/test-kutt-backups.py
 bash scripts/test-systemd-backup.sh
 ```

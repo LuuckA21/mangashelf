@@ -177,7 +177,7 @@ unset MANGASHELF_ROOT
 assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" 'status=successful'
 
 # Once installed, the full Kutt-style backup must take precedence over the
-# legacy low-level script (which remains necessary on older branches).
+# low-level component (also used directly by deploys on older branches).
 cat > "$TEST_ROOT/host/mangashelf/backup.sh" <<'MANAGED_BACKUP'
 #!/usr/bin/env bash
 printf 'managed-backup\n' >> "$FAKE_DEPLOY_LOG"

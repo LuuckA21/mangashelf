@@ -27,7 +27,6 @@ jobs:
       - run: bash scripts/test-systemd-backup.sh
       - run: ./scripts/test-backup-restore.sh
       - run: ./scripts/test-deploy.sh
-      - run: ./scripts/test-scheduled-backup.sh
       - run: python3 scripts/test-kutt-backups.py
       - run: python3 scripts/test-proxy-headers.py
 

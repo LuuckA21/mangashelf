@@ -87,9 +87,17 @@ Il link locale `backups`, se gia esistente, puo restare: non e richiesto per
 l'installazione standard in `/srv/apps/mangashelf`.
 
 `last-success` cambia dal vecchio formato chiave=valore al percorso singolo
-usato da Kutt, soltanto al primo nuovo backup riuscito. Gli script legacy
-restano disponibili ma non vanno piu eseguiti sullo stesso BACKUP_ROOT del nuovo
-servizio: usano un diverso formato del marker. I vecchi dump restano ripristinabili.
+usato da Kutt, soltanto al primo nuovo backup riuscito. La vecchia pianificazione
+`scripts/backup-scheduled.sh` e il relativo test sono stati rimossi. Se un'istanza
+usa ancora quel comando in systemd o cron, migrare al servizio attuale con
+l'installer e disattivare eventuali richiami cron precedenti. Sul server gia
+migrato non occorre reinstallare le unita per questa pulizia. I vecchi dump
+restano ripristinabili e nessuna copia esistente viene eliminata.
+
+`scripts/backup.sh` resta il componente interno per dump PostgreSQL e archivio
+copertine, usato dal backup completo e dalla copia di sicurezza pre-ripristino.
+`scripts/restore.sh` resta il comando per ripristinare database e copertine.
+I relativi test sono mantenuti: questi file fanno parte del sistema attuale.
 
 Per disabilitare esplicitamente l'invio cloud e installare il solo servizio
 locale, usare `./install-backup.sh --local`. Non cancella il repository remoto
@@ -154,7 +162,8 @@ verifica la struttura del repository; `restic check --read-data` rilegge tutti i
 blocchi e richiede piu tempo/traffico. Non sono previste notifiche o retry orari.
 
 Il lock `.backup.lock` serializza nuovo backup locale, cloud e verifica del
-ripristino. Gli script legacy non usano questo lock. Il deploy chiama il nuovo
+ripristino. `scripts/restore.sh` e l'esecuzione diretta del componente interno
+`scripts/backup.sh` non acquisiscono questo lock. Il deploy chiama il nuovo
 backup, ma non mantiene il lock durante la ricostruzione: evitare attivita
 operative concorrenti, come per Kutt. Dump e copertine sono acquisiti in sequenza,
 non come snapshot atomico dell'intera applicazione: per un punto di ripristino
