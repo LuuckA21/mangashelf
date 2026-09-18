@@ -1,9 +1,9 @@
 [Unit]
-Description=Run the MangaShelf backup every day
+Description=Daily MangaShelf backup at 04:15 Europe/Zurich
 
 [Timer]
-OnCalendar=*-*-* 03:30:00
-RandomizedDelaySec=15m
+OnCalendar=*-*-* 04:15:00 Europe/Zurich
+AccuracySec=1min
 Persistent=true
 Unit=mangashelf-backup.service
 

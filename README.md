@@ -138,93 +138,58 @@ MANGASHELF_HEALTH_TIMEOUT=300 ./deploy.sh master
 
 ## Backup
 
-Il backup include:
+La gestione operativa segue lo stesso schema di Kutt: `backup.sh` crea una
+cartella `daily-AAAAMMGG-HHMMSS-NANOSECONDI` direttamente sotto
+`/srv/backups/mangashelf`, con PostgreSQL, copertine, `.env`, Compose, riferimenti
+alle immagini, manifest Git e checksum. Le cartelle sono private: contengono
+anche credenziali SMTP e chiave 2FA. Non pubblicarle e non committarle.
 
-- dump PostgreSQL in formato custom;
-- archivio delle copertine;
-- checksum SHA-256;
-- manifest con data UTC e commit Git.
+Il backup locale conserva almeno **14 giorni**. Il file `last-success` contiene
+il percorso dell'ultima copia completa; la rotazione tocca soltanto cartelle
+create e marcate dal nuovo script. Le precedenti `daily/`, `weekly/`, `secrets/`
+e i backup nel vecchio formato restano conservati.
 
-Esegui:
-
-```bash
-./scripts/backup.sh
-```
-
-Il risultato viene salvato in `backups/mangashelf-AAAAMMGGTHHMMSSZ`. Per scegliere un'altra destinazione:
+Su `prd-apps-01`, dopo aver verificato il nuovo branch, eseguire come `appsvc`:
 
 ```bash
-./scripts/backup.sh /percorso/dei/backup
+cd /srv/apps/mangashelf
+./install-backup.sh --cloud-from-kutt
 ```
 
-La directory contiene dati personali e deve essere conservata con accesso limitato, preferibilmente anche su un supporto esterno al server. Il file `.env` non viene incluso: salvalo separatamente in un gestore di segreti o in un archivio cifrato.
+L'installer riusa le credenziali S3 gia configurate per Kutt, crea un repository
+separato terminante in `/mangashelf` e una password Restic distinta. Se esiste
+la configurazione MangaShelf del kit precedente, ne conserva repository e
+password. Non modifica Kutt. Occorre salvare password Restic e credenziali S3
+in un gestore di password esterno al server.
 
-Un backup non è considerato affidabile finché non è stato copiato fuori dal server e provato almeno una volta con il ripristino.
+Il timer utente esegue il backup ogni giorno alle **04:15 Europe/Zurich**, con
+recupero delle scadenze perse. Il servizio richiama `backup.sh` e, solo dopo il
+successo locale, `cloud-backup.sh` tramite `ExecStartPost`, come Kutt. Il cloud
+mantiene **14 giornalieri, 8 settimanali e 12 mensili**, quindi verifica il
+repository. Il file `last-cloud-success.json` attesta il successo della catena
+cloud; controllare anche `Result=success` del servizio.
 
-### Backup automatici con systemd
+Per il solo backup locale usare esplicitamente `./install-backup.sh --local`.
+Per una copia manuale usare `./backup.sh`; per l'intera catena, con l'ambiente
+systemd utente impostato, `systemctl --user start mangashelf-backup.service`.
+Anche il deploy usa il nuovo backup locale prima di aggiornare il codice.
 
-Il timer incluso nel repository crea un backup ogni giorno alle 03:30, con un
-ritardo casuale massimo di 15 minuti. Se il server è spento all'orario previsto,
-`Persistent=true` avvia il backup al successivo avvio.
-
-Installa il servizio per l'utente che gestisce MangaShelf:
+La prova di recupero dal cloud e di ripristino PostgreSQL isolato si esegue con:
 
 ```bash
-mkdir -p ~/.config/systemd/user
-cp ops/systemd/mangashelf-backup.service ~/.config/systemd/user/
-cp ops/systemd/mangashelf-backup.timer ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now mangashelf-backup.timer
-systemctl --user list-timers mangashelf-backup.timer
+./verify-backup.sh
 ```
 
-Il servizio presuppone che il repository si trovi in `~/mangashelf`. Per
-eseguire i timer utente anche senza una sessione aperta, controlla:
+Non sostituisce i dati attivi e non pubblica porte. Verifica checksum, archivio
+copertine e importazione del dump in un DB temporaneo; non avvia una seconda
+istanza completa dell'applicazione.
 
-```bash
-loginctl show-user "$USER" -p Linger
-```
+Vedi [installazione, migrazione, struttura e recupero](docs/backups.md) per i
+comandi da `opsadmin`, i limiti e la disattivazione del cloud.
 
-Se il risultato è `Linger=no`, abilitalo una sola volta:
-
-```bash
-sudo loginctl enable-linger "$USER"
-```
-
-Esegui subito un backup supervisionato e controllane il risultato:
-
-```bash
-systemctl --user start mangashelf-backup.service
-systemctl --user status mangashelf-backup.service --no-pager
-journalctl --user -u mangashelf-backup.service -n 100 --no-pager
-cat backups/last-success
-```
-
-I backup sono conservati in `backups/daily` e `backups/weekly`. Per impostazione
-predefinita vengono mantenuti gli ultimi 7 giornalieri e gli ultimi 4
-settimanali; la copia settimanale viene creata la domenica. Le copie settimanali
-usano hard link, quindi restano valide anche dopo la rimozione della copia
-giornaliera senza duplicare immediatamente gli stessi dati sul disco.
-
-Per cambiare la conservazione, crea un override del servizio:
-
-```bash
-systemctl --user edit mangashelf-backup.service
-```
-
-Inserisci, per esempio:
-
-```ini
-[Service]
-Environment=MANGASHELF_DAILY_RETENTION=14
-Environment=MANGASHELF_WEEKLY_RETENTION=8
-```
-
-Poi applica la modifica con `systemctl --user daemon-reload`. L'ultimo esito
-positivo è registrato in `backups/last-success`; in caso di errore vengono
-conservati data e codice di uscita in `backups/last-failure` e nei log di
-systemd. Un backup automatico può essere ripristinato passando allo script il
-percorso completo, per esempio `backups/daily/mangashelf-AAAAMMGGTHHMMSSZ`.
+Gli script storici `scripts/backup.sh`, `scripts/backup-scheduled.sh` e
+`scripts/restore.sh` restano disponibili per compatibilita. Solo il vecchio
+backup minimale esclude `.env`; il nuovo `backup.sh` lo include sempre.
 
 ## Ripristino
 
@@ -286,6 +251,8 @@ Script operativi, senza modificare Docker o dati reali:
 ./scripts/test-backup-restore.sh
 ./scripts/test-deploy.sh
 ./scripts/test-scheduled-backup.sh
+python3 scripts/test-kutt-backups.py
+bash scripts/test-systemd-backup.sh
 ```
 
 GitHub Actions esegue automaticamente tutte queste verifiche sulle pull request.
