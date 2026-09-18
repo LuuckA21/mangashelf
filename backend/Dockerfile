@@ -1,5 +1,5 @@
 # ---- build ----
-FROM maven:3.9-eclipse-temurin-25@sha256:31618505df21177d2baa3dc574be2d0b0b32614c8539baca1f23a9136b766eb0 AS build
+FROM maven:3-eclipse-temurin-24@sha256:a137a467ec89b5713d0be817b55bdba6b4d6ef16e3d05565a79bc08d8e775a1c AS build
 WORKDIR /build
 
 # Dependency cache: copy only the pom first, so a source change does not
