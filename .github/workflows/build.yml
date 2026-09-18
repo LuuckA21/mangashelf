@@ -19,19 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - run: >-
-          bash -n deploy.sh
-          scripts/backup.sh
-          scripts/backup-scheduled.sh
-          scripts/restore.sh
-          scripts/test-backup-restore.sh
-          scripts/test-deploy.sh
-          scripts/test-scheduled-backup.sh
-          scripts/tests/fake-docker
-      - run: systemd-analyze verify ops/systemd/mangashelf-backup.service ops/systemd/mangashelf-backup.timer
+      - name: Check shell syntax
+        run: |
+          for script in ./*.sh scripts/*.sh scripts/tests/fake-docker; do
+            bash -n "$script"
+          done
+      - run: bash scripts/test-systemd-backup.sh
       - run: ./scripts/test-backup-restore.sh
       - run: ./scripts/test-deploy.sh
       - run: ./scripts/test-scheduled-backup.sh
+      - run: python3 scripts/test-kutt-backups.py
       - run: python3 scripts/test-proxy-headers.py
 
   backend:

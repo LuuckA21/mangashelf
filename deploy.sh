@@ -401,14 +401,16 @@ else
         exit 1
     fi
 
-    if [[ ! -x scripts/backup.sh ]]; then
-        red "scripts/backup.sh is missing or not executable; deployment stopped before updating code."
+    BACKUP_SCRIPT=scripts/backup.sh
+    if [[ -f backup.sh ]]; then BACKUP_SCRIPT=./backup.sh; fi
+    if [[ ! -x "$BACKUP_SCRIPT" ]]; then
+        red "$BACKUP_SCRIPT is missing or not executable; deployment stopped before updating code."
         exit 1
     fi
 
     TEMP_BACKUP_LOG="$(mktemp "$ROOT/.mangashelf-backup.XXXXXX")"
     info "Creating the mandatory pre-deploy backup"
-    scripts/backup.sh | tee "$TEMP_BACKUP_LOG"
+    "$BACKUP_SCRIPT" | tee "$TEMP_BACKUP_LOG"
     BACKUP_DIR="$(sed -n 's/^Backup completed: //p' "$TEMP_BACKUP_LOG" | tail -n 1)"
     if [[ -z "$BACKUP_DIR" ]]; then
         red "The backup completed without reporting its destination. Deployment stopped."

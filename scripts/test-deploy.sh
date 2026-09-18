@@ -176,4 +176,16 @@ unset MANGASHELF_ROOT
 "$TEST_ROOT/host/mangashelf/deploy.sh" master > "$TEST_ROOT/in-repo.out" 2>&1
 assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" 'status=successful'
 
+# Once installed, the full Kutt-style backup must take precedence over the
+# legacy low-level script (which remains necessary on older branches).
+cat > "$TEST_ROOT/host/mangashelf/backup.sh" <<'MANAGED_BACKUP'
+#!/usr/bin/env bash
+printf 'managed-backup\n' >> "$FAKE_DEPLOY_LOG"
+printf 'Backup completed: %s/backups/daily-fixture\n' "$PWD"
+MANAGED_BACKUP
+chmod +x "$TEST_ROOT/host/mangashelf/backup.sh"
+"$TEST_ROOT/host/mangashelf/deploy.sh" master > "$TEST_ROOT/managed-backup.out" 2>&1
+assert_file_contains "$FAKE_DEPLOY_LOG" 'managed-backup'
+assert_file_contains "$TEST_ROOT/host/.mangashelf-last-deploy" 'backups/daily-fixture'
+
 printf 'Deploy script tests passed.\n'

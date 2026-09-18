@@ -1,11 +1,14 @@
 [Unit]
-Description=Create and rotate a verified MangaShelf backup
+Description=Verified MangaShelf backup (PostgreSQL, covers and configuration)
+Requires=docker.service
+After=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=%h/mangashelf
+WorkingDirectory=/srv/apps/mangashelf
 Environment="PATH=%h/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/bin/env bash %h/mangashelf/scripts/backup-scheduled.sh
+Environment="MANGASHELF_BACKUP_ROOT=/srv/backups/mangashelf"
+ExecStart=/usr/bin/env bash /srv/apps/mangashelf/backup.sh
 UMask=0077
 Nice=10
 IOSchedulingClass=best-effort

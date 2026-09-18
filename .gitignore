@@ -8,7 +8,10 @@
 *.sql.gz
 backup-*
 !scripts/backup-scheduled.sh
+!scripts/backup-common.sh
 backups/
+/backups
+/ops-local/
 
 # Backend
 backend/target/
