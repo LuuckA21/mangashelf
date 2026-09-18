@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Exercise the production nginx template in an isolated, unpublished container."""
+"""Exercise the production nginx template in isolated, unpublished containers."""
 
+from contextlib import contextmanager
+from http.client import HTTPResponse
+from io import BytesIO
 from pathlib import Path
+import json
 import subprocess
 import time
 import unittest
@@ -9,7 +13,6 @@ import uuid
 
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGE = "nginx:1.31.4-alpine"
 
 
 def docker(*args):
@@ -18,8 +21,23 @@ def docker(*args):
     ).stdout.strip()
 
 
+class ResponseSocket:
+    def __init__(self, raw):
+        self.raw = raw
+
+    def makefile(self, *args):
+        return BytesIO(self.raw)
+
+
 class ProxyHeadersTest(unittest.TestCase):
-    def exercise(self, trusted, expected_address, expected_proto, expected_host, xff):
+    @classmethod
+    def setUpClass(cls):
+        # Exercise exactly the production nginx runtime and its OS fixes.
+        # This target does not require building the frontend's Node stage.
+        cls.image = docker("build", "--quiet", "--target", "runtime-base", str(ROOT / "frontend"))
+
+    @contextmanager
+    def container(self, trusted):
         name = "mangashelf-proxy-test-" + uuid.uuid4().hex
         docker(
             "run", "--detach", "--name", name,
@@ -28,7 +46,7 @@ class ProxyHeadersTest(unittest.TestCase):
             "--env", "NGINX_ENVSUBST_FILTER=^MS_",
             "--volume", f"{ROOT / 'frontend/default.conf.template'}:/etc/nginx/templates/default.conf.template:ro",
             "--volume", f"{ROOT / 'scripts/tests/proxy-backend.conf'}:/etc/nginx/conf.d/backend.conf:ro",
-            IMAGE,
+            self.image,
         )
         try:
             # No host ports and no production volumes or credentials are used.
@@ -40,20 +58,39 @@ class ProxyHeadersTest(unittest.TestCase):
                     time.sleep(0.25)
             else:
                 self.fail("nginx did not become ready: " + docker("logs", name))
-            result = docker(
-                "exec", name, "wget", "-qO-",
-                "--header=X-Forwarded-For: " + xff,
-                "--header=X-Forwarded-Proto: https",
-                "--header=X-Forwarded-Host: forged.example",
-                "--header=Forwarded: for=203.0.113.99;proto=https",
-                "http://127.0.0.1/api/probe",
-            )
-            self.assertEqual(result, "|".join([
-                expected_address, expected_address, expected_proto, expected_host, ""
-            ]))
+            docker("exec", name, "nginx", "-t")
+            yield name
         finally:
-            # Exact randomly generated test container; never a Compose service.
             docker("rm", "--force", name)
+
+    def request(self, name, path, xff="203.0.113.7", method="GET"):
+        # curl stops at the HTTP message boundary. Waiting for nc's idle
+        # timeout spaces requests far enough apart to refill the login quota.
+        raw = subprocess.run(
+            ["docker", "exec", name, "curl", "--silent", "--show-error",
+             "--http1.1", "--raw", "--include", "--max-time", "5",
+             "--request", method,
+             "--header", "Connection: close",
+             "--header", f"X-Forwarded-For: {xff}",
+             "--header", "X-Forwarded-Proto: https",
+             "--header", "X-Forwarded-Host: forged.example",
+             "--header", "Forwarded: for=203.0.113.99;proto=https",
+             "--header", "Content-Length: 0",
+             f"http://127.0.0.1{path}"],
+            check=True, capture_output=True, timeout=10,
+        ).stdout
+        response = HTTPResponse(ResponseSocket(raw))
+        response.begin()
+        return response.status, dict(response.getheaders()), response.read().decode()
+
+    def exercise(self, trusted, expected_address, expected_proto, expected_host, xff):
+        with self.container(trusted) as name:
+            for path in ("/api/probe", "/api/auth/login", "/api/auth/register", "/api/auth/2fa/login"):
+                status, _, result = self.request(name, path, xff)
+                self.assertEqual(status, 200)
+                self.assertEqual(result, "|".join([
+                    expected_address, expected_address, expected_proto, expected_host, ""
+                ]))
 
     def test_untrusted_client_cannot_supply_proxy_identity(self):
         self.exercise("192.0.2.10", "127.0.0.1", "http", "127.0.0.1",
@@ -66,6 +103,46 @@ class ProxyHeadersTest(unittest.TestCase):
     def test_private_hops_are_not_implicitly_trusted(self):
         self.exercise("127.0.0.1", "10.0.0.8", "https", "forged.example",
                       "203.0.113.7, 10.0.0.8")
+
+    def test_limits_use_real_ip_and_leave_session_reads_and_other_clients_available(self):
+        with self.container("127.0.0.1") as name:
+            results = [self.request(name, "/api/auth/login", method="POST") for _ in range(20)]
+            rejected = [result for result in results if result[0] == 429]
+            self.assertTrue(rejected, "login burst was never limited")
+            self.assertEqual(json.loads(rejected[0][2]), {"error": "too_many_attempts"})
+            self.assertIn("application/json", rejected[0][1]["Content-Type"])
+            # A query string or switching to MFA must not create a fresh bucket.
+            self.assertEqual(self.request(name, "/api/auth/2fa/login?attempt=next", method="POST")[0], 429)
+            self.assertEqual(self.request(name, "/api/auth/login", "203.0.113.8", "POST")[0], 200)
+            for _ in range(20):
+                self.assertEqual(self.request(name, "/api/auth/me")[0], 200)
+            # Registration has its own allowance.
+            self.assertEqual(self.request(name, "/api/auth/register", method="POST")[0], 200)
+
+    def test_forged_headers_cannot_reset_rate_limit_on_direct_access(self):
+        with self.container("192.0.2.10") as name:
+            results = [self.request(name, "/api/auth/login", f"203.0.113.{n}", "POST")[0]
+                       for n in range(1, 21)]
+            self.assertIn(429, results)
+
+    def test_registration_has_a_separate_limit(self):
+        with self.container("127.0.0.1") as name:
+            results = [self.request(name, "/api/auth/register", method="POST")[0] for _ in range(12)]
+            self.assertIn(429, results)
+            self.assertEqual(self.request(name, "/api/auth/login", method="POST")[0], 200)
+
+    def test_backend_rate_limit_and_security_headers_are_preserved(self):
+        with self.container("127.0.0.1") as name:
+            status, headers, body = self.request(name, "/api/upstream-rate-limit")
+            self.assertEqual(status, 429)
+            self.assertEqual(json.loads(body), {"error": "upstream_rate_limited"})
+            self.assertEqual(headers["Retry-After"], "42")
+            for path in ("/", "/assets/missing.js", "/covers/missing.png", "/api/auth/me"):
+                _, headers, _ = self.request(name, path)
+                csp = headers["Content-Security-Policy"]
+                self.assertIn("img-src 'self' https://s4.anilist.co data:", csp)
+                self.assertIn("object-src 'none'", csp)
+                self.assertEqual(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=()")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:18-alpine
+    build:
+      context: ./db
     container_name: mangashelf-db
     restart: unless-stopped
     environment:
