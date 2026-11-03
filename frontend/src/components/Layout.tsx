@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { NavLink, Link, Outlet, useNavigate } from 'react-router'
 import { api } from '../api/client'
+import { endSession } from '../features/auth/endSession'
 import { useMe } from '../features/auth/useMe'
 import { t } from '../i18n/t'
 
@@ -10,9 +11,16 @@ export default function Layout() {
   const client = useQueryClient()
   const navigate = useNavigate()
 
+  const [logoutFailed, setLogoutFailed] = useState(false)
+
   async function logout() {
-    await api('/auth/logout', { method: 'POST' })
-    client.setQueryData(['me'], null)
+    try {
+      await api('/auth/logout', { method: 'POST' })
+    } catch {
+      setLogoutFailed(true)
+      return
+    }
+    endSession(client)
     navigate('/login')
   }
 
@@ -25,7 +33,7 @@ export default function Layout() {
           </Link>
           {me && !me.mustChangePassword && (
             <>
-              <nav aria-label={t('app.name')}>
+              <nav aria-label={t('nav.main')}>
                 <NavLink to="/" end>
                   {t('nav.collection')}
                 </NavLink>
@@ -44,6 +52,11 @@ export default function Layout() {
         </div>
       </header>
       <main className="page">
+        {logoutFailed && (
+          <p className="error" role="alert">
+            {t('error.generic')}
+          </p>
+        )}
         <Suspense fallback={<p className="muted">{t('common.loading')}</p>}>
           <Outlet />
         </Suspense>

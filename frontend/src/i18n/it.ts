@@ -1,6 +1,7 @@
 // Italian UI texts. Flat dotted keys; `{name}` marks a parameter (see t.ts).
 export const it = {
   'app.name': 'MangaShelf',
+  'nav.main': 'Principale',
   'nav.collection': 'Collezione',
   'nav.catalog': 'Catalogo',
   'nav.users': 'Utenti',

@@ -15,7 +15,14 @@ export default function RequireAuth({ admin = false }: { admin?: boolean }) {
         <button onClick={() => refetch()}>{t('common.retry')}</button>
       </div>
     )
-  if (!me) return <Navigate to="/login" state={{ from: location }} replace />
+  if (!me)
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname + location.search }}
+        replace
+      />
+    )
   if (me.mustChangePassword) return <Navigate to="/change-password" replace />
   if (admin && me.role !== 'ADMIN') return <NotFoundPage />
   return <Outlet />

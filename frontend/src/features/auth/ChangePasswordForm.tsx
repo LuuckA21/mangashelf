@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, type SyntheticEvent } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 import { ApiError, api } from '../../api/client'
 import { t } from '../../i18n/t'
+import { endSession } from './endSession'
 
 // The backend closes every session on success, so the user is gone for good:
 // the caller decides where to send them.
@@ -21,8 +22,9 @@ export default function ChangePasswordForm({
         body: JSON.stringify({ currentPassword, newPassword }),
       }),
     onSuccess: () => {
-      client.setQueryData(['me'], null)
+      // Navigate first, so clearing the session cannot trigger a redirect that wins.
       onSuccess()
+      endSession(client)
     },
   })
 
@@ -34,6 +36,14 @@ export default function ChangePasswordForm({
     err instanceof ApiError
       ? fieldErrors.length === 0 && err.detail
       : err && t('error.generic')
+
+  // Focus the first invalid field once its error is rendered, so it is read out.
+  const firstInvalid = (['currentPassword', 'newPassword'] as const).find(
+    message,
+  )
+  useEffect(() => {
+    if (firstInvalid) document.getElementById(firstInvalid)?.focus()
+  }, [firstInvalid, err])
 
   function submit(e: SyntheticEvent) {
     e.preventDefault()

@@ -32,13 +32,14 @@ function renderApp(path: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <AppRoutes />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return Object.assign(client, { container: view.container })
 }
 
 const me = (extra = {}) => ({
@@ -115,6 +116,7 @@ describe('auth', () => {
     const input = await screen.findByLabelText('Nuova password')
     await waitFor(() => expect(input).toHaveAttribute('aria-invalid', 'true'))
     expect(input).toHaveAccessibleDescription('Troppo corta')
+    await waitFor(() => expect(input).toHaveFocus())
   })
 
   it('changePasswordSuccessGoesToLoginWithMessage', async () => {
@@ -156,16 +158,36 @@ describe('auth', () => {
   it('logoutClearsUserAndGoesToLogin', async () => {
     replies['GET /auth/me'] = [200, me()]
     replies['POST /auth/logout'] = [204]
-    renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Esci' }))
+    const client = renderApp('/')
+    const logout = await screen.findByRole('button', { name: 'Esci' })
+    client.setQueryData(['collection'], ['previous user data'])
+    await userEvent.click(logout)
     expect(
       await screen.findByRole('heading', { name: 'Accedi' }),
+    ).toBeInTheDocument()
+    expect(client.getQueryData(['collection'])).toBeUndefined()
+  })
+
+  it('logoutFailureShowsErrorAndStays', async () => {
+    replies['GET /auth/me'] = [200, me()]
+    replies['POST /auth/logout'] = [500, { detail: 'boom' }]
+    renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Esci' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Si è verificato un errore',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'La mia collezione' }),
     ).toBeInTheDocument()
   })
 
   it('loginPageHasNoAxeViolations', async () => {
     const { container } = renderApp('/login')
     await screen.findByRole('heading', { name: 'Accedi' })
-    expect((await axe(container)).violations).toEqual([])
+    // jsdom cannot compute colors; contrast is covered by styles.test.ts
+    const results = await axe(container, {
+      rules: { 'color-contrast': { enabled: false } },
+    })
+    expect(results.violations).toEqual([])
   })
 })

@@ -5,7 +5,7 @@ import { ApiError, api } from '../../api/client'
 import type { MeResponse } from '../../api/types'
 import { t } from '../../i18n/t'
 
-type LoginState = { from?: { pathname: string }; passwordChanged?: boolean }
+type LoginState = { from?: string; passwordChanged?: boolean }
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -21,11 +21,10 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       }),
     onSuccess: (me) => {
+      client.clear()
       client.setQueryData(['me'], me)
       navigate(
-        me.mustChangePassword
-          ? '/change-password'
-          : (state.from?.pathname ?? '/'),
+        me.mustChangePassword ? '/change-password' : (state.from ?? '/'),
         { replace: true },
       )
     },
