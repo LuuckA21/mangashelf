@@ -1,6 +1,9 @@
 package me.luucka.mangashelf.common;
 
 import java.util.List;
+import org.hibernate.exception.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -19,6 +22,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 // Oversized uploads (413) are already mapped by ResponseEntityExceptionHandler.
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
   public record FieldError(String field, String message) {}
 
@@ -40,12 +45,21 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(DataIntegrityViolationException.class)
   ProblemDetail integrity(DataIntegrityViolationException e) {
-    var message = e.getMostSpecificCause().getMessage();
-    if (message != null && message.contains("uq_")) {
+    if (constraintName(e).startsWith("uq_")) {
       return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Valore già in uso");
     }
+    log.error("Unexpected data integrity violation", e);
     return ProblemDetail.forStatusAndDetail(
         HttpStatus.INTERNAL_SERVER_ERROR, "Errore interno del server");
+  }
+
+  private static String constraintName(Throwable e) {
+    for (Throwable t = e; t != null; t = t.getCause()) {
+      if (t instanceof ConstraintViolationException cve && cve.getConstraintName() != null) {
+        return cve.getConstraintName();
+      }
+    }
+    return "";
   }
 
   @ExceptionHandler(AccessDeniedException.class)

@@ -22,6 +22,7 @@ spring:
         jdbc:
           time_zone: UTC
   session:
+    timeout: 14d # inactivity; Spring Session ignores server.servlet.session.timeout
     jdbc:
       initialize-schema: never # schema comes from a Flyway migration
   mvc:
@@ -36,11 +37,8 @@ server:
   forward-headers-strategy: native # behind Nginx (05)
   servlet:
     session:
-      timeout: 14d
       cookie:
-        http-only: true
-        secure: true
-        same-site: lax
+        secure: true # read by SecurityConfig#cookieSerializer (HttpOnly/SameSite=Lax are set there)
   error:
     include-stacktrace: never
     include-message: never

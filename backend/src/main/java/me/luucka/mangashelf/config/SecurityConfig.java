@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import me.luucka.mangashelf.users.AppUserDetailsService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -18,11 +19,31 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 public class SecurityConfig {
+
+  /** Shared with AuthController, which rotates/clears the token on login/logout. */
+  @Bean
+  CsrfTokenRepository csrfTokenRepository() {
+    return CookieCsrfTokenRepository.withHttpOnlyFalse();
+  }
+
+  /** Spring Session ignores server.servlet.session.cookie.*; reuse the secure flag from there. */
+  @Bean
+  CookieSerializer cookieSerializer(
+      @Value("${server.servlet.session.cookie.secure:true}") boolean secure) {
+    var serializer = new DefaultCookieSerializer();
+    serializer.setUseHttpOnlyCookie(true);
+    serializer.setSameSite("Lax");
+    serializer.setUseSecureCookie(secure);
+    return serializer;
+  }
 
   @Bean
   PasswordEncoder passwordEncoder() {
@@ -38,9 +59,10 @@ public class SecurityConfig {
   }
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    return http.csrf(
-            c -> c.spa().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http, CsrfTokenRepository csrfTokenRepository) throws Exception {
+    return http.requestCache(c -> c.disable())
+        .csrf(c -> c.spa().csrfTokenRepository(csrfTokenRepository))
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .headers(h ->
             h.contentSecurityPolicy(

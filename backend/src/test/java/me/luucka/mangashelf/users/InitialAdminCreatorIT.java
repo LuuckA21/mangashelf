@@ -1,6 +1,7 @@
 package me.luucka.mangashelf.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.config.AppProperties;
@@ -52,5 +53,22 @@ class InitialAdminCreatorIT {
     assertThat(users.count()).isZero();
     // restore the shared fixture for the other tests
     new InitialAdminCreator(users, encoder, props).run(null);
+  }
+
+  @Test
+  void failsOnStartupWhenPasswordTooShort() {
+    var creator =
+        new InitialAdminCreator(
+            users,
+            encoder,
+            new AppProperties(null, null, null, new AppProperties.InitialAdmin("x", "short")));
+    users.deleteAll();
+    try {
+      assertThatThrownBy(() -> creator.run(null))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("12");
+    } finally {
+      new InitialAdminCreator(users, encoder, props).run(null);
+    }
   }
 }

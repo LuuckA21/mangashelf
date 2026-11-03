@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import java.util.Optional;
 import me.luucka.mangashelf.TestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,9 +18,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,10 +33,13 @@ class AuthIT {
   @Autowired MockMvc mvc;
   @Autowired AppUserRepository users;
   @Autowired PasswordEncoder encoder;
+  @Autowired JdbcTemplate jdbc;
+  @Autowired FindByIndexNameSessionRepository<?> sessionRepository;
 
   @BeforeEach
   void seed() {
     users.deleteAll();
+    jdbc.update("DELETE FROM spring_session");
     users.save(
         new AppUser("Luca", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
   }
@@ -41,17 +48,28 @@ class AuthIT {
     return "{\"username\":\"%s\",\"password\":\"%s\"}".formatted(u, p);
   }
 
-  // Real SPA flow: the csrf() post-processor would patch the shared filter and make tests
-  // order-dependent.
-  private Cookie xsrf() throws Exception {
-    var header =
-        mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse().getHeader("Set-Cookie");
-    return new Cookie("XSRF-TOKEN", header.substring("XSRF-TOKEN=".length(), header.indexOf(';')));
+  /** Last non-expired cookie with this name among all Set-Cookie headers. */
+  private static Optional<Cookie> cookie(MockHttpServletResponse response, String name) {
+    Cookie found = null;
+    for (String header : response.getHeaders("Set-Cookie")) {
+      if (header.startsWith(name + "=")) {
+        var value = header.substring(name.length() + 1).split(";", 2)[0];
+        found = value.isEmpty() ? null : new Cookie(name, value);
+      }
+    }
+    return Optional.ofNullable(found);
   }
 
-  private org.springframework.test.web.servlet.ResultActions login(String u, String p)
-      throws Exception {
-    var xsrf = xsrf();
+  private Cookie xsrf() throws Exception {
+    return cookie(mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse(), "XSRF-TOKEN")
+        .orElseThrow();
+  }
+
+  private ResultActions login(String u, String p) throws Exception {
+    return loginWith(xsrf(), u, p);
+  }
+
+  private ResultActions loginWith(Cookie xsrf, String u, String p) throws Exception {
     return mvc.perform(
         post("/api/v1/auth/login")
             .cookie(xsrf)
@@ -67,22 +85,46 @@ class AuthIT {
             .andExpect(status().isUnauthorized())
             .andReturn()
             .getResponse();
-    assertThat(response.getHeaders("Set-Cookie")).anyMatch(c -> c.startsWith("XSRF-TOKEN="));
+    assertThat(cookie(response, "XSRF-TOKEN")).isPresent();
   }
 
   @Test
   void loginWithValidCredentialsReturnsMe() throws Exception {
-    var result =
+    var response =
         login("Luca", "correct-horse-1")
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("Luca"))
             .andExpect(jsonPath("$.role").value("USER"))
-            .andReturn();
-    var session = (MockHttpSession) result.getRequest().getSession(false);
-    assertThat(session).isNotNull();
-    mvc.perform(get("/api/v1/auth/me").session(session))
+            .andReturn()
+            .getResponse();
+    var session = cookie(response, "SESSION").orElseThrow();
+    mvc.perform(get("/api/v1/auth/me").cookie(session))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value("Luca"));
+  }
+
+  @Test
+  void sessionIsStoredInJdbcWithConfiguredCookieAndTimeout() throws Exception {
+    var response = login("Luca", "correct-horse-1").andReturn().getResponse();
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM spring_session", Integer.class))
+        .isEqualTo(1);
+    assertThat(jdbc.queryForObject("SELECT max_inactive_interval FROM spring_session", Long.class))
+        .isEqualTo(14L * 24 * 3600);
+    assertThat(sessionRepository.findByPrincipalName("Luca")).hasSize(1);
+    assertThat(response.getHeaders("Set-Cookie"))
+        .anyMatch(c ->
+            c.startsWith("SESSION=")
+                && c.contains("HttpOnly")
+                && c.contains("SameSite=Lax")
+                && c.contains("Secure"));
+  }
+
+  @Test
+  void loginRotatesXsrfToken() throws Exception {
+    var before = xsrf();
+    var response = loginWith(before, "Luca", "correct-horse-1").andReturn().getResponse();
+    assertThat(cookie(response, "XSRF-TOKEN").orElseThrow().getValue())
+        .isNotEqualTo(before.getValue());
   }
 
   @Test
@@ -110,18 +152,20 @@ class AuthIT {
   }
 
   @Test
-  void logoutEndsSession() throws Exception {
+  void logoutEndsSessionAndClearsXsrf() throws Exception {
     var session =
-        (MockHttpSession)
-            login("Luca", "correct-horse-1").andReturn().getRequest().getSession(false);
+        cookie(login("Luca", "correct-horse-1").andReturn().getResponse(), "SESSION").orElseThrow();
     var token = xsrf();
-    mvc.perform(
-            post("/api/v1/auth/logout")
-                .cookie(token)
-                .header("X-XSRF-TOKEN", token.getValue())
-                .session(session))
-        .andExpect(status().isNoContent());
-    mvc.perform(get("/api/v1/auth/me").session(session)).andExpect(status().isUnauthorized());
+    var response =
+        mvc.perform(
+                post("/api/v1/auth/logout")
+                    .cookie(session, token)
+                    .header("X-XSRF-TOKEN", token.getValue()))
+            .andExpect(status().isNoContent())
+            .andReturn()
+            .getResponse();
+    assertThat(cookie(response, "XSRF-TOKEN")).isEmpty();
+    mvc.perform(get("/api/v1/auth/me").cookie(session)).andExpect(status().isUnauthorized());
   }
 
   @Test

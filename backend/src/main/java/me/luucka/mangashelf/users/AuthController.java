@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfLogoutHandler;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,8 +29,14 @@ public class AuthController {
   private final SecurityContextRepository contextRepository =
       new HttpSessionSecurityContextRepository();
 
-  public AuthController(AuthenticationManager authenticationManager) {
+  private final CsrfTokenRepository csrfTokenRepository;
+  private final CsrfLogoutHandler csrfLogout;
+
+  public AuthController(
+      AuthenticationManager authenticationManager, CsrfTokenRepository csrfTokenRepository) {
     this.authenticationManager = authenticationManager;
+    this.csrfTokenRepository = csrfTokenRepository;
+    this.csrfLogout = new CsrfLogoutHandler(csrfTokenRepository);
   }
 
   @PostMapping("/login")
@@ -46,17 +54,19 @@ public class AuthController {
     context.setAuthentication(auth);
     SecurityContextHolder.setContext(context);
     contextRepository.saveContext(context, request, response);
+    csrfTokenRepository.saveToken(csrfTokenRepository.generateToken(request), request, response);
     return MeResponse.of((AppUserPrincipal) auth.getPrincipal());
   }
 
   @PostMapping("/logout")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void logout(HttpServletRequest request) {
+  public void logout(HttpServletRequest request, HttpServletResponse response) {
     var session = request.getSession(false);
     if (session != null) {
       session.invalidate();
     }
     SecurityContextHolder.clearContext();
+    csrfLogout.logout(request, response, null);
   }
 
   @GetMapping("/me")
