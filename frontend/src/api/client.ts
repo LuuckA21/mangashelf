@@ -1,0 +1,59 @@
+export class ApiError extends Error {
+  status: number
+  detail: string
+  errors: { field: string; message: string }[]
+
+  constructor(
+    status: number,
+    detail: string,
+    errors: { field: string; message: string }[] = [],
+  ) {
+    super(detail)
+    this.status = status
+    this.detail = detail
+    this.errors = errors
+  }
+}
+
+function csrfToken(): string | undefined {
+  return document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1]
+}
+
+// A 401 here is an answer to show, not a lost session.
+const NO_REDIRECT_ON_401 = ['/auth/me', '/auth/login']
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = (init.method ?? 'GET').toUpperCase()
+  const headers = new Headers(init.headers)
+  // FormData sets its own multipart boundary header.
+  if (
+    init.body &&
+    !(init.body instanceof FormData) &&
+    !headers.has('Content-Type')
+  )
+    headers.set('Content-Type', 'application/json')
+  const token = csrfToken()
+  if (method !== 'GET' && token)
+    headers.set('X-XSRF-TOKEN', decodeURIComponent(token))
+
+  const res = await fetch(`/api/v1${path}`, {
+    ...init,
+    method,
+    headers,
+    credentials: 'same-origin',
+  })
+
+  if (res.status === 401 && !NO_REDIRECT_ON_401.includes(path)) {
+    window.location.assign('/login')
+    throw new ApiError(401, 'Not logged in')
+  }
+  if (!res.ok) {
+    const problem = await res.json().catch(() => ({}))
+    throw new ApiError(
+      res.status,
+      problem.detail ?? res.statusText,
+      problem.errors,
+    )
+  }
+  return res.status === 204 ? (undefined as T) : res.json()
+}

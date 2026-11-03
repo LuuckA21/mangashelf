@@ -1,0 +1,892 @@
+/*
+ * Design tokens.
+ *
+ * Indigo and vermilion on paper: the two dyes of a woodblock print, which
+ * is where this subject actually comes from. Indigo carries structure —
+ * spines, headings, rules. Vermilion appears only where the interface asks
+ * you to act, so it never becomes decoration.
+ */
+:root {
+  --paper: #f1efe8;
+  --paper-raised: #fbfaf7;
+  --indigo: #1e3a5f;
+  --indigo-deep: #142942;
+  --indigo-wash: #dfe4ec;
+  --vermilion: #c93427;
+  --vermilion-deep: #a82a1f;
+  /* 4.59:1 on paper and 5.06:1 on raised paper: readable at text sizes. */
+  --ash: #706b63;
+  --ash-line: #d6d2c8;
+
+  --font-display:
+    'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-data: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  --s: 8px;
+  --radius: 2px;
+  --shell: 1080px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--indigo-deep);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+a {
+  color: var(--indigo);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: calc(var(--s) * 1.1) calc(var(--s) * 1.25);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  color: var(--indigo-deep);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
+  font-family: var(--font-body);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+button {
+  padding: calc(var(--s) * 1.1) calc(var(--s) * 2);
+  background: var(--vermilion);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: var(--vermilion-deep);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button:focus-visible {
+  outline: 2px solid var(--indigo-deep);
+  outline-offset: 2px;
+}
+
+button.quiet {
+  background: transparent;
+  color: var(--indigo);
+  border: 1px solid var(--ash-line);
+}
+button.quiet:hover:not(:disabled) {
+  background: var(--indigo-wash);
+}
+
+label {
+  display: block;
+  margin-bottom: calc(var(--s) * 0.4);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.field {
+  margin-bottom: calc(var(--s) * 2);
+}
+
+.error {
+  padding: var(--s) calc(var(--s) * 1.5);
+  margin-bottom: calc(var(--s) * 2);
+  border-left: 3px solid var(--vermilion);
+  background: var(--paper-raised);
+  font-size: 14px;
+}
+
+.success {
+  padding: var(--s) calc(var(--s) * 1.5);
+  margin-bottom: calc(var(--s) * 2);
+  border-left: 3px solid #4a7c4e;
+  background: var(--paper-raised);
+  font-size: 14px;
+}
+
+.muted {
+  color: var(--ash);
+}
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+/* ---------------------------------------------------------- auth screens */
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: calc(var(--s) * 3);
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  padding-left: calc(var(--s) * 3);
+  border-left: 2px solid var(--indigo);
+}
+.auth-card h1 {
+  font-size: 30px;
+  margin-bottom: calc(var(--s) * 0.5);
+}
+.auth-card .subtitle {
+  margin: 0 0 calc(var(--s) * 4);
+  color: var(--ash);
+  font-size: 14px;
+}
+.auth-card .switch {
+  margin-top: calc(var(--s) * 3);
+  font-size: 14px;
+  color: var(--ash);
+}
+.auth-recovery {
+  margin: calc(var(--s) * -0.5) 0 calc(var(--s) * 2);
+  text-align: right;
+  font-size: 13px;
+}
+.auth-confirmation {
+  margin-top: calc(var(--s) * 2);
+  padding-top: calc(var(--s) * 2);
+  border-top: 1px solid var(--ash-line);
+  color: var(--ash);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.auth-confirmation a {
+  white-space: nowrap;
+}
+.auth-language {
+  margin-bottom: calc(var(--s) * 2);
+}
+.auth-language span {
+  display: block;
+  margin-bottom: calc(var(--s) * 0.4);
+}
+
+.app-state {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: var(--s);
+  padding: calc(var(--s) * 3);
+  max-width: 560px;
+  margin: 0 auto;
+}
+.app-state p {
+  margin: 0 0 var(--s);
+  color: var(--ash);
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.topbar {
+  border-bottom: 1px solid var(--ash-line);
+  background: var(--paper-raised);
+}
+.topbar-inner {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 3);
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--s) * 3);
+}
+.topbar .brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--indigo-deep);
+  text-decoration: none;
+}
+.topbar nav {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  font-size: 14px;
+}
+.topbar nav a {
+  color: var(--ash);
+  text-decoration: none;
+}
+.topbar nav a:hover,
+.topbar nav a.active {
+  color: var(--indigo);
+}
+.account-link {
+  color: var(--ash);
+  font-size: 14px;
+  text-decoration: none;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-link:hover,
+.account-link.active {
+  color: var(--indigo);
+}
+.spacer {
+  flex: 1;
+}
+
+.page {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: calc(var(--s) * 4) calc(var(--s) * 3) calc(var(--s) * 8);
+}
+.page-head {
+  margin-bottom: calc(var(--s) * 3);
+}
+.page-head h1 {
+  font-size: 32px;
+}
+
+.row {
+  display: flex;
+  gap: var(--s);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--s) * 2);
+}
+@media (max-width: 640px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Search and administration actions share a line on a wide screen, while
+   staying as two deliberate full-width rows on a phone. */
+.catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s);
+  margin-bottom: 24px;
+}
+.catalog-search {
+  display: flex;
+  flex: 1 1 380px;
+  gap: var(--s);
+  align-items: center;
+}
+.catalog-search input {
+  flex: 1;
+  min-width: 200px;
+}
+.catalog-actions {
+  display: flex;
+  gap: var(--s);
+  flex-wrap: wrap;
+}
+
+.panel {
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  padding: calc(var(--s) * 3);
+}
+.settings-panel {
+  max-width: 520px;
+}
+.field-help {
+  margin: var(--s) 0 0;
+  font-size: 13px;
+}
+.settings-section {
+  margin-bottom: calc(var(--s) * 2);
+}
+.settings-section h2 {
+  font-size: 21px;
+  margin-bottom: calc(var(--s) * 1.5);
+}
+
+/* --------------------------------------------------- account administration */
+
+.admin-users-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-users-table th,
+.admin-users-table td {
+  padding: calc(var(--s) * 1.25) var(--s);
+  border-bottom: 1px solid var(--ash-line);
+  text-align: left;
+  vertical-align: middle;
+}
+.admin-users-table th {
+  color: var(--ash);
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.admin-users-table select {
+  min-width: 130px;
+}
+.admin-user-action {
+  text-align: right !important;
+}
+.self-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--ash-line);
+  border-radius: 999px;
+  color: var(--ash);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------ manga list */
+
+.manga-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.manga-list li {
+  border-bottom: 1px solid var(--ash-line);
+}
+.manga-list a {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  align-items: baseline;
+  padding: calc(var(--s) * 2) 0;
+  text-decoration: none;
+  color: inherit;
+}
+.manga-list a:hover .title {
+  color: var(--vermilion);
+}
+.manga-list .title {
+  font-family: var(--font-display);
+  font-size: 19px;
+}
+.manga-list .meta {
+  font-size: 13px;
+  color: var(--ash);
+}
+
+/* --------------------------------------------------------------- shelf --
+ * The signature: the whole run laid out as numbered tiles. Owned volumes
+ * are solid; missing ones keep their place as dashed outlines, so a gap in
+ * the sequence reads at a glance instead of having to be worked out from a
+ * list. Per-volume covers would be better still, but no free source has
+ * them, and a cover shrunk to this size would be unreadable anyway.
+ */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  padding: calc(var(--s) * 2) 0 calc(var(--s) * 2);
+  border-bottom: 3px solid var(--indigo-deep);
+}
+
+.tile {
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--indigo);
+  color: var(--paper-raised);
+  font-family: var(--font-data);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 100ms ease,
+    background 100ms ease;
+}
+.tile:hover {
+  background: var(--indigo-deep);
+  transform: translateY(-2px);
+}
+
+.tile.missing {
+  background: transparent;
+  color: var(--ash);
+  border: 1px dashed var(--ash-line);
+}
+.tile.missing:hover {
+  background: var(--indigo-wash);
+  color: var(--indigo);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--vermilion);
+  outline-offset: 2px;
+}
+.tile.busy {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.shelf-legend {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  margin-top: calc(var(--s) * 1.5);
+  font-size: 13px;
+  color: var(--ash);
+}
+.shelf-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.swatch {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border-radius: var(--radius);
+}
+.swatch.owned {
+  background: var(--indigo);
+}
+.swatch.missing {
+  border: 1px dashed var(--ash-line);
+}
+
+/* Progress bar: how much of the run is on the shelf. */
+.progress {
+  height: 6px;
+  background: var(--indigo-wash);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: var(--s) 0 calc(var(--s) * 2);
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--indigo);
+}
+
+/* ------------------------------------------------------------- editions */
+
+.edition-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s);
+}
+.edition-list a {
+  display: block;
+  padding: calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-left: 3px solid var(--indigo);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+}
+.edition-list a:hover {
+  border-left-color: var(--vermilion);
+}
+.edition-list .name {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.empty {
+  padding: calc(var(--s) * 4);
+  text-align: center;
+  border: 1px dashed var(--ash-line);
+  border-radius: var(--radius);
+  color: var(--ash);
+}
+
+/* Narrow numeric fields, sized by class so a media query can widen them.
+   Inline widths could not be overridden. */
+.field-narrow {
+  width: 90px;
+}
+.field-medium {
+  width: 110px;
+}
+.field-date {
+  width: 170px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* A cover on the catalogue rows, once a work has been imported. */
+.manga-list .cover {
+  width: 34px;
+  height: 51px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.detail-cover {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--indigo-wash);
+}
+
+/* --------------------------------------------------------- destructive --
+ * Delete is the only place vermilion appears as an outline rather than a
+ * fill: present but not inviting, so it never competes with the action the
+ * page is actually for.
+ */
+button.danger {
+  background: transparent;
+  color: var(--vermilion);
+  border: 1px solid var(--vermilion);
+}
+button.danger:hover:not(:disabled) {
+  background: var(--vermilion);
+  color: #fff;
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s);
+  flex-wrap: wrap;
+}
+.confirm-text {
+  font-size: 14px;
+  color: var(--indigo-deep);
+}
+
+.inline-actions {
+  display: flex;
+  gap: var(--s);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* An edition row carries its own controls, so the link cannot wrap them. */
+.edition-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 2);
+  padding: calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-left: 3px solid var(--indigo);
+  border-radius: var(--radius);
+}
+.edition-row:hover {
+  border-left-color: var(--vermilion);
+}
+.edition-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.edition-row a {
+  text-decoration: none;
+  color: inherit;
+}
+.edition-row .name {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+/* ------------------------------------------------------------------ chips --
+ * Filters read as a single row of switches rather than a dropdown: with
+ * three options the choice and its state are both visible at a glance.
+ */
+.chips {
+  display: flex;
+  gap: var(--s);
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--ash);
+  border: 1px solid var(--ash-line);
+  border-radius: 999px;
+  font-size: 14px;
+}
+.chip:hover:not(.active) {
+  color: var(--indigo);
+  border-color: var(--indigo);
+}
+.chip.active {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--paper-raised);
+}
+
+/* Missing volumes are the shopping list, so they carry the action colour
+   without shouting — this is information, not an error. */
+.missing-line {
+  margin-top: 6px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  color: var(--vermilion);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--ash);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.link-button:hover {
+  color: var(--vermilion);
+  background: none;
+}
+
+/* =========================================================================
+   Mobile
+   =========================================================================
+   Controls get a thumb-sized minimum, tables become labelled cards and the
+   rest gives back the space it was wasting.
+   ====================================================================== */
+
+@media (max-width: 700px) {
+  /* ------------------------------------------------------------- layout */
+
+  .page {
+    padding: calc(var(--s) * 3) calc(var(--s) * 2) calc(var(--s) * 6);
+  }
+  .page-head h1 {
+    font-size: 26px;
+  }
+  .panel {
+    padding: calc(var(--s) * 2);
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: var(--s) calc(var(--s) * 2);
+    padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  }
+  /* The spacer would push the account onto a line of its own; on a phone the
+     nav wrapping under the brand reads better. */
+  .topbar .spacer {
+    display: none;
+  }
+  .topbar nav {
+    order: 3;
+    width: 100%;
+    gap: 0 calc(var(--s) * 2);
+    flex-wrap: wrap;
+  }
+  .topbar nav a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  /* The account keeps to the right of the brand, where it sits on a wide
+     screen, instead of crowding it. */
+  .topbar-inner > .account-link {
+    margin-left: auto;
+  }
+  .topbar-inner > .account-link {
+    max-width: 24vw;
+  }
+
+  .field-narrow,
+  .field-medium,
+  .field-date,
+  .filter-input {
+    width: 100%;
+  }
+  .row > .field-narrow,
+  .row > .field-medium {
+    flex: 1 1 100px;
+    width: auto;
+  }
+  .row > .field-date {
+    flex: 1 1 100%;
+    width: auto;
+  }
+  .filter-input {
+    flex: 1 1 100%;
+  }
+
+  /* Each row now has the same usable width as the search controls. */
+  .catalog-search,
+  .catalog-actions {
+    flex: 1 1 100%;
+  }
+  .catalog-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-actions button {
+    width: 100%;
+  }
+
+  /* A 44px minimum keeps every control usable with a thumb. */
+  button,
+  input,
+  select {
+    min-height: 44px;
+  }
+  .link-button {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    padding: 4px 8px;
+  }
+  .tile {
+    font-size: 16px;
+  }
+
+  .detail-cover {
+    width: 88px;
+    height: 132px;
+  }
+
+  /* Rows that pair text with a button: at this width the two fight over
+     the same 300px and the text loses. The button drops to its own line. */
+  .edition-row {
+    flex-wrap: wrap;
+  }
+  .edition-row .grow {
+    flex: 1 1 100%;
+  }
+  .edition-row .inline-actions {
+    width: 100%;
+  }
+  .edition-row .inline-actions button {
+    flex: 1;
+  }
+
+  /* User administration becomes one labelled card per account. */
+  .admin-users-table,
+  .admin-users-table tbody,
+  .admin-users-table tr,
+  .admin-users-table td {
+    display: block;
+  }
+  .admin-users-table thead {
+    display: none;
+  }
+  .admin-users-table tr {
+    margin-bottom: calc(var(--s) * 2);
+    padding: var(--s);
+    border: 1px solid var(--ash-line);
+    border-radius: var(--radius);
+    background: var(--paper-raised);
+  }
+  .admin-users-table td {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.45fr) minmax(0, 1fr);
+    gap: var(--s);
+    align-items: center;
+    padding: calc(var(--s) * 0.75) 0;
+    border-bottom: 1px solid var(--ash-line);
+    overflow-wrap: anywhere;
+  }
+  .admin-users-table td::before {
+    content: attr(data-label);
+    color: var(--ash);
+    font-size: 12px;
+  }
+  .admin-users-table td:last-child {
+    border-bottom: none;
+  }
+  .admin-users-table select,
+  .admin-users-table button {
+    width: 100%;
+    min-width: 0;
+  }
+  .admin-user-action {
+    display: block !important;
+    padding-top: var(--s) !important;
+  }
+}
+
+/* Account deletion: separate from ordinary preferences. */
+.account-danger {
+  border-left: 3px solid var(--vermilion);
+}
+.deletion-identity {
+  padding: 12px;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  overflow-wrap: anywhere;
+}
+.deletion-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 24px 0;
+  font-size: 14px;
+}
+.deletion-check input {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 5px;
+}
