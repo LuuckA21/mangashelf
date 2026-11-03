@@ -5,6 +5,7 @@ import java.util.UUID;
 import me.luucka.mangashelf.catalog.dto.SeriesDetail;
 import me.luucka.mangashelf.catalog.dto.SeriesSummary;
 import me.luucka.mangashelf.common.ConflictException;
+import me.luucka.mangashelf.common.LikeEscape;
 import me.luucka.mangashelf.common.NotFoundException;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.springframework.data.domain.Page;
@@ -31,8 +32,7 @@ public class SeriesService {
   @Transactional(readOnly = true)
   public Page<SeriesSummary> list(String q, Pageable pageable) {
     var unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-    // shortcut: LIKE wildcards (% _) in q are not escaped, upgrade if users complain
-    return series.search(q == null ? "" : q.strip(), unsorted);
+    return series.search(q == null ? "" : LikeEscape.escape(q.strip()), unsorted);
   }
 
   @Transactional(readOnly = true)

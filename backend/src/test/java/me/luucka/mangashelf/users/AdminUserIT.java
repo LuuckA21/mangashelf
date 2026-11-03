@@ -90,6 +90,12 @@ class AdminUserIT {
   }
 
   @Test
+  void pageSizeIsCappedAt100() throws Exception {
+    mvc.perform(get("/api/v1/users").param("size", "101").cookie(session("Admin")))
+        .andExpect(jsonPath("$.page.size").value(100));
+  }
+
+  @Test
   void createUserReturns201WithLocationAndForcesPasswordChange() throws Exception {
     send(post("/api/v1/users"), session("Admin"), create("luca", "temporary-pass-1", "USER"))
         .andExpect(status().isCreated())

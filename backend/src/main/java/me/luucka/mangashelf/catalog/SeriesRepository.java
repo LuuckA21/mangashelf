@@ -10,7 +10,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface SeriesRepository extends JpaRepository<Series, UUID> {
 
-  /** Blank {@code q} matches everything; the sort is fixed, so pass an unsorted Pageable. */
+  /**
+   * Blank {@code q} matches everything; wildcards in {@code q} must be escaped with LikeEscape; the
+   * sort is fixed, so pass an unsorted Pageable.
+   */
   @Query(
       value =
           """
@@ -18,7 +21,7 @@ public interface SeriesRepository extends JpaRepository<Series, UUID> {
             cast(s.id as string), s.title,
             (select count(e) from Edition e where e.series = s))
           from Series s
-          where :q = '' or lower(s.title) like concat('%', lower(:q), '%')
+          where :q = '' or lower(s.title) like concat('%', lower(:q), '%') escape '\\'
           order by lower(s.title)
           """,
       countQuery =

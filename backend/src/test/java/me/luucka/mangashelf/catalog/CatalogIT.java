@@ -166,6 +166,15 @@ class CatalogIT {
   }
 
   @Test
+  void searchTreatsWildcardsLiterally() throws Exception {
+    createSeries("100% Manga");
+    createSeries("100 Manga");
+    mvc.perform(get("/api/v1/series").param("q", "100%").cookie(mario))
+        .andExpect(jsonPath("$.content.length()").value(1))
+        .andExpect(jsonPath("$.content[0].title").value("100% Manga"));
+  }
+
+  @Test
   void seriesDetailListsEditions() throws Exception {
     var id = createSeries("One Piece");
     createEdition(id, EDITION);

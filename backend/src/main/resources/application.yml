@@ -32,6 +32,8 @@ spring:
     web:
       pageable:
         max-page-size: 100
+        # Set here, not via @EnableSpringDataWebSupport: that annotation disables these properties
+        serialization-mode: via-dto
 
 server:
   forward-headers-strategy: native # behind Nginx (05)
