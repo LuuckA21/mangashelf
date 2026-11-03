@@ -69,6 +69,8 @@ public class EditionService {
     if (r.version() != e.getVersion()) {
       throw new ConflictException("L'edizione è stata modificata da un altro utente");
     }
+    // shortcut: an admin lowering volumeCount while a user PUTs volumes can leave owned numbers
+    // above volume_count; a row lock on the edition or a DB trigger is the upgrade if it matters.
     if (ownedVolumes.findMaxNumberByEditionId(id).orElse(0) > r.volumeCount()) {
       throw new ConflictException("Alcuni utenti possiedono volumi oltre questo numero");
     }
@@ -84,10 +86,15 @@ public class EditionService {
 
   /** Call inside a transaction: reads the lazy series. */
   EditionResponse toResponse(Edition e, AppUserPrincipal me) {
-    return toResponse(e, me, collection.existsByUserIdAndEditionId(me.id(), e.getId()));
+    return toResponse(
+        e,
+        me,
+        collection.existsByUserIdAndEditionId(me.id(), e.getId()),
+        collection.countByEditionId(e.getId()));
   }
 
-  EditionResponse toResponse(Edition e, AppUserPrincipal me, boolean inMyCollection) {
+  EditionResponse toResponse(
+      Edition e, AppUserPrincipal me, boolean inMyCollection, long collectionCount) {
     return new EditionResponse(
         e.getId().toString(),
         e.getSeries().getId().toString(),
@@ -100,7 +107,7 @@ public class EditionService {
         e.getCoverFile() != null,
         me.isAdmin() || me.id().equals(e.getCreatedBy()),
         e.getVersion(),
-        collection.countByEditionId(e.getId()),
+        collectionCount,
         inMyCollection);
   }
 

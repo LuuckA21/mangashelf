@@ -1,8 +1,10 @@
 package me.luucka.mangashelf.catalog;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import me.luucka.mangashelf.catalog.dto.SeriesDetail;
 import me.luucka.mangashelf.catalog.dto.SeriesSummary;
 import me.luucka.mangashelf.collection.CollectionEditionRepository;
@@ -46,16 +48,24 @@ public class SeriesService {
   public SeriesDetail detail(UUID id, AppUserPrincipal me) {
     var s = require(id);
     var list = editions.findBySeries(id);
+    var ids = list.stream().map(Edition::getId).toList();
     var mine =
+        list.isEmpty() ? Set.<UUID>of() : Set.copyOf(collection.findEditionIds(me.id(), ids));
+    var counts =
         list.isEmpty()
-            ? Set.<UUID>of()
-            : Set.copyOf(
-                collection.findEditionIds(me.id(), list.stream().map(Edition::getId).toList()));
+            ? Map.<UUID, Long>of()
+            : collection.countByEditionIds(ids).stream()
+                .collect(
+                    Collectors.toMap(
+                        CollectionEditionRepository.EditionCount::editionId,
+                        CollectionEditionRepository.EditionCount::count));
     return new SeriesDetail(
         s.getId().toString(),
         s.getTitle(),
         list.stream()
-            .map(e -> editionService.toResponse(e, me, mine.contains(e.getId())))
+            .map(e ->
+                editionService.toResponse(
+                    e, me, mine.contains(e.getId()), counts.getOrDefault(e.getId(), 0L)))
             .toList());
   }
 

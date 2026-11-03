@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import me.luucka.mangashelf.catalog.EditionType;
 import me.luucka.mangashelf.collection.dto.CollectionEntry;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.LikeEscape;
+import me.luucka.mangashelf.common.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -108,7 +110,7 @@ public class CollectionService {
   @Transactional
   public CollectionEntry setOwned(UUID userId, UUID editionId, List<Integer> owned) {
     var edition = editions.require(editionId);
-    var distinct = new java.util.HashSet<>(owned);
+    var distinct = new HashSet<>(owned);
     if (distinct.size() != owned.size()) {
       throw new FieldValidationException("owned", "Numeri duplicati");
     }
@@ -136,7 +138,9 @@ public class CollectionService {
             Map.of("userId", userId, "editionId", editionId),
             "",
             null)
-        .getFirst();
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> new NotFoundException("Edizione non trovata nella collezione"));
   }
 
   private List<CollectionEntry> query(

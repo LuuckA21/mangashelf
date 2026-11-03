@@ -70,12 +70,25 @@ class AccountExportIT {
             "$.id");
     send(put("/api/v1/collection/editions/" + edition + "/volumes"), s, "{\"owned\":[1,4]}");
 
+    users.save(
+        new AppUser("Bruno", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
+    var other =
+        cookie(login(mvc, "Bruno", "correct-horse-1").andReturn().getResponse(), "SESSION")
+            .orElseThrow();
+    send(put("/api/v1/collection/editions/" + edition), other, null);
+
     mvc.perform(get("/api/v1/account/export").cookie(s))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value("Anna"))
         .andExpect(jsonPath("$.role").value("USER"))
         .andExpect(jsonPath("$.createdAt").exists())
         .andExpect(jsonPath("$.collection[0].seriesTitle").value("Berserk"))
-        .andExpect(jsonPath("$.collection[0].owned[1]").value(4));
+        .andExpect(jsonPath("$.collection[0].owned[1]").value(4))
+        .andExpect(jsonPath("$.collection.length()").value(1))
+        .andExpect(jsonPath("$.passwordHash").doesNotExist())
+        .andExpect(jsonPath("$.password").doesNotExist());
+    mvc.perform(get("/api/v1/account/export").cookie(other))
+        .andExpect(jsonPath("$.username").value("Bruno"))
+        .andExpect(jsonPath("$.collection[0].owned").isEmpty());
   }
 }

@@ -21,6 +21,15 @@ public interface CollectionEditionRepository extends JpaRepository<CollectionEdi
       "select c.editionId from CollectionEdition c where c.userId = :userId and c.editionId in :editionIds")
   List<UUID> findEditionIds(UUID userId, Collection<UUID> editionIds);
 
+  record EditionCount(UUID editionId, long count) {}
+
+  /** Collection counts for many editions in one query; editions in no collection are absent. */
+  @Query(
+      "select new me.luucka.mangashelf.collection.CollectionEditionRepository$EditionCount("
+          + "c.editionId, count(c)) from CollectionEdition c "
+          + "where c.editionId in :editionIds group by c.editionId")
+  List<EditionCount> countByEditionIds(Collection<UUID> editionIds);
+
   @Modifying
   @Query("delete from CollectionEdition c where c.userId = :userId and c.editionId = :editionId")
   void deleteByUserIdAndEditionId(UUID userId, UUID editionId);

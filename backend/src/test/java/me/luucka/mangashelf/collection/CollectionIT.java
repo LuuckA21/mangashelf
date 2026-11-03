@@ -238,7 +238,8 @@ class CollectionIT {
         .andExpect(jsonPath("$.collectionCount").value(2))
         .andExpect(jsonPath("$.inMyCollection").value(true));
     mvc.perform(get("/api/v1/series/" + s).cookie(a))
-        .andExpect(jsonPath("$.editions[0].inMyCollection").value(true));
+        .andExpect(jsonPath("$.editions[0].inMyCollection").value(true))
+        .andExpect(jsonPath("$.editions[0].collectionCount").value(2));
     mvc.perform(get("/api/v1/series/" + s).cookie(admin))
         .andExpect(jsonPath("$.editions[0].inMyCollection").value(false));
   }
