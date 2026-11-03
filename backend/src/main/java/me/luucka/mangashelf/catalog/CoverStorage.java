@@ -45,7 +45,7 @@ public class CoverStorage {
     }
   }
 
-  /** Missing files are ignored: cleanup must never fail the request. */
+  /** A missing file is ignored; other I/O errors throw. */
   public void delete(String fileName) {
     try {
       Files.deleteIfExists(resolve(fileName));

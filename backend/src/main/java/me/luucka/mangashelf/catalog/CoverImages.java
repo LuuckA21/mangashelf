@@ -18,6 +18,7 @@ final class CoverImages {
   private static final int MAX_W = 480;
   private static final int MAX_H = 720;
   private static final long MAX_PIXELS = 100_000_000L;
+  private static final int MAX_SIDE = 20_000;
   private static final Color PAPER = new Color(0xf1efe8);
 
   private CoverImages() {}
@@ -46,14 +47,16 @@ final class CoverImages {
     }
   }
 
-  /** Dimensions are checked before decoding; subsampling keeps the raster near 2x the target. */
+  /**
+   * Size caps are checked before decoding; subsampling by the larger ratio keeps the raster small.
+   */
   private static BufferedImage decode(ImageReader reader) throws IOException {
     int w = reader.getWidth(0);
     int h = reader.getHeight(0);
-    if ((long) w * h > MAX_PIXELS) {
+    if (w > MAX_SIDE || h > MAX_SIDE || (long) w * h > MAX_PIXELS) {
       throw new InvalidImageException("Immagine troppo grande");
     }
-    int s = Math.max(1, (int) Math.floor(Math.min(w / (2.0 * MAX_W), h / (2.0 * MAX_H))));
+    int s = Math.max(1, (int) Math.floor(Math.max(w / (2.0 * MAX_W), h / (2.0 * MAX_H))));
     var param = reader.getDefaultReadParam();
     param.setSourceSubsampling(s, s, 0, 0);
     return reader.read(0, param);

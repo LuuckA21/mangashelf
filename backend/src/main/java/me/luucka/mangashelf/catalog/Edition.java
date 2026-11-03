@@ -12,7 +12,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
-import org.hibernate.annotations.OptimisticLock;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
@@ -38,8 +37,6 @@ public class Edition {
 
   private int volumeCount;
 
-  // A cover change must not invalidate the version an admin is editing the metadata with.
-  @OptimisticLock(excluded = true)
   private String coverFile;
 
   private UUID createdBy;

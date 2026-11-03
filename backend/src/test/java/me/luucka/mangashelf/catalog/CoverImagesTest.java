@@ -70,22 +70,46 @@ class CoverImagesTest {
   @Test
   void rejectsNonImage() throws Exception {
     assertThatThrownBy(() -> CoverImages.toJpeg("hello".getBytes()))
-        .isInstanceOf(InvalidImageException.class);
+        .isInstanceOf(InvalidImageException.class)
+        .hasMessage("Immagine non valida");
     var gif = encode(10, 10, BufferedImage.TYPE_INT_RGB, "gif");
-    assertThatThrownBy(() -> CoverImages.toJpeg(gif)).isInstanceOf(InvalidImageException.class);
+    assertThatThrownBy(() -> CoverImages.toJpeg(gif))
+        .isInstanceOf(InvalidImageException.class)
+        .hasMessage("Sono ammessi solo JPEG e PNG");
+  }
+
+  private static byte[] pngDeclaring(int w, int h) throws Exception {
+    var png = encode(1, 1, BufferedImage.TYPE_INT_RGB, "png");
+    // IHDR data starts at byte 16: width, height; its CRC covers type + data (bytes 12..28).
+    var buf = ByteBuffer.wrap(png);
+    buf.putInt(16, w);
+    buf.putInt(20, h);
+    var crc = new CRC32();
+    crc.update(png, 12, 17);
+    buf.putInt(29, (int) crc.getValue());
+    return png;
   }
 
   @Test
   void rejectsDecompressionBomb() throws Exception {
-    var png = encode(1, 1, BufferedImage.TYPE_INT_RGB, "png");
-    // IHDR data starts at byte 16: width, height; its CRC covers type + data (bytes 12..28).
-    var buf = ByteBuffer.wrap(png);
-    buf.putInt(16, 20000);
-    buf.putInt(20, 20000);
-    var crc = new CRC32();
-    crc.update(png, 12, 17);
-    buf.putInt(29, (int) crc.getValue());
+    var png = pngDeclaring(20000, 20000);
+    assertThatThrownBy(() -> CoverImages.toJpeg(png))
+        .isInstanceOf(InvalidImageException.class)
+        .hasMessage("Immagine troppo grande");
+  }
 
-    assertThatThrownBy(() -> CoverImages.toJpeg(png)).isInstanceOf(InvalidImageException.class);
+  @Test
+  void rejectsOverlongSide() throws Exception {
+    var png = pngDeclaring(50000, 2000);
+    assertThatThrownBy(() -> CoverImages.toJpeg(png))
+        .isInstanceOf(InvalidImageException.class)
+        .hasMessage("Immagine troppo grande");
+  }
+
+  @Test
+  void legalSkewedImageIsShrunk() throws Exception {
+    var img = decode(CoverImages.toJpeg(encode(4000, 200, BufferedImage.TYPE_INT_RGB, "png")));
+    assertThat(img.getWidth()).isEqualTo(480);
+    assertThat(img.getHeight()).isEqualTo(24);
   }
 }

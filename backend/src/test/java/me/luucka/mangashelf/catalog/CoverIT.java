@@ -178,6 +178,27 @@ class CoverIT {
   }
 
   @Test
+  void coverChangeBumpsVersion() throws Exception {
+    var before = version();
+    putCover(mario, png()).andExpect(status().isNoContent());
+    assertThat(version()).isGreaterThan(before);
+  }
+
+  private long version() {
+    return jdbc.queryForObject(
+        "SELECT version FROM editions WHERE id = ?::uuid", Long.class, editionId);
+  }
+
+  @Test
+  void adminCanDeleteCover() throws Exception {
+    putCover(mario, png()).andExpect(status().isNoContent());
+    send(delete("/api/v1/editions/" + editionId + "/cover"), admin, null)
+        .andExpect(status().isNoContent());
+    mvc.perform(get("/api/v1/editions/" + editionId + "/cover").cookie(luigi))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
   void adminCan() throws Exception {
     putCover(admin, png()).andExpect(status().isNoContent());
   }

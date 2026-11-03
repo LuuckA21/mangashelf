@@ -10,6 +10,8 @@ import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.NotFoundException;
 import me.luucka.mangashelf.users.AppUserPrincipal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class EditionService {
+
+  private static final Logger log = LoggerFactory.getLogger(EditionService.class);
 
   private final EditionRepository editions;
   private final SeriesRepository series;
@@ -133,8 +137,13 @@ public class EditionService {
           @Override
           public void afterCompletion(int status) {
             var file = status == STATUS_COMMITTED ? onCommit : onRollback;
-            if (file != null) {
+            if (file == null) {
+              return;
+            }
+            try {
               covers.delete(file);
+            } catch (RuntimeException e) {
+              log.warn("Could not delete cover file {}", file, e);
             }
           }
         });
