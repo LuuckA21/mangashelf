@@ -11,12 +11,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 /** SPA CSRF + session-cookie helpers shared by the auth integration tests. */
-final class AuthTestSupport {
+public final class AuthTestSupport {
 
   private AuthTestSupport() {}
 
   /** Last non-expired cookie with this name among all Set-Cookie headers. */
-  static Optional<Cookie> cookie(MockHttpServletResponse response, String name) {
+  public static Optional<Cookie> cookie(MockHttpServletResponse response, String name) {
     Cookie found = null;
     for (String header : response.getHeaders("Set-Cookie")) {
       if (header.startsWith(name + "=")) {
@@ -27,12 +27,13 @@ final class AuthTestSupport {
     return Optional.ofNullable(found);
   }
 
-  static Cookie xsrf(MockMvc mvc) throws Exception {
+  public static Cookie xsrf(MockMvc mvc) throws Exception {
     return cookie(mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse(), "XSRF-TOKEN")
         .orElseThrow();
   }
 
-  static ResultActions loginWith(MockMvc mvc, Cookie xsrf, String u, String p) throws Exception {
+  public static ResultActions loginWith(MockMvc mvc, Cookie xsrf, String u, String p)
+      throws Exception {
     return mvc.perform(
         post("/api/v1/auth/login")
             .cookie(xsrf)
@@ -41,7 +42,7 @@ final class AuthTestSupport {
             .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(u, p)));
   }
 
-  static ResultActions login(MockMvc mvc, String u, String p) throws Exception {
+  public static ResultActions login(MockMvc mvc, String u, String p) throws Exception {
     return loginWith(mvc, xsrf(mvc), u, p);
   }
 }

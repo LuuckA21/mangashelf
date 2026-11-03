@@ -32,6 +32,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
   }
 
+  @ExceptionHandler(FieldValidationException.class)
+  ProblemDetail invalidField(FieldValidationException e) {
+    var problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dati non validi");
+    problem.setProperty("errors", List.of(new FieldError(e.field(), e.getMessage())));
+    return problem;
+  }
+
   @ExceptionHandler(ConflictException.class)
   ProblemDetail conflict(ConflictException e) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
