@@ -1,0 +1,51 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+
+# Build output
+dist/
+build/
+out/
+.next/
+target/
+.gradle/
+*.class
+hs_err_pid*
+coverage/
+
+# Logs & temp
+*.log
+logs/
+tmp/
+.cache/
+
+# Backups / dumps (never commit data)
+*.sql
+*.sql.gz
+!backend/src/main/resources/db/**/*.sql
+*.dump
+backups/
+
+# Claude Code personal settings
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Uploaded cover images (dev)
+backend/uploads/

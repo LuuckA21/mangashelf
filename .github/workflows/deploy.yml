@@ -1,0 +1,130 @@
+name: Deploy
+
+# Production: runs when a release is published (normally the draft made by
+# release.yml) and deploys the image release.yml built for that tag. Nothing
+# is rebuilt, so production runs exactly what the release contains. Only the
+# Latest release deploys: publishing an older fix release never downgrades prod.
+#
+# By hand (Actions -> Deploy): staging builds and deploys the selected branch;
+# production redeploys the Latest release (e.g. after rebuilding the server).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    outputs:
+      target: ${{ steps.target.outputs.target }}
+      tag: ${{ steps.target.outputs.tag }}
+      image: ${{ steps.target.outputs.image }}
+    steps:
+      - name: Resolve what to deploy where
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_ENV: ${{ inputs.environment }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2> /dev/null || true)
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            if [ "$PRERELEASE" = true ] || [ "$RELEASE_TAG" != "$latest" ]; then
+              echo "::notice::$RELEASE_TAG is not the Latest release (Latest: ${latest:-none}), not deploying."
+              echo "target=none" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            target=production tag=$RELEASE_TAG
+          elif [ "$INPUT_ENV" = production ]; then
+            if [ -z "$latest" ]; then
+              echo "::error::No published release to redeploy."
+              exit 1
+            fi
+            target=production tag=$latest
+          else
+            target=staging tag=$GITHUB_SHA
+          fi
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Deploying $tag to $target" >> "$GITHUB_STEP_SUMMARY"
+
+  # Staging only: production images are built by release.yml.
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.target == 'staging'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ needs.resolve.outputs.image }}:${{ needs.resolve.outputs.tag }}
+
+  deploy:
+    needs: [resolve, build]
+    # build is skipped for production; deploy must still run
+    if: >-
+      always() && needs.resolve.result == 'success' && needs.resolve.outputs.target != 'none'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Deploy over SSH (through the proxy jump host)
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }} # proxy (public) + app server (private), 13
+          JUMP_HOST: ${{ vars.DEPLOY_JUMP_HOST }} # proxy public IP/hostname
+          HOST: ${{ vars.DEPLOY_HOST }} # app server private IP
+          PORT: ${{ vars.DEPLOY_SSH_PORT }} # custom SSH port (13)
+          TARGET: ${{ needs.resolve.outputs.target }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # Same key for both hops; the app server forces it to appsvc-deploy (13)
+          cat > ~/.ssh/config <<EOF
+          Host jump
+            HostName $JUMP_HOST
+            Port ${PORT:-22}
+            User jump
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+          Host app
+            HostName $HOST
+            Port ${PORT:-22}
+            User appsvc
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            ProxyJump jump
+          EOF
+          # Folder on the server: /srv/apps/<repository name, lowercase>[-staging]
+          repo="${GITHUB_REPOSITORY#*/}"
+          ssh app "${repo,,} $TARGET $TAG"

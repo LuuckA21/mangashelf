@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw:*)",
+      "Bash(npm ci)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*.local)",
+      "Bash(git push origin main:*)",
+      "Bash(git push --force:*)",
+      "Bash(gh release:*)",
+      "Bash(ssh:*)"
+    ]
+  }
+}

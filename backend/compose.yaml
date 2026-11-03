@@ -1,0 +1,16 @@
+# Local development only. Spring Boot starts it on ./mvnw spring-boot:run and connects to it
+# (spring-boot-docker-compose, a development-only dependency). See 10-local-development.md.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: mangashelf
+      POSTGRES_USER: mangashelf
+      POSTGRES_PASSWORD: mangashelf # local only
+    ports:
+      - "127.0.0.1:5432:5432" # also reachable from your DB client
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

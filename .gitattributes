@@ -1,0 +1,5 @@
+# LF everywhere, also when files are edited on Windows: shell scripts and cloud-init files break with CRLF.
+* text=auto eol=lf
+# Windows batch files (e.g. the Maven wrapper's mvnw.cmd) need CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -1,0 +1,88 @@
+# Baseline from project-standards (03, 05, 07, 08, 10). Values come from env vars:
+# server .env in staging/prod, backend/.env locally.
+spring:
+  application:
+    name: mangashelf
+  config:
+    import: optional:file:.env[.properties] # local only; absent on the server
+  datasource:
+    # Locally Spring Boot's Docker Compose support provides the connection (10); on the server, .env (05).
+    url: ${DATABASE_URL:}
+    username: ${DATABASE_USER:}
+    password: ${DATABASE_PASSWORD:}
+  docker:
+    compose:
+      lifecycle-management: start-only # keep the dev DB running between restarts
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  session:
+    jdbc:
+      initialize-schema: never # schema comes from a Flyway migration
+  mvc:
+    problemdetails:
+      enabled: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+server:
+  forward-headers-strategy: native # behind Nginx (05)
+  servlet:
+    session:
+      timeout: 14d
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+app:
+  base-url: ${APP_URL}
+  frontend-origin: ${FRONTEND_ORIGIN}
+  uploads-dir: ${APP_UPLOADS_DIR:/app/uploads}
+  initial-admin:
+    username: ${ADMIN_USERNAME:}
+    password: ${ADMIN_INITIAL_PASSWORD:}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev-data
+app:
+  uploads-dir: ./uploads
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false # http://localhost
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+springdoc:
+  api-docs:
+    enabled: false
+logging:
+  structured:
+    format:
+      console: ecs
