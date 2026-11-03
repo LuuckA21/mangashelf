@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { t } from '../i18n/t'
 import { ApiError, api } from './client'
 
 const fetchMock = vi.fn()
@@ -76,6 +77,19 @@ describe('api', () => {
       expect(assign).not.toHaveBeenCalled()
     },
   )
+
+  it('doesNotRedirectOn401WhileOnLoginPage', async () => {
+    vi.stubGlobal('location', { assign, pathname: '/login' })
+    respond(401, { status: 401, detail: 'x' })
+    await expect(api('/collection')).rejects.toBeInstanceOf(ApiError)
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('fallsBackToGenericMessageWhenDetailAndStatusTextAreEmpty', async () => {
+    respond(500) // no body, empty statusText: what HTTP/2 gives
+    const error = (await api('/things').catch((e) => e)) as ApiError
+    expect(error.detail).toBe(t('error.generic'))
+  })
 
   it('returnsUndefinedOn204', async () => {
     respond(204)

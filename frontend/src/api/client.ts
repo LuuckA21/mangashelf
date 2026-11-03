@@ -1,3 +1,5 @@
+import { t } from '../i18n/t'
+
 export class ApiError extends Error {
   status: number
   detail: string
@@ -43,7 +45,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     credentials: 'same-origin',
   })
 
-  if (res.status === 401 && !NO_REDIRECT_ON_401.includes(path)) {
+  // On /login already, redirecting again would loop.
+  if (
+    res.status === 401 &&
+    !NO_REDIRECT_ON_401.includes(path) &&
+    window.location.pathname !== '/login'
+  ) {
     window.location.assign('/login')
     throw new ApiError(401, 'Not logged in')
   }
@@ -51,7 +58,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     const problem = await res.json().catch(() => ({}))
     throw new ApiError(
       res.status,
-      problem.detail ?? res.statusText,
+      problem.detail || res.statusText || t('error.generic'),
       problem.errors,
     )
   }
