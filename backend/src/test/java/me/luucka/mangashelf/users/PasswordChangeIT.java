@@ -6,6 +6,7 @@ import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,6 +67,7 @@ class PasswordChangeIT {
     mvc.perform(get("/api/v1/series").cookie(session))
         .andExpect(status().isForbidden())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(header().string("X-Frame-Options", "DENY"))
         .andExpect(jsonPath("$.status").value(403));
     mvc.perform(get("/api/v1/auth/me").cookie(session))
         .andExpect(status().isOk())
@@ -103,5 +105,40 @@ class PasswordChangeIT {
     changePassword(session(), OLD, "a".repeat(65))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].field").value("newPassword"));
+  }
+
+  @Test
+  void missingNewPasswordIs400() throws Exception {
+    var token = xsrf(mvc);
+    mvc.perform(
+            post("/api/v1/auth/password")
+                .cookie(session(), token)
+                .header("X-XSRF-TOKEN", token.getValue())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"%s\"}".formatted(OLD)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("newPassword"));
+  }
+
+  @Test
+  void multibytePasswordOver72BytesIs400() throws Exception {
+    changePassword(session(), OLD, "è".repeat(40))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("newPassword"));
+  }
+
+  @Test
+  void mustChangeUserCanLogoutButNotReachLookalikePaths() throws Exception {
+    var session = session();
+    var token = xsrf(mvc);
+    mvc.perform(
+            post("/api/v1/auth/me").cookie(session, token).header("X-XSRF-TOKEN", token.getValue()))
+        .andExpect(status().is4xxClientError());
+    mvc.perform(get("/api/v1/auth/me/").cookie(session)).andExpect(status().is4xxClientError());
+    mvc.perform(
+            post("/api/v1/auth/logout")
+                .cookie(session, token)
+                .header("X-XSRF-TOKEN", token.getValue()))
+        .andExpect(status().isNoContent());
   }
 }

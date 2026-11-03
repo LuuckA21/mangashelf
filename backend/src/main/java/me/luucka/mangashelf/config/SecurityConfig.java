@@ -18,11 +18,11 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
@@ -71,8 +71,7 @@ public class SecurityConfig {
     return http.requestCache(c -> c.disable())
         .csrf(c -> c.spa().csrfTokenRepository(csrfTokenRepository))
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-        .addFilterAfter(
-            new MustChangePasswordFilter(exceptionResolver), SecurityContextHolderFilter.class)
+        .addFilterAfter(new MustChangePasswordFilter(exceptionResolver), HeaderWriterFilter.class)
         .headers(h ->
             h.contentSecurityPolicy(
                     csp -> csp.policyDirectives("default-src 'self'; img-src 'self' blob:"))
