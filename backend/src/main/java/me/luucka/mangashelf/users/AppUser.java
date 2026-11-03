@@ -50,6 +50,15 @@ public class AppUser {
     this.mustChangePassword = false;
   }
 
+  public void resetPassword(String passwordHash) {
+    this.passwordHash = passwordHash;
+    this.mustChangePassword = true;
+  }
+
+  public void changeRole(Role role) {
+    this.role = role;
+  }
+
   public UUID getId() {
     return id;
   }
