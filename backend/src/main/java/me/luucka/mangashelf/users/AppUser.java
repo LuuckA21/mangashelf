@@ -45,6 +45,11 @@ public class AppUser {
     updatedAt = Instant.now();
   }
 
+  public void changePassword(String passwordHash) {
+    this.passwordHash = passwordHash;
+    this.mustChangePassword = false;
+  }
+
   public UUID getId() {
     return id;
   }

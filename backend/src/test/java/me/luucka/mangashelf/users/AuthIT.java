@@ -48,34 +48,20 @@ class AuthIT {
     return "{\"username\":\"%s\",\"password\":\"%s\"}".formatted(u, p);
   }
 
-  /** Last non-expired cookie with this name among all Set-Cookie headers. */
   private static Optional<Cookie> cookie(MockHttpServletResponse response, String name) {
-    Cookie found = null;
-    for (String header : response.getHeaders("Set-Cookie")) {
-      if (header.startsWith(name + "=")) {
-        var value = header.substring(name.length() + 1).split(";", 2)[0];
-        found = value.isEmpty() ? null : new Cookie(name, value);
-      }
-    }
-    return Optional.ofNullable(found);
+    return AuthTestSupport.cookie(response, name);
   }
 
   private Cookie xsrf() throws Exception {
-    return cookie(mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse(), "XSRF-TOKEN")
-        .orElseThrow();
+    return AuthTestSupport.xsrf(mvc);
   }
 
   private ResultActions login(String u, String p) throws Exception {
-    return loginWith(xsrf(), u, p);
+    return AuthTestSupport.login(mvc, u, p);
   }
 
   private ResultActions loginWith(Cookie xsrf, String u, String p) throws Exception {
-    return mvc.perform(
-        post("/api/v1/auth/login")
-            .cookie(xsrf)
-            .header("X-XSRF-TOKEN", xsrf.getValue())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(creds(u, p)));
+    return AuthTestSupport.loginWith(mvc, xsrf, u, p);
   }
 
   @Test

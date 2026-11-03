@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import me.luucka.mangashelf.users.AppUserDetailsService;
+import me.luucka.mangashelf.users.MustChangePasswordFilter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -24,6 +27,7 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 @Configuration
 public class SecurityConfig {
@@ -60,10 +64,15 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(
-      HttpSecurity http, CsrfTokenRepository csrfTokenRepository) throws Exception {
+      HttpSecurity http,
+      CsrfTokenRepository csrfTokenRepository,
+      @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver)
+      throws Exception {
     return http.requestCache(c -> c.disable())
         .csrf(c -> c.spa().csrfTokenRepository(csrfTokenRepository))
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+        .addFilterAfter(
+            new MustChangePasswordFilter(exceptionResolver), SecurityContextHolderFilter.class)
         .headers(h ->
             h.contentSecurityPolicy(
                     csp -> csp.policyDirectives("default-src 'self'; img-src 'self' blob:"))
