@@ -25,6 +25,6 @@ public interface SeriesRepository extends JpaRepository<Series, UUID> {
           order by lower(s.title)
           """,
       countQuery =
-          "select count(s) from Series s where :q = '' or lower(s.title) like concat('%', lower(:q), '%')")
+          "select count(s) from Series s where :q = '' or lower(s.title) like concat('%', lower(:q), '%') escape '\\'")
   Page<SeriesSummary> search(@Param("q") String q, Pageable pageable);
 }

@@ -1,9 +1,11 @@
 package me.luucka.mangashelf.catalog;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import me.luucka.mangashelf.catalog.dto.SeriesDetail;
 import me.luucka.mangashelf.catalog.dto.SeriesSummary;
+import me.luucka.mangashelf.collection.CollectionEditionRepository;
 import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.LikeEscape;
 import me.luucka.mangashelf.common.NotFoundException;
@@ -21,12 +23,17 @@ public class SeriesService {
   private final SeriesRepository series;
   private final EditionRepository editions;
   private final EditionService editionService;
+  private final CollectionEditionRepository collection;
 
   public SeriesService(
-      SeriesRepository series, EditionRepository editions, EditionService editionService) {
+      SeriesRepository series,
+      EditionRepository editions,
+      EditionService editionService,
+      CollectionEditionRepository collection) {
     this.series = series;
     this.editions = editions;
     this.editionService = editionService;
+    this.collection = collection;
   }
 
   @Transactional(readOnly = true)
@@ -38,10 +45,18 @@ public class SeriesService {
   @Transactional(readOnly = true)
   public SeriesDetail detail(UUID id, AppUserPrincipal me) {
     var s = require(id);
+    var list = editions.findBySeries(id);
+    var mine =
+        list.isEmpty()
+            ? Set.<UUID>of()
+            : Set.copyOf(
+                collection.findEditionIds(me.id(), list.stream().map(Edition::getId).toList()));
     return new SeriesDetail(
         s.getId().toString(),
         s.getTitle(),
-        editions.findBySeries(id).stream().map(e -> editionService.toResponse(e, me)).toList());
+        list.stream()
+            .map(e -> editionService.toResponse(e, me, mine.contains(e.getId())))
+            .toList());
   }
 
   /** A duplicate title surfaces as a unique-index violation, which the API maps to 409. */

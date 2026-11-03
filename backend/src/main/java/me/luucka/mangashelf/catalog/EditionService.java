@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.UUID;
 import me.luucka.mangashelf.catalog.dto.EditionRequest;
 import me.luucka.mangashelf.catalog.dto.EditionResponse;
+import me.luucka.mangashelf.collection.CollectionEditionRepository;
+import me.luucka.mangashelf.collection.OwnedVolumeRepository;
 import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.NotFoundException;
@@ -16,10 +18,18 @@ public class EditionService {
 
   private final EditionRepository editions;
   private final SeriesRepository series;
+  private final CollectionEditionRepository collection;
+  private final OwnedVolumeRepository ownedVolumes;
 
-  public EditionService(EditionRepository editions, SeriesRepository series) {
+  public EditionService(
+      EditionRepository editions,
+      SeriesRepository series,
+      CollectionEditionRepository collection,
+      OwnedVolumeRepository ownedVolumes) {
     this.editions = editions;
     this.series = series;
+    this.collection = collection;
+    this.ownedVolumes = ownedVolumes;
   }
 
   @Transactional(readOnly = true)
@@ -59,6 +69,9 @@ public class EditionService {
     if (r.version() != e.getVersion()) {
       throw new ConflictException("L'edizione è stata modificata da un altro utente");
     }
+    if (ownedVolumes.findMaxNumberByEditionId(id).orElse(0) > r.volumeCount()) {
+      throw new ConflictException("Alcuni utenti possiedono volumi oltre questo numero");
+    }
     e.update(r.name().strip(), publisher(r), r.type(), r.status(), r.volumeCount());
     return toResponse(editions.saveAndFlush(e), me);
   }
@@ -71,6 +84,10 @@ public class EditionService {
 
   /** Call inside a transaction: reads the lazy series. */
   EditionResponse toResponse(Edition e, AppUserPrincipal me) {
+    return toResponse(e, me, collection.existsByUserIdAndEditionId(me.id(), e.getId()));
+  }
+
+  EditionResponse toResponse(Edition e, AppUserPrincipal me, boolean inMyCollection) {
     return new EditionResponse(
         e.getId().toString(),
         e.getSeries().getId().toString(),
@@ -83,8 +100,8 @@ public class EditionService {
         e.getCoverFile() != null,
         me.isAdmin() || me.id().equals(e.getCreatedBy()),
         e.getVersion(),
-        0, // Task 6
-        false); // Task 6
+        collection.countByEditionId(e.getId()),
+        inMyCollection);
   }
 
   private static String publisher(EditionRequest r) {
