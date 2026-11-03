@@ -10,8 +10,11 @@ import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.NotFoundException;
 import me.luucka.mangashelf.users.AppUserPrincipal;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class EditionService {
@@ -20,16 +23,19 @@ public class EditionService {
   private final SeriesRepository series;
   private final CollectionEditionRepository collection;
   private final OwnedVolumeRepository ownedVolumes;
+  private final CoverStorage covers;
 
   public EditionService(
       EditionRepository editions,
       SeriesRepository series,
       CollectionEditionRepository collection,
-      OwnedVolumeRepository ownedVolumes) {
+      OwnedVolumeRepository ownedVolumes,
+      CoverStorage covers) {
     this.editions = editions;
     this.series = series;
     this.collection = collection;
     this.ownedVolumes = ownedVolumes;
+    this.covers = covers;
   }
 
   @Transactional(readOnly = true)
@@ -81,7 +87,57 @@ public class EditionService {
   @Transactional
   public void delete(UUID id, AppUserPrincipal me) {
     SeriesService.requireAdmin(me);
-    editions.delete(require(id));
+    var e = require(id);
+    editions.delete(e);
+    afterCompletion(e.getCoverFile(), null);
+  }
+
+  @Transactional
+  public void putCover(UUID id, byte[] image, AppUserPrincipal me) {
+    var e = requireCoverEditor(id, me);
+    var name = covers.save(CoverImages.toJpeg(image));
+    var old = e.getCoverFile();
+    afterCompletion(old, name);
+    e.setCoverFile(name);
+    editions.saveAndFlush(e);
+  }
+
+  @Transactional
+  public void deleteCover(UUID id, AppUserPrincipal me) {
+    var e = requireCoverEditor(id, me);
+    afterCompletion(e.getCoverFile(), null);
+    e.setCoverFile(null);
+    editions.saveAndFlush(e);
+  }
+
+  public byte[] readCover(UUID id) {
+    var name = require(id).getCoverFile();
+    if (name == null) {
+      throw new NotFoundException("Copertina non trovata");
+    }
+    return covers.read(name);
+  }
+
+  private Edition requireCoverEditor(UUID id, AppUserPrincipal me) {
+    var e = require(id);
+    if (!me.isAdmin() && !me.id().equals(e.getCreatedBy())) {
+      throw new AccessDeniedException("Not allowed to change this cover");
+    }
+    return e;
+  }
+
+  /** Deletes {@code onCommit} once the transaction commits, {@code onRollback} if it does not. */
+  private void afterCompletion(String onCommit, String onRollback) {
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCompletion(int status) {
+            var file = status == STATUS_COMMITTED ? onCommit : onRollback;
+            if (file != null) {
+              covers.delete(file);
+            }
+          }
+        });
   }
 
   /** Call inside a transaction: reads the lazy series. */

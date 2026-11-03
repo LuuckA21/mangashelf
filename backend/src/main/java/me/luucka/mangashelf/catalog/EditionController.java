@@ -1,11 +1,15 @@
 package me.luucka.mangashelf.catalog;
 
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import me.luucka.mangashelf.catalog.dto.EditionRequest;
 import me.luucka.mangashelf.catalog.dto.EditionResponse;
 import me.luucka.mangashelf.users.AppUserPrincipal;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,8 +18,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
@@ -57,5 +63,29 @@ public class EditionController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID id) {
     service.delete(id, me);
+  }
+
+  @PutMapping("/api/v1/editions/{id}/cover")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void putCover(
+      @AuthenticationPrincipal AppUserPrincipal me,
+      @PathVariable UUID id,
+      @RequestParam("file") MultipartFile file)
+      throws IOException {
+    service.putCover(id, file.getBytes(), me);
+  }
+
+  @DeleteMapping("/api/v1/editions/{id}/cover")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteCover(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID id) {
+    service.deleteCover(id, me);
+  }
+
+  @GetMapping("/api/v1/editions/{id}/cover")
+  public ResponseEntity<byte[]> cover(@PathVariable UUID id) {
+    return ResponseEntity.ok()
+        .contentType(MediaType.IMAGE_JPEG)
+        .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePrivate())
+        .body(service.readCover(id));
   }
 }

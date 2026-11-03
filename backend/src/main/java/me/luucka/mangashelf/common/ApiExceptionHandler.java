@@ -1,6 +1,7 @@
 package me.luucka.mangashelf.common;
 
 import java.util.List;
+import me.luucka.mangashelf.catalog.InvalidImageException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     var problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dati non validi");
     problem.setProperty("errors", List.of(new FieldError(e.field(), e.getMessage())));
     return problem;
+  }
+
+  @ExceptionHandler(InvalidImageException.class)
+  ProblemDetail invalidImage(InvalidImageException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
   }
 
   @ExceptionHandler(ConflictException.class)

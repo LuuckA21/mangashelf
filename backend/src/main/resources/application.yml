@@ -25,6 +25,10 @@ spring:
     timeout: 14d # inactivity; Spring Session ignores server.servlet.session.timeout
     jdbc:
       initialize-schema: never # schema comes from a Flyway migration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   mvc:
     problemdetails:
       enabled: true
