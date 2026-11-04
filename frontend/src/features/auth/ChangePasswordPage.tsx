@@ -1,11 +1,13 @@
 import { Navigate, useNavigate } from 'react-router'
 import { t } from '../../i18n/t'
 import ChangePasswordForm from './ChangePasswordForm'
+import { useLogout } from './useLogout'
 import { useMe } from './useMe'
 
 export default function ChangePasswordPage() {
   const { data: me, isPending } = useMe()
   const navigate = useNavigate()
+  const { logout, failed } = useLogout()
 
   if (isPending) return <p className="app-state">{t('common.loading')}</p>
   if (!me) return <Navigate to="/login" replace />
@@ -23,6 +25,14 @@ export default function ChangePasswordPage() {
             })
           }
         />
+        {failed && (
+          <p className="error" role="alert">
+            {t('error.generic')}
+          </p>
+        )}
+        <button type="button" className="quiet" onClick={logout}>
+          {t('nav.logout')}
+        </button>
       </main>
     </div>
   )

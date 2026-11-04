@@ -186,8 +186,28 @@ describe('auth', () => {
       'Si è verificato un errore',
     )
     expect(
-      screen.getByRole('heading', { name: 'La mia collezione' }),
+      await screen.findByRole('heading', { name: 'La mia collezione' }),
     ).toBeInTheDocument()
+  })
+
+  it('forcedChangePasswordPageOffersLogout', async () => {
+    replies['GET /auth/me'] = [200, me({ mustChangePassword: true })]
+    replies['POST /auth/logout'] = [204]
+    renderApp('/change-password')
+    await userEvent.click(await screen.findByRole('button', { name: 'Esci' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Accedi' }),
+    ).toBeInTheDocument()
+  })
+
+  it('forcedChangePasswordLogoutFailureShowsError', async () => {
+    replies['GET /auth/me'] = [200, me({ mustChangePassword: true })]
+    replies['POST /auth/logout'] = [500, { detail: 'boom' }]
+    renderApp('/change-password')
+    await userEvent.click(await screen.findByRole('button', { name: 'Esci' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Si è verificato un errore',
+    )
   })
 
   it('loginPageHasNoAxeViolations', async () => {

@@ -1,29 +1,12 @@
-import { useQueryClient } from '@tanstack/react-query'
-import { Suspense, useState } from 'react'
-import { NavLink, Link, Outlet, useNavigate } from 'react-router'
-import { api } from '../api/client'
-import { endSession } from '../features/auth/endSession'
+import { Suspense } from 'react'
+import { NavLink, Link, Outlet } from 'react-router'
+import { useLogout } from '../features/auth/useLogout'
 import { useMe } from '../features/auth/useMe'
 import { t } from '../i18n/t'
 
 export default function Layout() {
   const { data: me } = useMe()
-  const client = useQueryClient()
-  const navigate = useNavigate()
-
-  const [logoutFailed, setLogoutFailed] = useState(false)
-
-  async function logout() {
-    setLogoutFailed(false)
-    try {
-      await api('/auth/logout', { method: 'POST' })
-    } catch {
-      setLogoutFailed(true)
-      return
-    }
-    endSession(client)
-    navigate('/login')
-  }
+  const { logout, failed: logoutFailed } = useLogout()
 
   return (
     <>
