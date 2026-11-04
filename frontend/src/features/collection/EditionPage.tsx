@@ -1,7 +1,18 @@
-import { useParams } from 'react-router'
+import { useState } from 'react'
+import type { EditionResponse } from '../../api/types'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import Shelf from '../../components/Shelf'
 import { t } from '../../i18n/t'
+import { useMe } from '../auth/useMe'
+import {
+  errorText,
+  useDeleteEdition,
+  useSetCover,
+  useUpdateEdition,
+} from '../catalog/api'
+import CoverInput from '../catalog/CoverInput'
+import EditionForm from '../catalog/EditionForm'
 import {
   useAddToCollection,
   useEdition,
@@ -11,8 +22,86 @@ import {
 } from './api'
 import { formatMissing } from './formatMissing'
 
+function AdminActions({ edition }: { edition: EditionResponse }) {
+  const navigate = useNavigate()
+  const update = useUpdateEdition(edition)
+  const remove = useDeleteEdition(edition)
+  const [editing, setEditing] = useState(false)
+  return (
+    <>
+      {!editing && (
+        <>
+          <button className="quiet" onClick={() => setEditing(true)}>
+            {t('edition.edit')}
+          </button>
+          <ConfirmDelete
+            label={t('edition.delete')}
+            what={t('edition.deleteWhat', { n: edition.collectionCount })}
+            onConfirm={() =>
+              remove.mutateAsync().then(
+                () => navigate(`/series/${edition.seriesId}`),
+                () => undefined,
+              )
+            }
+          />
+          {remove.isError && (
+            <p className="error" role="alert">
+              {errorText(remove.error)}
+            </p>
+          )}
+        </>
+      )}
+      {editing && (
+        // A new version (after a stale-edit refetch) remounts the form with fresh values.
+        <EditionForm
+          key={edition.version}
+          initial={edition}
+          submitLabel={t('common.save')}
+          pending={update.isPending}
+          error={update.error}
+          onCancel={() => setEditing(false)}
+          onSubmit={(values) =>
+            update.mutate(values, { onSuccess: () => setEditing(false) })
+          }
+        />
+      )}
+    </>
+  )
+}
+
+function CoverActions({ edition }: { edition: EditionResponse }) {
+  const cover = useSetCover(edition)
+  return (
+    <div>
+      <CoverInput onSelect={(file) => cover.mutate(file)} />
+      {edition.hasCover && (
+        <ConfirmDelete
+          label={t('cover.remove')}
+          what={t('cover.removeWhat')}
+          onConfirm={() =>
+            cover.mutateAsync(null).then(
+              () => undefined,
+              () => undefined,
+            )
+          }
+        />
+      )}
+      {cover.isError && (
+        <p className="error" role="alert">
+          {errorText(cover.error)}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function EditionPage() {
   const id = useParams().id ?? ''
+  const isAdmin = useMe().data?.role === 'ADMIN'
+  // Set when the edition was just created but its cover upload failed.
+  const createdCoverError = (
+    useLocation().state as { coverError?: string } | null
+  )?.coverError
   const { data: edition, isPending, isError, refetch } = useEdition(id)
   const entry = useOwned(id, edition?.inMyCollection ?? false)
   const setOwned = useSetOwned(id)
@@ -79,8 +168,13 @@ export default function EditionPage() {
                 {t('edition.add')}
               </button>
             )}
-            {/* Task 11: admin actions (edit, delete) go here. */}
+            {isAdmin && <AdminActions edition={edition} />}
           </div>
+          {createdCoverError && (
+            <p className="error" role="alert">
+              {createdCoverError}
+            </p>
+          )}
           {(add.isError || remove.isError) && (
             <p className="error" role="alert">
               {t('error.generic')}
@@ -88,6 +182,8 @@ export default function EditionPage() {
           )}
         </div>
       </div>
+
+      {edition.canEditCover && <CoverActions edition={edition} />}
 
       <Shelf
         volumeCount={edition.volumeCount}
