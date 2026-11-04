@@ -60,5 +60,6 @@ export type CollectionEntry = {
   status: EditionStatus
   volumeCount: number
   hasCover: boolean
+  version: number
   owned: number[]
 }

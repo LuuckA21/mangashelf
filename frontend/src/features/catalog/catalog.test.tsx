@@ -218,7 +218,9 @@ describe('series page', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Immagine non valida')
     expect(alert).toHaveClass('error')
-    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Deluxe' }),
+    ).toBeInTheDocument()
   })
 
   it('rejectsHugeCoverBeforeUpload', async () => {
@@ -363,9 +365,8 @@ describe('edition page admin actions', () => {
       'è in 3 collezioni',
     )
     await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Berserk' }),
-    ).toBeInTheDocument()
+    // The edition page shows the same h1 while it leaves: wait for the series form.
+    expect(await screen.findByLabelText('Nome edizione')).toBeInTheDocument()
     expect(calls('DELETE', '/editions/e1')).toHaveLength(1)
     expect(calls('GET', '/editions/e1')).toHaveLength(1)
     expect(screen.queryByRole('alert')).toBeNull()

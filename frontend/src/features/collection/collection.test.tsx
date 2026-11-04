@@ -22,6 +22,7 @@ const entry = (over: Partial<CollectionEntry> = {}): CollectionEntry => ({
   status: 'ONGOING',
   volumeCount: 5,
   hasCover: false,
+  version: 1,
   owned: [],
   ...over,
 })
@@ -87,6 +88,19 @@ function renderApp(path: string) {
 const listUrl = (qs: string) => `GET /collection?page=0&size=20${qs}`
 
 describe('collection page', () => {
+  it('showsCoverThumbnailWithVersion', async () => {
+    replies[listUrl('')] = [
+      200,
+      pageOf([entry({ hasCover: true, version: 7 })]),
+    ]
+    const { container } = renderApp('/')
+    await screen.findByText('Deluxe')
+    expect(container.querySelector('img.thumb')).toHaveAttribute(
+      'src',
+      '/api/v1/editions/e1/cover?v=7',
+    )
+  })
+
   it('groupsEditionsBySeriesWithProgress', async () => {
     replies[listUrl('')] = [
       200,

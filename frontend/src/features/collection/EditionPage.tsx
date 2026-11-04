@@ -190,11 +190,16 @@ export default function EditionPage() {
               {t('error.generic')}
             </p>
           )}
+          {edition.canEditCover && (
+            <details className="cover-actions">
+              <summary>{t('cover.manage')}</summary>
+              <CoverActions edition={edition} />
+            </details>
+          )}
         </div>
       </div>
 
-      {edition.canEditCover && <CoverActions edition={edition} />}
-
+      <h2 className="section-title">{t('shelf.title')}</h2>
       <Shelf
         volumeCount={edition.volumeCount}
         owned={owned}

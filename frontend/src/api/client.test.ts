@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 function sentHeaders() {
-  return fetchMock.mock.calls[0][1].headers as Headers
+  return fetchMock.mock.calls.at(-1)![1].headers as Headers
 }
 
 describe('api', () => {
@@ -40,6 +40,19 @@ describe('api', () => {
     await api('/things')
     expect(sentHeaders().has('X-XSRF-TOKEN')).toBe(false)
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/things')
+  })
+
+  it('fetchesXsrfTokenFirstWhenMissing', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/auth/me') document.cookie = 'XSRF-TOKEN=fresh'
+      return new Response('{}', { status: 200 })
+    })
+    await api('/auth/login', { method: 'POST', body: '{}' })
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      '/api/v1/auth/me',
+      '/api/v1/auth/login',
+    ])
+    expect(sentHeaders().get('X-XSRF-TOKEN')).toBe('fresh')
   })
 
   it('sendsNoContentTypeForFormData', async () => {

@@ -532,23 +532,6 @@ label {
   display: grid;
   gap: var(--s);
 }
-.edition-list a {
-  display: block;
-  padding: calc(var(--s) * 2);
-  background: var(--paper-raised);
-  border: 1px solid var(--ash-line);
-  border-left: 3px solid var(--indigo);
-  border-radius: var(--radius);
-  text-decoration: none;
-  color: inherit;
-}
-.edition-list a:hover {
-  border-left-color: var(--vermilion);
-}
-.edition-list .name {
-  font-family: var(--font-display);
-  font-size: 18px;
-}
 
 .empty {
   padding: calc(var(--s) * 4);
@@ -577,8 +560,29 @@ label {
   }
 }
 
-/* A cover on the catalogue rows, once a work has been imported. */
-.manga-list .cover {
+/* Series headings in lists, and the shelf heading on an edition. */
+section > h2,
+.section-title {
+  margin: calc(var(--s) * 4) 0 calc(var(--s) * 1.5);
+}
+
+.cover-actions {
+  margin-top: calc(var(--s) * 2);
+}
+.cover-actions summary {
+  cursor: pointer;
+  color: var(--indigo);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.cover-actions summary:focus-visible {
+  outline: 2px solid var(--indigo-deep);
+  outline-offset: 2px;
+}
+
+/* Small cover on the collection rows. */
+.thumb {
   width: 34px;
   height: 51px;
   object-fit: cover;
@@ -729,8 +733,13 @@ button.danger:hover:not(:disabled) {
 
   .topbar-inner {
     flex-wrap: wrap;
-    gap: var(--s) calc(var(--s) * 2);
-    padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+    align-items: center;
+    gap: 0 calc(var(--s) * 2);
+    padding: var(--s) calc(var(--s) * 2) 0;
+  }
+  /* Logout sits at the right of the brand, so the nav takes one short row. */
+  .topbar-inner > button {
+    margin-left: auto;
   }
   /* The spacer would push the account onto a line of its own; on a phone the
      nav wrapping under the brand reads better. */
@@ -820,6 +829,10 @@ button.danger:hover:not(:disabled) {
   }
   .edition-row .grow {
     flex: 1 1 100%;
+  }
+  /* The cover thumbnail stays beside the title instead of on a line alone. */
+  .edition-row:has(> .thumb) .grow {
+    flex: 1 1 0;
   }
   .edition-row .inline-actions {
     width: 100%;
