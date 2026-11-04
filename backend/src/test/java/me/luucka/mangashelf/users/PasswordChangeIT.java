@@ -80,6 +80,9 @@ class PasswordChangeIT {
     mvc.perform(get("/change-password").cookie(session)).andExpect(status().isOk());
     mvc.perform(get("/index.html").cookie(session)).andExpect(status().isOk());
     mvc.perform(get("/api/v1/series").cookie(session)).andExpect(status().isForbidden());
+    // Percent-encoded path must not slip past the gate (MVC matches the decoded path).
+    mvc.perform(get(java.net.URI.create("/%61pi/v1/series")).cookie(session))
+        .andExpect(status().isForbidden());
     var token = xsrf(mvc);
     mvc.perform(
             post("/api/v1/auth/login")

@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.util.UrlPathHelper;
 
 /** While the password is temporary, only the endpoints needed to change it are reachable. */
 public class MustChangePasswordFilter extends OncePerRequestFilter {
@@ -32,12 +33,14 @@ public class MustChangePasswordFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
     var auth = SecurityContextHolder.getContext().getAuthentication();
+    // Decoded path, as MVC and Spring Security match it: "/%61pi/..." must not slip past.
+    var path = UrlPathHelper.defaultInstance.getPathWithinApplication(request);
     // Only the API is gated: the SPA shell and assets must load so the user can reach the form.
     if (auth != null
-        && request.getRequestURI().startsWith("/api/")
+        && path.startsWith("/api/")
         && auth.getPrincipal() instanceof AppUserPrincipal p
         && p.mustChangePassword()
-        && !ALLOWED.contains(request.getMethod() + " " + request.getRequestURI())) {
+        && !ALLOWED.contains(request.getMethod() + " " + path)) {
       // Reuses ApiExceptionHandler so the 403 is a Problem Details body.
       resolver.resolveException(
           request, response, null, new AccessDeniedException("Password change required"));
