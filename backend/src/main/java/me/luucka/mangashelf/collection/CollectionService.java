@@ -148,7 +148,7 @@ public class CollectionService {
     var sql =
         """
         select e.id edition_id, s.id series_id, s.title, e.name, e.publisher, e.type, e.status,
-               e.volume_count, e.cover_file is not null has_cover,
+               e.volume_count, e.cover_file is not null has_cover, e.version,
                array(select ov.number from owned_volumes ov
                      where ov.collection_edition_id = ce.id order by ov.number) owned
         """
@@ -180,6 +180,7 @@ public class CollectionService {
                   EditionStatus.valueOf(rs.getString("status")),
                   rs.getInt("volume_count"),
                   rs.getBoolean("has_cover"),
+                  rs.getLong("version"),
                   List.copyOf(owned));
             })
         .list();

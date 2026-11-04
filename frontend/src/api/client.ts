@@ -34,6 +34,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     !headers.has('Content-Type')
   )
     headers.set('Content-Type', 'application/json')
+  // The page may not come from Spring (Vite in dev): any GET hands out the token.
+  if (method !== 'GET' && !csrfToken())
+    await fetch('/api/v1/auth/me', { credentials: 'same-origin' })
   const token = csrfToken()
   if (method !== 'GET' && token)
     headers.set('X-XSRF-TOKEN', decodeURIComponent(token))

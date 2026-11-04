@@ -16,6 +16,18 @@ function Entry({ e }: { e: CollectionEntry }) {
   const missing = formatMissing(e.owned, e.volumeCount)
   return (
     <li className="edition-row">
+      {e.hasCover ? (
+        <img
+          className="thumb"
+          src={`/api/v1/editions/${e.editionId}/cover?v=${e.version}`}
+          alt=""
+          width={34}
+          height={51}
+          loading="lazy"
+        />
+      ) : (
+        <div className="thumb" aria-hidden="true" />
+      )}
       <div className="grow">
         <Link className="name" to={`/editions/${e.editionId}`}>
           {e.editionName}

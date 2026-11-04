@@ -128,7 +128,8 @@ class CollectionIT {
     list(a, "")
         .andExpect(jsonPath("$.content[0].owned.length()").value(2))
         .andExpect(jsonPath("$.content[0].owned[0]").value(2))
-        .andExpect(jsonPath("$.content[0].owned[1]").value(3));
+        .andExpect(jsonPath("$.content[0].owned[1]").value(3))
+        .andExpect(jsonPath("$.content[0].version").isNumber());
   }
 
   @Test

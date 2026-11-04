@@ -14,4 +14,5 @@ public record CollectionEntry(
     EditionStatus status,
     int volumeCount,
     boolean hasCover,
+    long version,
     List<Integer> owned) {}
