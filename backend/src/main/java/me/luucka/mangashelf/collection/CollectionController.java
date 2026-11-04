@@ -40,6 +40,12 @@ public class CollectionController {
     return service.list(me.id(), q, type, status, incomplete, pageable);
   }
 
+  @GetMapping("/api/v1/collection/editions/{editionId}")
+  public CollectionEntry get(
+      @AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID editionId) {
+    return service.entry(me.id(), editionId);
+  }
+
   @PutMapping("/api/v1/collection/editions/{editionId}")
   public CollectionEntry add(
       @AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID editionId) {

@@ -132,7 +132,7 @@ public class CollectionService {
             () -> collection.saveAndFlush(new CollectionEdition(userId, editionId, Instant.now())));
   }
 
-  private CollectionEntry entry(UUID userId, UUID editionId) {
+  CollectionEntry entry(UUID userId, UUID editionId) {
     return query(
             new StringBuilder(" and e.id = :editionId"),
             Map.of("userId", userId, "editionId", editionId),

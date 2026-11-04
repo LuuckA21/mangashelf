@@ -132,6 +132,20 @@ class CollectionIT {
   }
 
   @Test
+  void getsOneEntryOr404WhenNotInCollection() throws Exception {
+    var e = edition("Blu", 10);
+    var url = "/api/v1/collection/editions/" + e;
+    mvc.perform(get(url).cookie(a)).andExpect(status().isNotFound());
+    owned(a, e, "{\"owned\":[1,4]}").andExpect(status().isOk());
+    mvc.perform(get(url).cookie(a))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.editionId").value(e))
+        .andExpect(jsonPath("$.owned[1]").value(4));
+    mvc.perform(get("/api/v1/collection/editions/0198a000-0000-7000-8000-000000000000").cookie(a))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
   void settingVolumesAddsEditionToCollection() throws Exception {
     var e = edition("Blu", 10);
     owned(a, e, "{\"owned\":[1]}").andExpect(status().isOk());
