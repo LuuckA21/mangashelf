@@ -65,6 +65,17 @@ class AuthIT {
   }
 
   @Test
+  void sessionDoesNotStoreThePasswordHash() throws Exception {
+    login("Luca", "correct-horse-1").andExpect(status().isOk());
+    var bytes =
+        jdbc.queryForObject(
+            "SELECT attribute_bytes FROM spring_session_attributes LIMIT 1", byte[].class);
+    assertThat(new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1))
+        .contains("AppUserPrincipal")
+        .doesNotContain("$2a$");
+  }
+
+  @Test
   void meWithoutLoginIs401AndSetsXsrfCookie() throws Exception {
     var response =
         mvc.perform(get("/api/v1/auth/me"))
