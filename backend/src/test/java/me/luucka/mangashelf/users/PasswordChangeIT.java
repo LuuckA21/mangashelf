@@ -75,6 +75,22 @@ class PasswordChangeIT {
   }
 
   @Test
+  void temporaryPasswordStillServesTheSpaAndAllowsLogin() throws Exception {
+    var session = session();
+    mvc.perform(get("/change-password").cookie(session)).andExpect(status().isOk());
+    mvc.perform(get("/index.html").cookie(session)).andExpect(status().isOk());
+    mvc.perform(get("/api/v1/series").cookie(session)).andExpect(status().isForbidden());
+    var token = xsrf(mvc);
+    mvc.perform(
+            post("/api/v1/auth/login")
+                .cookie(session, token)
+                .header("X-XSRF-TOKEN", token.getValue())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"Mario\",\"password\":\"%s\"}".formatted(OLD)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
   void changePasswordClearsFlagAndClosesAllSessions() throws Exception {
     var first = session();
     var second = session();

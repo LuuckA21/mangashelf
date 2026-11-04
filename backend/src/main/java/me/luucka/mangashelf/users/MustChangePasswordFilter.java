@@ -15,7 +15,11 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 public class MustChangePasswordFilter extends OncePerRequestFilter {
 
   private static final Set<String> ALLOWED =
-      Set.of("GET /api/v1/auth/me", "POST /api/v1/auth/password", "POST /api/v1/auth/logout");
+      Set.of(
+          "GET /api/v1/auth/me",
+          "POST /api/v1/auth/login",
+          "POST /api/v1/auth/password",
+          "POST /api/v1/auth/logout");
 
   private final HandlerExceptionResolver resolver;
 
@@ -28,7 +32,9 @@ public class MustChangePasswordFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws ServletException, IOException {
     var auth = SecurityContextHolder.getContext().getAuthentication();
+    // Only the API is gated: the SPA shell and assets must load so the user can reach the form.
     if (auth != null
+        && request.getRequestURI().startsWith("/api/")
         && auth.getPrincipal() instanceof AppUserPrincipal p
         && p.mustChangePassword()
         && !ALLOWED.contains(request.getMethod() + " " + request.getRequestURI())) {
