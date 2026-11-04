@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { axe } from 'vitest-axe'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '../../App'
+import { axe } from '../../test/axe'
 
 const fetchMock = vi.fn()
 
@@ -12,7 +12,16 @@ type Reply = [status: number, body?: unknown]
 let replies: Record<string, Reply> = {}
 
 beforeEach(() => {
-  replies = { 'GET /auth/me': [401, { status: 401, detail: 'no' }] }
+  replies = {
+    'GET /auth/me': [401, { status: 401, detail: 'no' }],
+    'GET /collection?page=0&size=20': [
+      200,
+      {
+        content: [],
+        page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
+      },
+    ],
+  }
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const key = `${init.method} ${url.replace('/api/v1', '')}`
     const [status, body] = replies[key] ?? [404, { detail: key }]
@@ -184,10 +193,7 @@ describe('auth', () => {
   it('loginPageHasNoAxeViolations', async () => {
     const { container } = renderApp('/login')
     await screen.findByRole('heading', { name: 'Accedi' })
-    // jsdom cannot compute colors; contrast is covered by styles.test.ts
-    const results = await axe(container, {
-      rules: { 'color-contrast': { enabled: false } },
-    })
+    const results = await axe(container)
     expect(results.violations).toEqual([])
   })
 })

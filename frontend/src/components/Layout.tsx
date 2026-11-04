@@ -14,6 +14,7 @@ export default function Layout() {
   const [logoutFailed, setLogoutFailed] = useState(false)
 
   async function logout() {
+    setLogoutFailed(false)
     try {
       await api('/auth/logout', { method: 'POST' })
     } catch {
