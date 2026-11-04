@@ -253,6 +253,9 @@ describe('edition page', () => {
     renderApp('/editions/e1')
     await userEvent.click(await tile(3, false))
     await userEvent.click(await tile(4, false))
+    // The second PUT must wait for the first (mutation scope).
+    await new Promise((r) => setTimeout(r, 20))
+    expect(puts).toHaveLength(1)
     first.open()
     expect(await screen.findByRole('alert')).toHaveClass('error')
     await vi.waitFor(() => expect(puts).toHaveLength(2))
