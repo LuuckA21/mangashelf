@@ -28,6 +28,8 @@ Last reviewed: 2026-11-04
 
 - HTTPS everywhere (HSTS at the proxy); encrypted backups (restic)
 - Passwords stored only as bcrypt hashes; session cookies HttpOnly, SameSite=Lax, CSRF protection on
+- Secrets in Bitwarden
+- Access to servers: SSH keys only, separate admin and app users (06)
 - Personal data deleted physically; deleted data stays in encrypted backups until they expire (max 12 months)
 - Expired sessions are removed by the Spring Session JDBC cleanup job
 - Log retention: Nginx Proxy Manager 14–30 days

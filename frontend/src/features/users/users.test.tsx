@@ -255,6 +255,30 @@ describe('users page', () => {
     expect(await screen.findByText('bruno')).toBeInTheDocument()
   })
 
+  it('stepsBackWhenTheLastPageEmpties', async () => {
+    replies['GET /users?page=0&size=20'] = [200, pageOf([user()], 2)]
+    replies['GET /users?page=1&size=20'] = [200, pageOf([bruno], 2)]
+    replies['DELETE /users/u2'] = [204]
+    renderApp()
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Successiva' }),
+    )
+    await userEvent.click(
+      within(await rowOf('bruno')).getByRole('button', { name: 'Elimina' }),
+    )
+    replies['GET /users?page=0&size=20'] = [200, pageOf([user()], 1)]
+    replies['GET /users?page=1&size=20'] = [
+      200,
+      {
+        content: [],
+        page: { size: 20, number: 1, totalElements: 1, totalPages: 1 },
+      },
+    ]
+    await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    expect(await rowOf('anna')).toBeInTheDocument()
+    expect(screen.queryByText('bruno')).not.toBeInTheDocument()
+  })
+
   it('hasNoAccessibilityViolations', async () => {
     const { container } = renderApp()
     await screen.findByText('bruno')

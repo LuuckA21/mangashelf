@@ -102,7 +102,9 @@ describe('account page', () => {
     expect(link.href).toBe('blob:export')
     expect(blob!.type).toBe('application/json')
     expect(await blob!.text()).toBe(JSON.stringify(data, null, 2))
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export')
+    await vi.waitFor(() =>
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export'),
+    )
   })
 
   it('exportFailureShowsError', async () => {
@@ -155,6 +157,24 @@ describe('account page', () => {
     const msg = await screen.findByText('Password errata')
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAttribute('aria-describedby', msg.id)
+    expect(input).toHaveFocus()
+  })
+
+  it('unmatchedDeleteErrorShownInAlert', async () => {
+    replies['DELETE /account'] = [
+      400,
+      { detail: 'x', errors: [{ field: 'other', message: 'Campo strano' }] },
+    ]
+    renderApp()
+    await userEvent.type(
+      await screen.findByLabelText('Password per confermare'),
+      'la-mia-password-1',
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Elimina account' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Campo strano')
   })
 
   it('lastAdminConflictShown', async () => {
@@ -171,6 +191,11 @@ describe('account page', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Sei l’ultimo admin')
     expect(alert).toHaveClass('error')
+    // still logged in: no navigation, the page and the session are intact
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Account' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Esci' })).toBeInTheDocument()
   })
 
   it('hasNoAccessibilityViolations', async () => {

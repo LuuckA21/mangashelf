@@ -12,6 +12,10 @@ export default function UsersPage() {
   const { data: me } = useMe()
   const [page, setPage] = useState(1)
   const { data, isPending, isError, refetch } = useUsers(page)
+  // Deleting the last row of the last page leaves it empty: step back.
+  const lastPage = data?.page.totalPages ?? 0
+  if (data && data.content.length === 0 && page > 1 && page > lastPage)
+    setPage(Math.max(1, lastPage))
   const { changeRole, remove } = useUserMutations()
   // One slot for role and delete failures (409 last admin and the like).
   const [error, setError] = useState<unknown>(null)

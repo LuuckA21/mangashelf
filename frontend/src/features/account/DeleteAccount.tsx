@@ -17,7 +17,12 @@ export default function DeleteAccount() {
   const msg = fieldMessage(error, 'password')
   const general =
     error instanceof ApiError
-      ? error.errors.length === 0 && error.detail
+      ? error.errors.length === 0
+        ? error.detail
+        : error.errors
+            .filter((e) => e.field !== 'password')
+            .map((e) => e.message)
+            .join(' ')
       : error && t('error.generic')
 
   useEffect(() => {
