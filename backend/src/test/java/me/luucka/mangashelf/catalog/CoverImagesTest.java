@@ -112,4 +112,74 @@ class CoverImagesTest {
     assertThat(img.getWidth()).isEqualTo(480);
     assertThat(img.getHeight()).isEqualTo(24);
   }
+
+  /** 200x100 JPEG, left half red and right half blue, with an APP1 holding this orientation. */
+  private static byte[] jpegWithOrientation(int orientation) throws Exception {
+    var img = new BufferedImage(200, 100, BufferedImage.TYPE_INT_RGB);
+    for (int x = 0; x < 200; x++) {
+      for (int y = 0; y < 100; y++) {
+        img.setRGB(x, y, x < 100 ? 0xff0000 : 0x0000ff);
+      }
+    }
+    var plain = new ByteArrayOutputStream();
+    ImageIO.write(img, "jpg", plain);
+    var jpeg = plain.toByteArray();
+    var tiff =
+        ByteBuffer.allocate(26)
+            .put("MM".getBytes(StandardCharsets.ISO_8859_1))
+            .putShort((short) 42)
+            .putInt(8)
+            .putShort((short) 1)
+            .putShort((short) 0x0112)
+            .putShort((short) 3)
+            .putInt(1)
+            .putShort((short) orientation)
+            .putShort((short) 0)
+            .array();
+    var exif = ByteBuffer.allocate(6 + tiff.length);
+    exif.put("Exif\0\0".getBytes(StandardCharsets.ISO_8859_1)).put(tiff);
+    var out = new ByteArrayOutputStream();
+    out.write(jpeg, 0, 2);
+    out.write(0xff);
+    out.write(0xe1);
+    out.write((exif.capacity() + 2) >> 8);
+    out.write((exif.capacity() + 2) & 0xff);
+    out.write(exif.array());
+    out.write(jpeg, 2, jpeg.length - 2);
+    return out.toByteArray();
+  }
+
+  @Test
+  void orientation6RotatesLandscapePixelsToPortrait() throws Exception {
+    var img = decode(CoverImages.toJpeg(jpegWithOrientation(6)));
+    assertThat(img.getWidth()).isEqualTo(100);
+    assertThat(img.getHeight()).isEqualTo(200);
+    // Rotating 90 degrees clockwise puts the red left half on top.
+    assertThat((img.getRGB(50, 20) >> 16) & 0xff).isGreaterThan(200);
+    assertThat(img.getRGB(50, 180) & 0xff).isGreaterThan(200);
+  }
+
+  @Test
+  void orientation3FlipsUpsideDown() throws Exception {
+    var img = decode(CoverImages.toJpeg(jpegWithOrientation(3)));
+    assertThat(img.getWidth()).isEqualTo(200);
+    assertThat(img.getRGB(20, 50) & 0xff).isGreaterThan(200);
+  }
+
+  @Test
+  void orientation1AndMissingExifAreUnchanged() throws Exception {
+    var img = decode(CoverImages.toJpeg(jpegWithOrientation(1)));
+    assertThat(img.getWidth()).isEqualTo(200);
+    assertThat((img.getRGB(20, 50) >> 16) & 0xff).isGreaterThan(200);
+    var plain = decode(CoverImages.toJpeg(encode(200, 100, BufferedImage.TYPE_INT_RGB, "jpg")));
+    assertThat(plain.getWidth()).isEqualTo(200);
+  }
+
+  @Test
+  void malformedExifIsIgnored() throws Exception {
+    var jpeg = jpegWithOrientation(6);
+    ByteBuffer.wrap(jpeg).putInt(16, 0x7fffff00); // SOI + APP1 header + "Exif" + TIFF header
+    var img = decode(CoverImages.toJpeg(jpeg));
+    assertThat(img.getWidth()).isEqualTo(200);
+  }
 }
