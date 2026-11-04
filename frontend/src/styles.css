@@ -339,6 +339,31 @@ label {
   border: 1px solid var(--ash-line);
   border-radius: var(--radius);
   padding: calc(var(--s) * 3);
+  /* Space from the list or panel above (block margins collapse, so no double gaps). */
+  margin-top: calc(var(--s) * 4);
+}
+.panel > h2:first-child {
+  margin-bottom: calc(var(--s) * 1.5);
+}
+
+/* Edition page: cover beside the title, details and actions. */
+.edition-head {
+  display: flex;
+  gap: calc(var(--s) * 3);
+  align-items: flex-start;
+}
+.edition-head h2 {
+  margin-bottom: var(--s);
+}
+.edition-head .muted {
+  margin: 0 0 calc(var(--s) * 2);
+}
+.page-head h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.page-head h1 a:hover {
+  text-decoration: underline;
 }
 .settings-panel {
   max-width: 520px;
@@ -561,7 +586,7 @@ label {
 }
 
 /* Series headings in lists, and the shelf heading on an edition. */
-section > h2,
+.series-group > h2,
 .section-title {
   margin: calc(var(--s) * 4) 0 calc(var(--s) * 1.5);
 }
@@ -875,6 +900,7 @@ button.danger:hover:not(:disabled) {
   .admin-users-table td:last-child {
     border-bottom: none;
   }
+  /* Your own row has no actions: no empty "Azioni" label. */
   .admin-users-table select,
   .admin-users-table button {
     width: 100%;
@@ -883,6 +909,10 @@ button.danger:hover:not(:disabled) {
   .admin-user-action {
     display: block !important;
     padding-top: var(--s) !important;
+  }
+  /* Your own row has no actions: no empty "Azioni" label (after the rule above). */
+  .admin-users-table td.admin-user-action:empty {
+    display: none !important;
   }
 }
 

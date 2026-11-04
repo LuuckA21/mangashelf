@@ -167,7 +167,7 @@ export default function CollectionPage() {
         <p className="empty">{t('collection.empty')}</p>
       )}
       {groups.map((g) => (
-        <section key={g.id}>
+        <section key={g.id} className="series-group">
           <h2>{g.title}</h2>
           <ul className="edition-list">
             {g.entries.map((e) => (

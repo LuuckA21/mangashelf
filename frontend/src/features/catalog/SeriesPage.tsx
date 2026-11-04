@@ -44,6 +44,7 @@ function EditionRow({ e }: { e: EditionResponse }) {
         <span className="muted">{t('series.inCollection')}</span>
       ) : (
         <button
+          className="quiet"
           onClick={() => add.mutate()}
           disabled={add.isPending}
           aria-label={`${t('edition.add')}: ${e.name}`}
