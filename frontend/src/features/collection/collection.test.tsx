@@ -9,7 +9,8 @@ import { axe } from '../../test/axe'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
-let replies: Record<string, Reply> = {}
+// A function reply is evaluated per request, so a test can change or delay the answer.
+let replies: Record<string, Reply | (() => Reply | Promise<Reply>)> = {}
 
 const entry = (over: Partial<CollectionEntry> = {}): CollectionEntry => ({
   editionId: 'e1',
@@ -53,9 +54,11 @@ beforeEach(() => {
     ],
   }
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
-    const [status, body] = replies[
-      `${init.method} ${url.replace('/api/v1', '')}`
-    ] ?? [404, { detail: `${init.method} ${url}` }]
+    const r = replies[`${init.method} ${url.replace('/api/v1', '')}`] ?? [
+      404,
+      { detail: `${init.method} ${url}` },
+    ]
+    const [status, body] = typeof r === 'function' ? await r() : r
     return new Response(body === undefined ? null : JSON.stringify(body), {
       status,
     })
@@ -154,6 +157,12 @@ describe('collection page', () => {
     )
   })
 
+  it('invalidPageParamFallsBackToFirstPage', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    renderApp('/?page=2.5')
+    expect(await screen.findByText('Deluxe')).toBeInTheDocument()
+  })
+
   it('pagesWithPrevNext', async () => {
     replies[listUrl('')] = [
       200,
@@ -193,45 +202,134 @@ describe('edition page', () => {
     expect((await axe(container)).violations).toEqual([])
   })
 
+  const tile = (n: number, owned: boolean) =>
+    screen.findByRole('button', {
+      name: `Volume ${n}, ${owned ? 'posseduto' : 'mancante'}`,
+    })
+  const never = () => new Promise<Reply>(() => {})
+  const gate = () => {
+    let open!: () => void
+    const opened = new Promise<void>((r) => (open = r))
+    return { open, opened }
+  }
+
   it('failedSaveRollsBackTileAndShowsError', async () => {
+    const put = gate()
     replies['GET /editions/e1'] = [200, edition()]
-    replies['GET /collection/editions/e1'] = [200, entry({ owned: [1] })]
-    replies['PUT /collection/editions/e1/volumes'] = [500, { detail: 'boom' }]
+    replies['PUT /collection/editions/e1/volumes'] = async () => {
+      await put.opened
+      return [500, { detail: 'boom' }]
+    }
+    let gets = 0
+    // After the first load the refetch never answers, so only the rollback can restore the tile.
+    replies['GET /collection/editions/e1'] = () =>
+      gets++ === 0 ? [200, entry({ owned: [1] })] : never()
     renderApp('/editions/e1')
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Volume 3, mancante' }),
-    )
+    await userEvent.click(await tile(3, false))
+    expect(await tile(3, true)).toHaveAttribute('aria-pressed', 'true')
+    put.open()
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveClass('error')
+    expect(await tile(3, false)).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('rapidClicksFirstFailsSecondSucceedsEndsOnSecondResponse', async () => {
+    const puts: string[] = []
+    const first = gate()
+    let server = [1]
+    replies['GET /editions/e1'] = [200, edition()]
+    replies['GET /collection/editions/e1'] = () => [
+      200,
+      entry({ owned: server }),
+    ]
+    replies['PUT /collection/editions/e1/volumes'] = async () => {
+      if (puts.push('put') === 1) {
+        await first.opened
+        return [500, { detail: 'boom' }]
+      }
+      server = [1, 4]
+      return [200, entry({ owned: server })]
+    }
+    renderApp('/editions/e1')
+    await userEvent.click(await tile(3, false))
+    await userEvent.click(await tile(4, false))
+    first.open()
+    expect(await screen.findByRole('alert')).toHaveClass('error')
+    await vi.waitFor(() => expect(puts).toHaveLength(2))
+    await tile(4, true)
+    await vi.waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Volume 3, mancante' }),
+      ).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    const bodies = fetchMock.mock.calls
+      .filter((c) => c[1].method === 'PUT')
+      .map((c) => c[1].body)
+    expect(bodies).toEqual(['{"owned":[1,3]}', '{"owned":[1,3,4]}'])
+  })
+
+  it('rapidClicksBothFailRestoreServerState', async () => {
+    replies['GET /editions/e1'] = [200, edition()]
+    let gets = 0
+    replies['GET /collection/editions/e1'] = () =>
+      gets++ === 0 ? [200, entry({ owned: [1] })] : never()
+    replies['PUT /collection/editions/e1/volumes'] = [500, { detail: 'boom' }]
+    renderApp('/editions/e1')
+    await userEvent.click(await tile(3, false))
+    await userEvent.click(await tile(4, false))
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter((c) => c[1].method === 'PUT'),
+      ).toHaveLength(2),
+    )
+    await vi.waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Volume 3, mancante' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Volume 4, mancante' }),
+      ).toBeInTheDocument()
+    })
     expect(
-      screen.getByRole('button', { name: 'Volume 3, mancante' }),
-    ).toHaveAttribute('aria-pressed', 'false')
+      screen.getByRole('button', { name: 'Volume 1, posseduto' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveClass('error')
   })
 
   it('firstToggleOnEditionOutsideCollectionSavesFullSet', async () => {
-    replies['GET /editions/e1'] = [200, edition({ inMyCollection: false })]
-    replies['PUT /collection/editions/e1/volumes'] = [
+    let saved = false
+    replies['GET /editions/e1'] = () => [
       200,
-      entry({ owned: [2] }),
+      edition({ inMyCollection: saved }),
     ]
+    replies['PUT /collection/editions/e1/volumes'] = () => {
+      saved = true
+      return [200, entry({ owned: [2] })]
+    }
+    replies['GET /collection/editions/e1'] = [200, entry({ owned: [2] })]
     renderApp('/editions/e1')
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Volume 2, mancante' }),
-    )
+    await userEvent.click(await tile(2, false))
+    expect(await tile(2, true)).toHaveAttribute('aria-pressed', 'true')
     expect(
-      await screen.findByRole('button', { name: 'Volume 2, posseduto' }),
-    ).toHaveAttribute('aria-pressed', 'true')
+      await screen.findByRole('button', { name: 'Togli dalla collezione' }),
+    ).toBeInTheDocument()
     const put = fetchMock.mock.calls.find((c) => c[1].method === 'PUT')!
     expect(put[1].body).toBe('{"owned":[2]}')
-    expect(fetchMock.mock.calls.map((c) => c[0])).not.toContain(
-      '/api/v1/collection/editions/e1',
-    )
   })
 
-  it('removeAsksConfirmationThenDeletes', async () => {
-    replies['GET /editions/e1'] = [200, edition()]
-    replies['GET /collection/editions/e1'] = [200, entry({ owned: [1] })]
-    replies['DELETE /collection/editions/e1'] = [204]
+  it('removeAsksConfirmationThenDeletesAndShowsEmptyShelf', async () => {
+    let removed = false
+    replies['GET /editions/e1'] = () => [
+      200,
+      edition({ inMyCollection: !removed }),
+    ]
+    replies['GET /collection/editions/e1'] = () =>
+      removed ? [404, { detail: 'no' }] : [200, entry({ owned: [1] })]
+    replies['DELETE /collection/editions/e1'] = () => {
+      removed = true
+      return [204]
+    }
     renderApp('/editions/e1')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Togli dalla collezione' }),
@@ -239,13 +337,13 @@ describe('edition page', () => {
     expect(fetchMock.mock.calls.some((c) => c[1].method === 'DELETE')).toBe(
       false,
     )
-    replies['GET /editions/e1'] = [200, edition({ inMyCollection: false })]
     await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
-    await vi.waitFor(() =>
-      expect(fetchMock.mock.calls.some((c) => c[1].method === 'DELETE')).toBe(
-        true,
-      ),
-    )
-    await screen.findByRole('button', { name: 'Aggiungi alla mia collezione' })
+    expect(
+      await screen.findByRole('button', {
+        name: 'Aggiungi alla mia collezione',
+      }),
+    ).toBeInTheDocument()
+    expect(await tile(1, false)).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

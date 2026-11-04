@@ -43,4 +43,11 @@ describe('Shelf', () => {
     )
     expect((await axe(container)).violations).toEqual([])
   })
+
+  it('zeroVolumesDoesNotProduceNaNWidth', () => {
+    const { container } = render(
+      <Shelf volumeCount={0} owned={[]} onChange={vi.fn()} />,
+    )
+    expect(container.querySelector('.progress i')).toHaveStyle({ width: '0%' })
+  })
 })

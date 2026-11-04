@@ -21,7 +21,7 @@ export default function EditionPage() {
 
   if (isPending || entry.isLoading)
     return <p className="muted">{t('common.loading')}</p>
-  if (isError || entry.isError)
+  if (isError || (entry.isError && edition?.inMyCollection))
     return (
       <div className="error" role="alert">
         {t('error.generic')}{' '}
@@ -95,7 +95,7 @@ export default function EditionPage() {
         onChange={(next) => setOwned.mutate(next)}
         busy={setOwned.isPending}
       />
-      {setOwned.isError && (
+      {setOwned.failed && (
         <p className="error" role="alert">
           {t('shelf.saveFailed')}
         </p>

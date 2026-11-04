@@ -45,8 +45,15 @@ export default function CollectionPage() {
   const type = TYPES.find((x) => x === params.get('type'))
   const status = STATUSES.find((x) => x === params.get('status'))
   const incomplete = params.get('incomplete') === 'true'
-  const page = Math.max(1, Number(params.get('page')) || 1)
+  const rawPage = Number(params.get('page'))
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1
   const [search, setSearch] = useState(q)
+  const [syncedQ, setSyncedQ] = useState(q)
+  // Back/forward changes the URL, and the box follows it.
+  if (q !== syncedQ) {
+    setSyncedQ(q)
+    setSearch(q)
+  }
 
   const { data, isPending, isError, refetch } = useCollection({
     q,

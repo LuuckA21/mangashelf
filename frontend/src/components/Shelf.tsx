@@ -42,7 +42,11 @@ export default function Shelf({ volumeCount, owned, onChange, busy }: Props) {
         aria-valuemax={volumeCount}
         aria-valuenow={owned.length}
       >
-        <i style={{ width: `${(owned.length / volumeCount) * 100}%` }} />
+        <i
+          style={{
+            width: `${volumeCount ? (owned.length / volumeCount) * 100 : 0}%`,
+          }}
+        />
       </div>
       <div className="shelf">
         {numbers.map((n) => {

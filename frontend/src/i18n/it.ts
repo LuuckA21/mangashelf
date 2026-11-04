@@ -12,7 +12,6 @@ export const it = {
   'shelf.volumeMissing': 'Volume {n}, mancante',
   'shelf.markAll': 'Segna tutti',
   'shelf.markNone': 'Nessuno',
-  'shelf.legend': 'Legenda',
   'shelf.owned': 'Posseduto',
   'shelf.missing': 'Mancante',
   'shelf.missingSummary': 'Mancano: {list}',

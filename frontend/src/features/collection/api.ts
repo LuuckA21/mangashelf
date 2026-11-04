@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import {
   useMutation,
   useQuery,
@@ -65,13 +66,35 @@ function refresh(client: QueryClient, id: string) {
   ])
 }
 
-/** Optimistic: the cache shows the new set at once and is restored if the save fails. */
+/**
+ * Optimistic: the cache shows the new set at once. Saves for one edition run one at a
+ * time (so they cannot arrive out of order); a failed save puts the last set the server
+ * confirmed back, and `failed` stays true until a later burst of saves ends without error.
+ */
 export function useSetOwned(editionId: string) {
   const client = useQueryClient()
-  const mutationKey = ['set-owned', editionId]
   const entryKey = ['collection-entry', editionId]
-  return useMutation({
-    mutationKey,
+  const confirmed = useRef<number[]>([])
+  const inflight = useRef(0)
+  const burstFailed = useRef(false)
+  const [failed, setFailed] = useState(false)
+
+  function show(owned: number[]) {
+    client.setQueriesData<Page<CollectionEntry>>(
+      { queryKey: ['collection'] },
+      (page) =>
+        page && {
+          ...page,
+          content: page.content.map((e) =>
+            e.editionId === editionId ? { ...e, owned } : e,
+          ),
+        },
+    )
+    client.setQueryData<Owned>(entryKey, (old) => ({ ...old, owned }))
+  }
+
+  const mutation = useMutation({
+    scope: { id: `owned-${editionId}` },
     mutationFn: (owned: number[]) =>
       api<CollectionEntry>(`/collection/editions/${editionId}/volumes`, {
         method: 'PUT',
@@ -80,35 +103,30 @@ export function useSetOwned(editionId: string) {
     onMutate: async (owned) => {
       await client.cancelQueries({ queryKey: ['collection'] })
       await client.cancelQueries({ queryKey: entryKey })
-      const lists = client.getQueriesData<Page<CollectionEntry>>({
-        queryKey: ['collection'],
-      })
-      const entry = client.getQueryData<Owned>(entryKey)
-      for (const [key] of lists)
-        client.setQueryData<Page<CollectionEntry>>(
-          key,
-          (page) =>
-            page && {
-              ...page,
-              content: page.content.map((e) =>
-                e.editionId === editionId ? { ...e, owned } : e,
-              ),
-            },
-        )
-      client.setQueryData<Owned>(entryKey, (old) => ({ ...old, owned }))
-      return { lists, entry }
+      if (inflight.current++ === 0) {
+        confirmed.current = client.getQueryData<Owned>(entryKey)?.owned ?? []
+        burstFailed.current = false
+      }
+      show(owned)
     },
-    onError: (_e, _owned, ctx) => {
-      if (!ctx) return
-      for (const [key, data] of ctx.lists) client.setQueryData(key, data)
-      client.setQueryData<Owned>(entryKey, ctx.entry ?? { owned: [] })
+    onSuccess: (saved) => {
+      confirmed.current = saved.owned
+      if (inflight.current === 1) show(saved.owned)
     },
-    // With several saves in flight, refetching early would overwrite the newer optimistic set.
-    onSettled: () =>
-      client.isMutating({ mutationKey }) === 1
-        ? refresh(client, editionId)
-        : undefined,
+    onError: () => {
+      burstFailed.current = true
+      setFailed(true)
+      show(confirmed.current)
+    },
+    // Refetching while saves are queued would overwrite the newer optimistic set.
+    onSettled: () => {
+      if (--inflight.current > 0) return
+      // An alert stays up until a later burst of saves ends cleanly.
+      setFailed(burstFailed.current)
+      return refresh(client, editionId)
+    },
   })
+  return { ...mutation, failed }
 }
 
 export function useAddToCollection(editionId: string) {
@@ -127,10 +145,18 @@ export function useRemoveFromCollection(editionId: string) {
   return useMutation({
     mutationFn: () =>
       api<void>(`/collection/editions/${editionId}`, { method: 'DELETE' }),
-    onSuccess: () =>
-      client.setQueryData<Owned>(['collection-entry', editionId], {
-        owned: [],
-      }),
-    onSettled: () => refresh(client, editionId),
+    onSuccess: () => {
+      // The entry is gone server side: refetching it would only answer 404.
+      client.setQueryData<EditionResponse>(
+        ['edition', editionId],
+        (e) => e && { ...e, inMyCollection: false },
+      )
+      client.removeQueries({ queryKey: ['collection-entry', editionId] })
+    },
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: ['collection'] }),
+        client.invalidateQueries({ queryKey: ['edition', editionId] }),
+      ]),
   })
 }

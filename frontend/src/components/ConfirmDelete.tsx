@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { t } from '../i18n/t'
 
 type Props = {
@@ -13,20 +13,34 @@ type Props = {
 export default function ConfirmDelete({ what, onConfirm, label }: Props) {
   const [armed, setArmed] = useState(false)
   const [busy, setBusy] = useState(false)
+  const questionId = useId()
+  const trigger = useRef<HTMLButtonElement>(null)
+  const confirm = useRef<HTMLButtonElement>(null)
+  const cancelled = useRef(false)
+
+  // Focus follows the swap: into the question, and back to the trigger on cancel.
+  useEffect(() => {
+    if (armed) confirm.current?.focus()
+    else if (cancelled.current) {
+      cancelled.current = false
+      trigger.current?.focus()
+    }
+  }, [armed])
 
   if (!armed)
     return (
-      <button className="danger" onClick={() => setArmed(true)}>
+      <button ref={trigger} className="danger" onClick={() => setArmed(true)}>
         {label ?? t('common.delete')}
       </button>
     )
 
   return (
-    <span className="confirm">
-      <span className="confirm-text">
+    <span className="confirm" role="alertdialog" aria-labelledby={questionId}>
+      <span className="confirm-text" id={questionId}>
         {t('delete.question')} {what}?
       </span>
       <button
+        ref={confirm}
         onClick={async () => {
           setBusy(true)
           try {
@@ -40,7 +54,14 @@ export default function ConfirmDelete({ what, onConfirm, label }: Props) {
       >
         {busy ? t('common.deleting') : t('common.yesDelete')}
       </button>
-      <button className="quiet" onClick={() => setArmed(false)} disabled={busy}>
+      <button
+        className="quiet"
+        onClick={() => {
+          cancelled.current = true
+          setArmed(false)
+        }}
+        disabled={busy}
+      >
         {t('common.cancel')}
       </button>
     </span>
