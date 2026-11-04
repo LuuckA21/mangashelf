@@ -97,8 +97,74 @@ export const it = {
   'series.title': 'Serie',
   'edition.title': 'Edizione',
   'users.title': 'Utenti',
+  'users.createTitle': 'Nuovo utente',
+  'users.temporaryPassword': 'Password temporanea',
+  'users.temporaryPasswordHelp':
+    'Da 12 a 64 caratteri. L’utente dovrà cambiarla al primo accesso.',
+  'users.role': 'Ruolo',
+  'users.create': 'Crea utente',
+  'users.list': 'Elenco utenti',
+  'users.colUsername': 'Nome utente',
+  'users.colRole': 'Ruolo',
+  'users.colCreated': 'Creato il',
+  'users.colActions': 'Azioni',
+  'users.you': 'Tu',
+  'users.roleOf': 'Ruolo di {username}',
+  'users.reset': 'Reimposta password',
+  'users.resetFor': 'Password temporanea per {username}',
+  'users.resetSubmit': 'Reimposta',
+  'users.resetDone': 'Password reimpostata per {username}',
+  'users.deleteWhat': 'l’utente {username} e la sua collezione',
+  'role.ADMIN': 'Amministratore',
+  'role.USER': 'Utente',
   'account.title': 'Account',
+  'account.passwordTitle': 'Cambia la password',
+  'account.passwordHelp':
+    'Dopo il cambio le sessioni vengono chiuse e dovrai accedere di nuovo.',
+  'account.exportTitle': 'Esporta i tuoi dati',
+  'account.exportHelp':
+    'Scarica un file JSON con il tuo profilo e la tua collezione.',
+  'account.export': 'Esporta i miei dati',
+  'account.deleteTitle': 'Elimina l’account',
+  'account.deleteHelp':
+    'Vengono eliminati il tuo account e la tua collezione. L’operazione non si può annullare. Restano solo nei backup cifrati, fino alla loro scadenza (al massimo 12 mesi).',
+  'account.deletePassword': 'Password per confermare',
+  'account.delete': 'Elimina account',
+  'account.deleteWhat': 'il tuo account e la tua collezione',
   'privacy.title': 'Privacy',
+  'privacy.updated': 'Ultimo aggiornamento: 4 novembre 2026',
+  'privacy.controllerTitle': 'Chi tratta i tuoi dati',
+  'privacy.controller': '<titolare e contatto privacy da completare>',
+  'privacy.dataTitle': 'Quali dati, perché e per quanto tempo',
+  'privacy.data.account':
+    'Nome utente e hash della password (mai la password in chiaro), per creare il tuo account e farti accedere. Li conserviamo fino all’eliminazione dell’account. Base giuridica: contratto.',
+  'privacy.data.collection':
+    'La tua collezione (serie, edizioni e volumi posseduti), per fornire il servizio. La conserviamo fino all’eliminazione dell’account. Base giuridica: contratto.',
+  'privacy.data.session':
+    'Dati di sessione, per tenerti collegato. Scadono dopo 14 giorni di inattività o quando esci.',
+  'privacy.data.logs':
+    'Indirizzo IP e data degli accessi nei log del server proxy, per la sicurezza. Li conserviamo da 14 a 30 giorni. Base giuridica: interesse legittimo (sicurezza).',
+  'privacy.data.backups':
+    'Tutti i dati sopra sono inclusi nei backup cifrati, conservati al massimo 12 mesi. Base giuridica: interesse legittimo (sicurezza dei dati).',
+  'privacy.processorsTitle': 'Fornitori che trattano i dati',
+  'privacy.processors.hetzner':
+    'Hetzner Online GmbH: hosting e server (Germania o Finlandia).',
+  'privacy.processors.infomaniak':
+    'Infomaniak Network SA (Swiss Backup): backup cifrati (Svizzera).',
+  'privacy.processors.github':
+    'GitHub: solo il codice sorgente, nessun dato personale (USA).',
+  'privacy.rightsTitle': 'I tuoi diritti',
+  'privacy.rights.access':
+    'Accesso e portabilità: dalla pagina Account puoi scaricare i tuoi dati in formato JSON.',
+  'privacy.rights.erasure':
+    'Cancellazione: dalla pagina Account puoi eliminare il tuo account e i tuoi dati.',
+  'privacy.rights.others':
+    'Rettifica, limitazione e opposizione: scrivi al contatto indicato sopra. Rispondiamo entro 30 giorni.',
+  'privacy.rights.complaint':
+    'Puoi presentare reclamo all’IFPDT (Svizzera) o all’autorità per la protezione dei dati del tuo paese (UE).',
+  'privacy.cookiesTitle': 'Cookie',
+  'privacy.cookies.body':
+    'Usiamo solo cookie tecnici: quello di sessione e quello CSRF. Non usiamo cookie di tracciamento, quindi non c’è nessun banner.',
   'notFound.title': 'Pagina non trovata',
   'notFound.back': 'Torna alla collezione',
   'footer.privacy': 'Privacy',

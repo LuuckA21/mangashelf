@@ -64,3 +64,10 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   return res.status === 204 ? (undefined as T) : res.json()
 }
+
+/** The message the server attached to one field of a 400, if any. */
+export function fieldMessage(error: unknown, field: string) {
+  return error instanceof ApiError
+    ? error.errors.find((e) => e.field === field)?.message
+    : undefined
+}
