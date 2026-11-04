@@ -27,6 +27,8 @@ cd frontend && npm ci && npm run dev       # -> http://localhost:5173
 Dev users (profile `dev` only, from `backend/src/main/resources/db/dev-data/`): `admin` / `admin-dev-password`
 (admin) and `amico` / `amico-dev-password`. The admin's collection has One Piece "Edizione blu" with volumes 1-110
 of 114 and "Volume 1 - Oro" with none. Open the app at http://localhost:5173 (Vite proxies `/api` to `:8080`).
+If your dev DB already existed before the seed (e.g. an `admin` created from `ADMIN_*`), reset it with
+`docker compose down -v` in `backend/` and start the backend again.
 
 ## Scripts
 
@@ -63,6 +65,8 @@ Nginx Proxy Manager: rate-limit login. Zone `app_auth` is in `http_top.conf` of 
 host's *Advanced* tab:
 
 ```nginx
+client_max_body_size 20m;   # cover uploads (nginx default is 1 MB)
+
 location /api/v1/auth/login {
     limit_req zone=app_auth burst=10 nodelay;
     limit_req_status 429;
@@ -79,7 +83,7 @@ migrations are backwards-compatible, so code rolls back without touching data.
 
 - RPO: 24h · RTO: <fill in>
 - Backups: PostgreSQL and covers (`/app/uploads`) with `backup.sh`, restic / Swiss Backup, daily
-- Restore runbook: `docs/runbooks/restore.md`
+- Restore runbook: still to be written (`docs/runbooks/restore.md`); until then follow the restore steps in project-standards 01-backup.md
 - Last restore test: YYYY-MM-DD
 
 ## Standards
