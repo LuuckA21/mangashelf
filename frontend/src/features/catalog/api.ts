@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   useMutation,
   useQuery,
@@ -64,12 +65,28 @@ export function useRenameSeries(id: string) {
   })
 }
 
+/**
+ * Drops a deleted record's cache entry once its page has unmounted. Removing it earlier
+ * would make the still-mounted page refetch it and flash a 404.
+ */
+function useDropOnUnmount() {
+  const client = useQueryClient()
+  const keys = useRef<unknown[][]>([])
+  useEffect(
+    () => () =>
+      keys.current.forEach((queryKey) => client.removeQueries({ queryKey })),
+    [client],
+  )
+  return (key: unknown[]) => keys.current.push(key)
+}
+
 export function useDeleteSeries(id: string) {
   const client = useQueryClient()
+  const drop = useDropOnUnmount()
   return useMutation({
     mutationFn: () => api<void>(`/series/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      client.removeQueries({ queryKey: ['series-detail', id] })
+      drop(['series-detail', id])
       return client.invalidateQueries({ queryKey: ['series'] })
     },
   })
@@ -131,12 +148,12 @@ export function useUpdateEdition(edition: EditionResponse) {
 
 export function useDeleteEdition(edition: EditionResponse) {
   const client = useQueryClient()
+  const drop = useDropOnUnmount()
   return useMutation({
     mutationFn: () =>
       api<void>(`/editions/${edition.id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      // Refetching a deleted edition would only answer 404.
-      client.removeQueries({ queryKey: ['edition', edition.id] })
+      drop(['edition', edition.id])
       return refreshEdition(client, edition.seriesId)
     },
   })

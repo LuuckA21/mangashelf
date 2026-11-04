@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import ConfirmDelete from '../../components/ConfirmDelete'
@@ -19,7 +18,6 @@ import SeriesForm from './SeriesForm'
 
 function EditionRow({ e }: { e: EditionResponse }) {
   const add = useAddToCollection(e.id)
-  const client = useQueryClient()
   return (
     <li className="edition-row">
       <div className="grow">
@@ -27,8 +25,14 @@ function EditionRow({ e }: { e: EditionResponse }) {
           {e.name}
         </Link>
         <div className="muted">
-          {e.publisher} · {t(`type.${e.type}`)} · {t(`status.${e.status}`)} ·{' '}
-          {t('edition.volumes')} {e.volumeCount}
+          {[
+            e.publisher,
+            t(`type.${e.type}`),
+            t(`status.${e.status}`),
+            `${t('edition.volumes')} ${e.volumeCount}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </div>
         {add.isError && (
           <p className="error" role="alert">
@@ -40,12 +44,7 @@ function EditionRow({ e }: { e: EditionResponse }) {
         <span className="muted">{t('series.inCollection')}</span>
       ) : (
         <button
-          onClick={() =>
-            add.mutate(undefined, {
-              onSuccess: () =>
-                client.invalidateQueries({ queryKey: ['series-detail'] }),
-            })
-          }
+          onClick={() => add.mutate()}
           disabled={add.isPending}
           aria-label={`${t('edition.add')}: ${e.name}`}
         >

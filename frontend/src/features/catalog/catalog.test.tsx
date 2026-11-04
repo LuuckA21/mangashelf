@@ -345,7 +345,15 @@ describe('edition page admin actions', () => {
   it('deleteEditionNamesCollectionCount', async () => {
     login('ADMIN')
     replies['GET /editions/e1'] = [200, edition({ collectionCount: 3 })]
-    replies['DELETE /editions/e1'] = [204]
+    let deleted = false
+    replies['GET /editions/e1'] = () =>
+      deleted
+        ? [404, { detail: 'Edizione non trovata' }]
+        : [200, edition({ collectionCount: 3 })]
+    replies['DELETE /editions/e1'] = () => {
+      deleted = true
+      return [204]
+    }
     replies['GET /series/s1'] = [200, detail([])]
     renderApp('/editions/e1')
     await userEvent.click(
@@ -359,6 +367,8 @@ describe('edition page admin actions', () => {
       await screen.findByRole('heading', { level: 1, name: 'Berserk' }),
     ).toBeInTheDocument()
     expect(calls('DELETE', '/editions/e1')).toHaveLength(1)
+    expect(calls('GET', '/editions/e1')).toHaveLength(1)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('adminEditSendsVersion', async () => {
@@ -397,7 +407,7 @@ describe('edition page admin actions', () => {
     current = edition({ name: 'Cambiata', version: 4 })
     await userEvent.click(screen.getByRole('button', { name: 'Salva' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Edizione modificata da altri',
+      'Edizione modificata da altri Il modulo è stato ricaricato con i dati attuali.',
     )
     expect(await screen.findByLabelText('Nome edizione')).toHaveValue(
       'Cambiata',
@@ -424,5 +434,111 @@ describe('edition page admin actions', () => {
     await vi.waitFor(() =>
       expect(calls('DELETE', '/editions/e1/cover')).toHaveLength(1),
     )
+  })
+})
+
+describe('review fixes', () => {
+  const png = (name: string) => new File(['x'], name, { type: 'image/png' })
+
+  it('rejectedCoverKeepsPreviousAcceptedFile', async () => {
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [201, edition({ id: 'e9' })]
+    replies['PUT /editions/e9/cover'] = [204]
+    replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    const a = png('a.png')
+    await userEvent.upload(screen.getByLabelText('Copertina'), a)
+    const big = png('big.png')
+    Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 })
+    await userEvent.upload(screen.getByLabelText('Copertina'), big)
+    expect(screen.getByRole('alert')).toHaveTextContent('supera i 5 MB')
+    expect(screen.getByRole('img', { name: 'Anteprima' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+    await vi.waitFor(() =>
+      expect(calls('PUT', '/editions/e9/cover')).toHaveLength(1),
+    )
+    const sent = calls('PUT', '/editions/e9/cover')[0][1].body as FormData
+    expect(sent.get('file')).toBe(a)
+  })
+
+  it('failedCoverUploadDropsPreview', async () => {
+    replies['GET /editions/e1'] = [200, edition({ canEditCover: true })]
+    replies['PUT /editions/e1/cover'] = [400, { detail: 'Immagine non valida' }]
+    renderApp('/editions/e1')
+    await userEvent.upload(
+      await screen.findByLabelText('Copertina'),
+      png('a.png'),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Immagine non valida',
+    )
+    expect(screen.queryByRole('img', { name: 'Anteprima' })).toBeNull()
+  })
+
+  it('deleteSeriesSuccessNeverRefetchesIt', async () => {
+    login('ADMIN')
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['DELETE /series/s1'] = [204]
+    replies['GET /series?page=0&size=20'] = [200, pageOf([])]
+    renderApp('/series/s1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Elimina serie' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Catalogo' }),
+    ).toBeInTheDocument()
+    expect(calls('GET', '/series/s1')).toHaveLength(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('seriesTitleFieldErrorIsLinkedAndFocused', async () => {
+    replies['GET /series?page=0&size=20'] = [200, pageOf([])]
+    replies['POST /series'] = [
+      400,
+      {
+        detail: 'Invalid',
+        errors: [{ field: 'title', message: 'Titolo vuoto' }],
+      },
+    ]
+    renderApp('/catalog')
+    await userEvent.type(await screen.findByLabelText('Titolo'), '   ')
+    await userEvent.click(screen.getByRole('button', { name: 'Crea serie' }))
+    const input = await screen.findByLabelText('Titolo')
+    await vi.waitFor(() => expect(input).toHaveFocus())
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription('Titolo vuoto')
+  })
+
+  it('unmatchedFieldErrorIsShownInAlert', async () => {
+    login('ADMIN')
+    replies['GET /editions/e1'] = [200, edition()]
+    replies['PUT /editions/e1'] = [
+      400,
+      {
+        detail: 'Invalid',
+        errors: [{ field: 'version', message: 'Versione mancante' }],
+      },
+    ]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Versione mancante',
+    )
+  })
+
+  it('nullPublisherHasNoLeadingSeparator', async () => {
+    replies['GET /series/s1'] = [
+      200,
+      detail([edition({ publisher: null as unknown as string })]),
+    ]
+    renderApp('/series/s1')
+    expect(
+      await screen.findByText('Regolare · In corso · Volumi 5'),
+    ).toBeInTheDocument()
   })
 })

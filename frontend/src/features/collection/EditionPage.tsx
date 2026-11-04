@@ -59,6 +59,7 @@ function AdminActions({ edition }: { edition: EditionResponse }) {
           submitLabel={t('common.save')}
           pending={update.isPending}
           error={update.error}
+          conflictNote={t('edition.reloaded')}
           onCancel={() => setEditing(false)}
           onSubmit={(values) =>
             update.mutate(values, { onSuccess: () => setEditing(false) })
@@ -73,7 +74,12 @@ function CoverActions({ edition }: { edition: EditionResponse }) {
   const cover = useSetCover(edition)
   return (
     <div>
-      <CoverInput onSelect={(file) => cover.mutate(file)} />
+      {/* Remounting after a failure drops the preview, so the current cover shows. */}
+      <CoverInput
+        key={cover.failureCount}
+        disabled={cover.isPending}
+        onSelect={(file) => cover.mutate(file)}
+      />
       {edition.hasCover && (
         <ConfirmDelete
           label={t('cover.remove')}
@@ -151,10 +157,14 @@ export default function EditionPage() {
         <div>
           <h2>{edition.name}</h2>
           <p className="muted">
-            {edition.publisher} · {t(`type.${edition.type}`)} ·{' '}
-            {t(`status.${edition.status}`)}
-            {' · '}
-            {t('edition.volumes')} {edition.volumeCount}
+            {[
+              edition.publisher,
+              t(`type.${edition.type}`),
+              t(`status.${edition.status}`),
+              `${t('edition.volumes')} ${edition.volumeCount}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
           <div className="inline-actions">
             {edition.inMyCollection ? (

@@ -29,6 +29,7 @@ export default function EditionForm({
   error,
   onSubmit,
   onCancel,
+  conflictNote,
   children,
 }: {
   initial?: Partial<EditionFormValues>
@@ -37,6 +38,8 @@ export default function EditionForm({
   error: unknown
   onSubmit: (values: EditionFormValues) => void
   onCancel?: () => void
+  /** Shown after the server's message when it answers 409 (stale data). */
+  conflictNote?: string
   /** Extra controls placed before the submit button. */
   children?: ReactNode
 }) {
@@ -53,9 +56,15 @@ export default function EditionForm({
 
   const fieldErrors = error instanceof ApiError ? error.errors : []
   const message = (f: string) => fieldErrors.find((e) => e.field === f)?.message
+  // Errors for fields this form does not show (e.g. `version`) must not vanish.
+  const unmatched = fieldErrors.filter(
+    (e) => !(FIELDS as readonly string[]).includes(e.field),
+  )
   const general =
     error instanceof ApiError
-      ? fieldErrors.length === 0 && error.detail
+      ? fieldErrors.length === 0
+        ? error.detail
+        : unmatched.map((e) => e.message).join(' ')
       : error !== null && error !== undefined && t('error.generic')
 
   // Focus the first invalid field once its error is rendered, so it is read out.
@@ -105,6 +114,9 @@ export default function EditionForm({
       {general && (
         <p className="error" role="alert">
           {general}
+          {error instanceof ApiError &&
+            error.status === 409 &&
+            conflictNote && <> {conflictNote}</>}
         </p>
       )}
       {field(

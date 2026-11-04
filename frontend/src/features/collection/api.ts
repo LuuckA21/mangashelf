@@ -136,7 +136,11 @@ export function useAddToCollection(editionId: string) {
       api<CollectionEntry>(`/collection/editions/${editionId}`, {
         method: 'PUT',
       }),
-    onSettled: () => refresh(client, editionId),
+    onSettled: () =>
+      Promise.all([
+        refresh(client, editionId),
+        client.invalidateQueries({ queryKey: ['series-detail'] }),
+      ]),
   })
 }
 

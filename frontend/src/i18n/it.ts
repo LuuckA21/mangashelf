@@ -89,6 +89,8 @@ export const it = {
   'cover.help': 'JPEG o PNG, massimo 5 MB.',
   'cover.preview': 'Anteprima',
   'cover.tooBig': 'L’immagine supera i 5 MB',
+  'cover.badType': 'Sono ammessi solo JPEG e PNG',
+  'edition.reloaded': 'Il modulo è stato ricaricato con i dati attuali.',
   'cover.remove': 'Rimuovi copertina',
   'cover.removeWhat': 'la copertina',
   'common.save': 'Salva',

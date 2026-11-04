@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 import { ApiError } from '../../api/client'
 import { t } from '../../i18n/t'
 
@@ -31,11 +31,27 @@ export default function SeriesForm({
     }
   }
 
+  const fieldErrors = error instanceof ApiError ? error.errors : []
+  const titleError = fieldErrors.find((e) => e.field === 'title')?.message
+  const others = fieldErrors.filter((e) => e.field !== 'title')
+  const general =
+    error === undefined
+      ? undefined
+      : error instanceof ApiError
+        ? fieldErrors.length === 0
+          ? error.detail
+          : others.map((e) => e.message).join(' ')
+        : t('error.generic')
+
+  useEffect(() => {
+    if (titleError) document.getElementById('series-title')?.focus()
+  }, [titleError, error])
+
   return (
     <form onSubmit={submit}>
-      {error !== undefined && (
+      {general && (
         <p className="error" role="alert">
-          {error instanceof ApiError ? error.detail : t('error.generic')}
+          {general}
         </p>
       )}
       <div className="field">
@@ -46,7 +62,14 @@ export default function SeriesForm({
           maxLength={200}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          aria-invalid={titleError ? true : undefined}
+          aria-describedby={titleError ? 'series-title-error' : undefined}
         />
+        {titleError && (
+          <p id="series-title-error" className="field-help">
+            {titleError}
+          </p>
+        )}
       </div>
       <div className="inline-actions">
         <button type="submit" disabled={busy}>
