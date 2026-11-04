@@ -12,7 +12,7 @@ Last reviewed: 2026-11-04
 | Purpose | Data categories | Data subjects | Legal basis (GDPR art. 6) | Retention |
 |---------|-----------------|---------------|---------------------------|-----------|
 | User accounts and login | Username, password hash (bcrypt), session data (Spring Session JDBC, expires after 14 days of inactivity) | Users | Contract (b) | Until account deletion; sessions 14 days |
-| Providing the service | Collection (series, editions, owned volumes) | Users | Contract (b) | Until account deletion |
+| Providing the service | Collection (series, editions, owned volumes); catalog authorship (`series.created_by`, `editions.created_by`: which user added a series or edition) | Users | Contract (b) | Until account deletion; then authorship is set to null and the catalog entries stay without an author |
 | Security logs | IP address, timestamps (reverse proxy access logs) | Visitors, users | Legitimate interest (f): security | 14–30 days |
 | Backups | All of the above | All | Legitimate interest (f): data safety | 12 months |
 

@@ -127,7 +127,7 @@ export const it = {
   'account.export': 'Esporta i miei dati',
   'account.deleteTitle': 'Elimina l’account',
   'account.deleteHelp':
-    'Vengono eliminati il tuo account e la tua collezione. L’operazione non si può annullare. Restano solo nei backup cifrati, fino alla loro scadenza (al massimo 12 mesi).',
+    'Vengono eliminati il tuo account e la tua collezione. Le serie e le edizioni che hai aggiunto al catalogo restano, senza il tuo nome. L’operazione non si può annullare. Restano solo nei backup cifrati, fino alla loro scadenza (al massimo 12 mesi).',
   'account.deletePassword': 'Password per confermare',
   'account.delete': 'Elimina account',
   'account.deleteWhat': 'il tuo account e la tua collezione',
@@ -139,9 +139,9 @@ export const it = {
   'privacy.data.account':
     'Nome utente e hash della password (mai la password in chiaro), per creare il tuo account e farti accedere. Li conserviamo fino all’eliminazione dell’account. Base giuridica: contratto.',
   'privacy.data.collection':
-    'La tua collezione (serie, edizioni e volumi posseduti), per fornire il servizio. La conserviamo fino all’eliminazione dell’account. Base giuridica: contratto.',
+    'La tua collezione (serie, edizioni e volumi posseduti), per fornire il servizio. Registriamo anche chi ha aggiunto ogni serie o edizione al catalogo: lo conserviamo fino all’eliminazione dell’account, poi l’autore viene rimosso e le voci del catalogo restano senza autore. Base giuridica: contratto.',
   'privacy.data.session':
-    'Dati di sessione, per tenerti collegato. Scadono dopo 14 giorni di inattività o quando esci.',
+    'Dati di sessione, per tenerti collegato. Scadono dopo 14 giorni di inattività o quando esci. Base giuridica: contratto (necessari per il servizio).',
   'privacy.data.logs':
     'Indirizzo IP e data degli accessi nei log del server proxy, per la sicurezza. Li conserviamo da 14 a 30 giorni. Base giuridica: interesse legittimo (sicurezza).',
   'privacy.data.backups':

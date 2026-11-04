@@ -33,7 +33,7 @@ export type EditionResponse = {
   seriesId: string
   seriesTitle: string
   name: string
-  publisher: string
+  publisher: string | null
   type: EditionType
   status: EditionStatus
   volumeCount: number
@@ -55,7 +55,7 @@ export type CollectionEntry = {
   seriesId: string
   seriesTitle: string
   editionName: string
-  publisher: string
+  publisher: string | null
   type: EditionType
   status: EditionStatus
   volumeCount: number

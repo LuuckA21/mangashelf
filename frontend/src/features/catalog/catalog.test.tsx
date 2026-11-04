@@ -532,10 +532,7 @@ describe('review fixes', () => {
   })
 
   it('nullPublisherHasNoLeadingSeparator', async () => {
-    replies['GET /series/s1'] = [
-      200,
-      detail([edition({ publisher: null as unknown as string })]),
-    ]
+    replies['GET /series/s1'] = [200, detail([edition({ publisher: null })])]
     renderApp('/series/s1')
     expect(
       await screen.findByText('Regolare · In corso · Volumi 5'),

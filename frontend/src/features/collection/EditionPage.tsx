@@ -55,7 +55,7 @@ function AdminActions({ edition }: { edition: EditionResponse }) {
         // A new version (after a stale-edit refetch) remounts the form with fresh values.
         <EditionForm
           key={edition.version}
-          initial={edition}
+          initial={{ ...edition, publisher: edition.publisher ?? '' }}
           submitLabel={t('common.save')}
           pending={update.isPending}
           error={update.error}

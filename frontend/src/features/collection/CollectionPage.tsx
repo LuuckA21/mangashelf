@@ -21,7 +21,9 @@ function Entry({ e }: { e: CollectionEntry }) {
           {e.editionName}
         </Link>
         <div className="muted">
-          {e.publisher} · {t(`type.${e.type}`)} · {t(`status.${e.status}`)}
+          {[e.publisher, t(`type.${e.type}`), t(`status.${e.status}`)]
+            .filter(Boolean)
+            .join(' · ')}
         </div>
         {missing && (
           <div className="missing-line">
