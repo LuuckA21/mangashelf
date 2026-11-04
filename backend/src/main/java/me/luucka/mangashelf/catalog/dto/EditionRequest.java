@@ -10,7 +10,7 @@ import me.luucka.mangashelf.catalog.EditionType;
 
 /** {@code version} is required on PUT only (checked by the controller). */
 public record EditionRequest(
-    @NotBlank @Size(max = 200) String name,
+    @NotBlank(message = "Campo obbligatorio") @Size(max = 200) String name,
     @Size(max = 100) String publisher,
     @NotNull EditionType type,
     @NotNull EditionStatus status,

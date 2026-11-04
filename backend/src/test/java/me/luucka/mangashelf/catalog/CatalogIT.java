@@ -121,6 +121,14 @@ class CatalogIT {
   }
 
   @Test
+  void validationMessagesAreItalianWhateverTheBrowserLocale() throws Exception {
+    var req = post("/api/v1/series").header("Accept-Language", "en");
+    send(req, mario, "{\"title\":\"  \"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].message").value("Campo obbligatorio"));
+  }
+
+  @Test
   void unauthenticatedIs401() throws Exception {
     mvc.perform(get("/api/v1/series")).andExpect(status().isUnauthorized());
   }
