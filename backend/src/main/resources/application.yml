@@ -29,6 +29,9 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB
+  web:
+    locale: it # the UI is Italian only: validation messages must not follow the browser
+    locale-resolver: fixed
   mvc:
     problemdetails:
       enabled: true
@@ -56,8 +59,6 @@ management:
         include: health
 
 app:
-  base-url: ${APP_URL}
-  frontend-origin: ${FRONTEND_ORIGIN}
   uploads-dir: ${APP_UPLOADS_DIR:/app/uploads}
   initial-admin:
     username: ${ADMIN_USERNAME:}
@@ -70,6 +71,7 @@ spring:
       on-profile: dev
   flyway:
     locations: classpath:db/migration,classpath:db/dev-data
+    out-of-order: true # the dev seed is V9999, so later real migrations would otherwise be rejected
 app:
   uploads-dir: ./uploads
 server:

@@ -43,8 +43,8 @@ If your dev DB already existed before the seed (e.g. an `admin` created from `AD
 
 | Env | URL | Deploys from |
 |-----|-----|--------------|
-| staging | | `main` |
-| prod | | release / `main` |
+| staging | | by hand: Actions -> Deploy -> staging builds and deploys the selected branch |
+| prod | | published release (the Latest one) |
 
 ## Deploy & rollback
 
@@ -52,14 +52,16 @@ One Docker image (`ghcr.io/luucka21/mangashelf`) serves the API and the React ap
 folder `/srv/apps/mangashelf` (production, port **8082**) and `/srv/apps/mangashelf-staging` (staging, port
 **8083**). Details: [05 - deploy & environments](https://github.com/LuuckA21/project-standards/blob/main/05-deploy-environments.md).
 
-How to deploy: merge to `main` deploys staging; publish a release (version bump + `CHANGELOG.md` in the PR) to
-deploy production. Both run `deploy.yml`.
+How to deploy: staging is deployed by hand (Actions -> Deploy -> staging builds and deploys the selected branch);
+publish a release (version bump + `CHANGELOG.md` in the PR) to deploy production. Both run `deploy.yml`.
 
-Server `.env` (never committed; values in Bitwarden), besides the database and `APP_URL` / `FRONTEND_ORIGIN`:
+Server `.env` (never committed; values in Bitwarden), besides the database: `PRIVATE_IP` (the server's private
+network IP) and `APP_PORT` (`8082` production, `8083` staging), as in the template server compose. Also:
 
 - `ADMIN_USERNAME` and `ADMIN_INITIAL_PASSWORD`: create the first admin, used **only for the first start**
   (when no user exists); the admin must change the password at first login. Remove them afterwards.
-- `BACKUP_UPLOADS_DIR=/app/uploads`: cover images, included in the backup.
+- Cover images live in the `uploads` volume (`/app/uploads`). To include them in the backup set
+  `BACKUP_UPLOADS_DIR=/app/uploads` in `/etc/backup/<app>.env` (not in the app `.env`; see guide 01).
 
 Nginx Proxy Manager: rate-limit login. Zone `app_auth` is in `http_top.conf` of the standards; in the proxy
 host's *Advanced* tab:

@@ -36,8 +36,7 @@ class InitialAdminCreatorIT {
     new InitialAdminCreator(
             users,
             encoder,
-            new AppProperties(
-                null, null, null, new AppProperties.InitialAdmin("other", "initial-pass-123")))
+            new AppProperties(null, new AppProperties.InitialAdmin("other", "initial-pass-123")))
         .run(null);
     assertThat(users.count()).isEqualTo(before);
   }
@@ -46,9 +45,7 @@ class InitialAdminCreatorIT {
   void doesNothingWhenNotConfigured() throws Exception {
     users.deleteAll();
     new InitialAdminCreator(
-            users,
-            encoder,
-            new AppProperties(null, null, null, new AppProperties.InitialAdmin("", "")))
+            users, encoder, new AppProperties(null, new AppProperties.InitialAdmin("", "")))
         .run(null);
     assertThat(users.count()).isZero();
     // restore the shared fixture for the other tests
@@ -59,9 +56,7 @@ class InitialAdminCreatorIT {
   void failsOnStartupWhenPasswordTooShort() {
     var creator =
         new InitialAdminCreator(
-            users,
-            encoder,
-            new AppProperties(null, null, null, new AppProperties.InitialAdmin("x", "short")));
+            users, encoder, new AppProperties(null, new AppProperties.InitialAdmin("x", "short")));
     users.deleteAll();
     try {
       assertThatThrownBy(() -> creator.run(null))
