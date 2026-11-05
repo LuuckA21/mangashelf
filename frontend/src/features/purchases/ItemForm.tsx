@@ -1,4 +1,4 @@
-import { useId, useState, type SyntheticEvent } from 'react'
+import { useId, useRef, useState, type SyntheticEvent } from 'react'
 import { ApiError, fieldMessage } from '../../api/client'
 import type { ItemView, PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
@@ -37,17 +37,29 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
       setChf(amountText(proposeChf(cents, settings.chfRate)))
   }
 
-  async function pick(e: PickedEdition) {
-    setEdition(e)
+  const current = useRef<string | null>(null)
+
+  /** Fills volume, date and prices from the proposal; CHF follows EUR again. */
+  async function applyProposal(editionId: string) {
+    current.current = editionId
     setChfEdited(false)
     try {
-      const p = await fetchProposal(listId, e.editionId)
-      if (p.volume !== null) setVolume(String(p.volume))
-      if (p.releaseDate) setDate(p.releaseDate)
-      if (p.priceEurCents !== null) changeEur(amountText(p.priceEurCents))
+      const p = await fetchProposal(listId, editionId)
+      if (current.current !== editionId) return // a newer pick won the race
+      setVolume(p.volume === null ? '' : String(p.volume))
+      setDate(p.releaseDate ?? '')
+      if (p.priceEurCents !== null) {
+        setEur(amountText(p.priceEurCents))
+        setChf(amountText(proposeChf(p.priceEurCents, settings.chfRate)))
+      }
     } catch {
       // proposals are only a convenience
     }
+  }
+
+  function pick(e: PickedEdition) {
+    setEdition(e)
+    return applyProposal(e.editionId)
   }
 
   async function submit(ev: SyntheticEvent) {
@@ -85,6 +97,7 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
           },
         })
       onDone()
+      if (!item) await applyProposal(edition!.editionId) // next volume
     } catch {
       // shown from change.error
     }
@@ -148,7 +161,10 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
             <button
               type="button"
               className="quiet"
-              onClick={() => setEdition(null)}
+              onClick={() => {
+                current.current = null
+                setEdition(null)
+              }}
             >
               {t('purchases.changeEdition')}
             </button>

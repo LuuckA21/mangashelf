@@ -338,6 +338,79 @@ describe('purchase list detail', () => {
     expect(await screen.findByText('EUR 5.90')).toBeVisible()
   })
 
+  const pickBerserk = async (user: ReturnType<typeof userEvent.setup>) => {
+    replies['GET /series?page=0&size=20&q=berserk'] = [
+      200,
+      {
+        content: [{ id: 's1', title: 'Berserk', editionCount: 1 }],
+        page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+      },
+    ]
+    replies['GET /series/s1'] = [
+      200,
+      {
+        id: 's1',
+        title: 'Berserk',
+        editions: [
+          {
+            id: 'e1',
+            seriesId: 's1',
+            seriesTitle: 'Berserk',
+            name: 'Deluxe',
+            volumeCount: 41,
+          },
+        ],
+      },
+    ]
+    await user.type(screen.getByLabelText('Cerca serie'), 'berserk')
+    await user.click(screen.getByRole('button', { name: 'Cerca' }))
+    await user.click(await screen.findByRole('button', { name: /Berserk/ }))
+    await user.click(await screen.findByRole('button', { name: /Deluxe/ }))
+  }
+
+  it('pickingEditionRecomputesHandEditedChf', async () => {
+    replies['GET /purchase-lists/l1/proposal?editionId=e1'] = [
+      200,
+      { volume: 114, priceEurCents: 590, releaseDate: null },
+    ]
+    await open(detail([]))
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Prezzo CHF'), '9')
+    await pickBerserk(user)
+    await waitFor(() =>
+      expect(screen.getByLabelText('Prezzo EUR')).toHaveValue('5.90'),
+    )
+    expect(screen.getByLabelText('Prezzo CHF')).toHaveValue('7.10')
+  })
+
+  it('addKeepsEditionAndReappliesProposal', async () => {
+    const proposal = (volume: number) =>
+      (replies['GET /purchase-lists/l1/proposal?editionId=e1'] = [
+        200,
+        { volume, priceEurCents: 590, releaseDate: null },
+      ])
+    proposal(21)
+    replies['POST /purchase-lists/l1/items'] = [201, detail([item()])]
+    await open(detail([]))
+    const user = userEvent.setup()
+    await pickBerserk(user)
+    await waitFor(() => expect(screen.getByLabelText('Volume')).toHaveValue(21))
+    proposal(22)
+    await user.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await waitFor(() => expect(screen.getByLabelText('Volume')).toHaveValue(22))
+    await user.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls
+          .filter(
+            ([u, i]) =>
+              u === '/api/v1/purchase-lists/l1/items' && i.method === 'POST',
+          )
+          .map(([, i]) => JSON.parse(i.body).volume),
+      ).toEqual([21, 22]),
+    )
+  })
+
   it('editedChfIsNotOverwrittenByEur', async () => {
     replies['PATCH /purchase-lists/l1/items/i1'] = [200, detail([item()])]
     await open(detail([item()]))
