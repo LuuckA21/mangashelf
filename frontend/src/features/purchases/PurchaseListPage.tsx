@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import type { ItemView } from '../../api/types'
+import { ApiError, fieldMessage } from '../../api/client'
+import type { ItemView, ListDetail } from '../../api/types'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import { t } from '../../i18n/t'
 import { usePurchaseList, useListChange, usePurchaseSettings } from './api'
@@ -34,6 +35,95 @@ function groupByDate(items: ItemView[]) {
   return [...groups.entries()]
     .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
     .map(([date, rows]) => ({ date, rows: rows.sort(byName) }))
+}
+
+/** Inline edit of description and month/year; works on closed lists too. */
+function HeaderForm({
+  list,
+  onDone,
+}: {
+  list: ListDetail
+  onDone: () => void
+}) {
+  const change = useListChange(list.id)
+  const [description, setDescription] = useState(list.description)
+  const [month, setMonth] = useState(
+    `${list.year}-${String(list.month).padStart(2, '0')}`,
+  )
+
+  async function submit(ev: SyntheticEvent) {
+    ev.preventDefault()
+    const [year, m] = month.split('-').map(Number)
+    try {
+      await change.mutateAsync({
+        method: 'PATCH',
+        body: { description: description.trim(), month: m, year },
+      })
+      onDone()
+    } catch {
+      // shown from change.error
+    }
+  }
+
+  const err = change.error
+  const descError = fieldMessage(err, 'description')
+  const monthError = fieldMessage(err, 'month') ?? fieldMessage(err, 'year')
+  const general =
+    err &&
+    (err instanceof ApiError
+      ? err.errors.length === 0 && err.detail
+      : t('error.generic'))
+
+  return (
+    <form className="inline-actions" onSubmit={submit}>
+      {general && (
+        <p className="error" role="alert">
+          {general}
+        </p>
+      )}
+      <div className="field">
+        <label htmlFor="list-description">
+          {t('purchases.descriptionLabel')}
+        </label>
+        <input
+          id="list-description"
+          maxLength={100}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          aria-invalid={descError ? true : undefined}
+          aria-describedby={descError ? 'list-description-error' : undefined}
+        />
+        {descError && (
+          <p id="list-description-error" className="field-help">
+            {descError}
+          </p>
+        )}
+      </div>
+      <div className="field">
+        <label htmlFor="list-month">{t('purchases.monthLabel')}</label>
+        <input
+          id="list-month"
+          type="month"
+          required
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          aria-invalid={monthError ? true : undefined}
+          aria-describedby={monthError ? 'list-month-error' : undefined}
+        />
+        {monthError && (
+          <p id="list-month-error" className="field-help">
+            {monthError}
+          </p>
+        )}
+      </div>
+      <button type="submit" disabled={change.isPending}>
+        {t('common.save')}
+      </button>
+      <button type="button" className="quiet" onClick={onDone}>
+        {t('common.cancel')}
+      </button>
+    </form>
+  )
 }
 
 function Row({
@@ -146,6 +236,7 @@ export default function PurchaseListPage() {
   const navigate = useNavigate()
   const [picked, setPicked] = useState<string[]>([])
   const [moving, setMoving] = useState<string[] | null>(null)
+  const [editingHead, setEditingHead] = useState(false)
   // Rows that are gone (deleted, moved) cannot stay selected.
   const selected = picked.filter((x) => data?.items.some((i) => i.id === x))
   const unbooked = data?.items.filter((i) => !i.booked).length ?? 0
@@ -155,16 +246,29 @@ export default function PurchaseListPage() {
         {t('purchases.back')}
       </Link>
       <div className="page-head">
-        <h1>
-          {data
-            ? t('purchases.listTitle', {
-                description: data.description,
-                month: monthLabel(data.month, data.year),
-              })
-            : t('purchases.title')}
-        </h1>
+        {editingHead && data ? (
+          <HeaderForm list={data} onDone={() => setEditingHead(false)} />
+        ) : (
+          <h1>
+            {data
+              ? t('purchases.listTitle', {
+                  description: data.description,
+                  month: monthLabel(data.month, data.year),
+                })
+              : t('purchases.title')}
+          </h1>
+        )}
         {data && (
           <div className="inline-actions">
+            {!editingHead && (
+              <button
+                type="button"
+                className="quiet"
+                onClick={() => setEditingHead(true)}
+              >
+                {t('purchases.editList')}
+              </button>
+            )}
             {data.closed ? (
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react'
+import { useState } from 'react'
 import { t } from '../../i18n/t'
 import { useSeriesDetail, useSeriesList } from '../catalog/api'
 
@@ -20,27 +20,33 @@ export default function EditionPicker({
   const list = useSeriesList(q, 1)
   const detail = useSeriesDetail(seriesId)
 
-  function search(ev: SyntheticEvent) {
-    ev.preventDefault()
+  // Not a <form>: the picker lives inside ItemForm's form.
+  function search() {
     setSeriesId('')
     setQ(text.trim())
   }
 
   return (
     <div className="edition-picker">
-      <form className="search-form" onSubmit={search} role="search">
+      <div className="search-form" role="search">
         <div className="field">
           <label htmlFor="picker-q">{t('purchases.searchSeries')}</label>
           <input
             id="picker-q"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                search()
+              }
+            }}
           />
         </div>
-        <button type="submit" className="quiet">
+        <button type="button" className="quiet" onClick={search}>
           {t('purchases.search')}
         </button>
-      </form>
+      </div>
       {q && !seriesId && (
         <ul className="chips">
           {list.data?.content.map((s) => (

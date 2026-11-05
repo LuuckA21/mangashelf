@@ -176,6 +176,7 @@ export const it = {
   'purchases.alsoIn': 'Già nella lista «{list}»',
   'purchases.rowDeleteWhat': 'il volume {name}',
   'purchases.editRow': 'Modifica',
+  'purchases.editList': 'Modifica',
   'purchases.subtotal': 'Subtotale',
   'purchases.discount': 'Sconto',
   'purchases.discountAmount': 'Sconto (CHF)',

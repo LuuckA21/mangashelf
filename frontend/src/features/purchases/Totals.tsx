@@ -16,6 +16,7 @@ function AmountEditor(props: {
   field: 'discountCents' | 'pointsDiscountCents'
   listId: string
   onDone?: () => void
+  onCancel?: () => void
 }) {
   const change = useListChange(props.listId)
   const [text, setText] = useState(
@@ -72,6 +73,11 @@ function AmountEditor(props: {
       <button type="submit" disabled={change.isPending}>
         {props.saveLabel}
       </button>
+      {props.onCancel && (
+        <button type="button" className="quiet" onClick={props.onCancel}>
+          {t('common.cancel')}
+        </button>
+      )}
     </form>
   )
 }
@@ -105,18 +111,20 @@ export default function Totals({
           <dd className="num">{formatChf(list.totalCents)}</dd>
         </div>
       </dl>
-      {editing ? (
+      {editing && (
         <AmountEditor
           id="discount-amount"
           label={t('purchases.discountAmount')}
           saveLabel={t('purchases.discountSave')}
-          initial={0}
+          initial={list.discountCents}
           field="discountCents"
           listId={list.id}
           onDone={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
         />
-      ) : (
-        <div className="inline-actions">
+      )}
+      <div className="inline-actions">
+        {!editing && (
           <button
             type="button"
             className="quiet"
@@ -124,22 +132,22 @@ export default function Totals({
           >
             {t('purchases.discountEdit')}
           </button>
-          {!list.discountAuto && (
-            <button
-              type="button"
-              className="quiet"
-              disabled={reset.isPending}
-              onClick={() =>
-                reset.mutate({ method: 'PATCH', body: { discountAuto: true } })
-              }
-            >
-              {t('purchases.discountBack', {
-                percent: settings.discountPercent,
-              })}
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        {!list.discountAuto && (
+          <button
+            type="button"
+            className="quiet"
+            disabled={reset.isPending}
+            onClick={() =>
+              reset.mutate({ method: 'PATCH', body: { discountAuto: true } })
+            }
+          >
+            {t('purchases.discountBack', {
+              percent: settings.discountPercent,
+            })}
+          </button>
+        )}
+      </div>
       <AmountEditor
         key={list.pointsDiscountCents}
         id="points-amount"

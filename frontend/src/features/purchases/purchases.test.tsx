@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -505,6 +511,7 @@ describe('purchase list detail', () => {
     expect(screen.getByText('CHF 10.00')).toBeVisible()
     expect(screen.getByText('CHF 9.00')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Modifica sconto' }))
+    await user.clear(screen.getByLabelText('Sconto (CHF)'))
     await user.type(screen.getByLabelText('Sconto (CHF)'), '5.00')
     await user.click(screen.getByRole('button', { name: 'Salva sconto' }))
     await waitFor(() =>
@@ -521,6 +528,105 @@ describe('purchase list detail', () => {
         discountAuto: true,
       }),
     )
+  })
+
+  it('searchingASeriesDoesNotSubmitTheAddForm', async () => {
+    await open(detail([]))
+    const user = userEvent.setup()
+    replies['GET /series?page=0&size=20&q=berserk'] = [
+      200,
+      {
+        content: [{ id: 's1', title: 'Berserk', editionCount: 1 }],
+        page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+      },
+    ]
+    await user.type(screen.getByLabelText('Cerca serie'), 'berserk')
+    await user.click(screen.getByRole('button', { name: 'Cerca' }))
+    expect(await screen.findByRole('button', { name: /Berserk/ })).toBeVisible()
+    await user.type(screen.getByLabelText('Cerca serie'), '{Enter}')
+    expect(screen.queryByText(/Scegli prima/)).toBeNull()
+    expect(screen.queryByText('Importo non valido')).toBeNull()
+    expect(screen.getByLabelText('Prezzo EUR')).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    expect(bodyOf('POST', '/purchase-lists/l1/items')).toBeUndefined()
+  })
+
+  it('proposalWithoutPriceClearsPrices', async () => {
+    replies['GET /purchase-lists/l1/proposal?editionId=e1'] = [
+      200,
+      { volume: 2, priceEurCents: null, releaseDate: null },
+    ]
+    await open(detail([]))
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Prezzo EUR'), '5.90')
+    expect(screen.getByLabelText('Prezzo CHF')).toHaveValue('7.10')
+    await pickBerserk(user)
+    await waitFor(() => expect(screen.getByLabelText('Volume')).toHaveValue(2))
+    expect(screen.getByLabelText('Prezzo EUR')).toHaveValue('')
+    expect(screen.getByLabelText('Prezzo CHF')).toHaveValue('')
+  })
+
+  it('editListHeader', async () => {
+    replies['PATCH /purchase-lists/l1'] = [
+      200,
+      detail([], { description: 'Fumetti', month: 3, year: 2027 }),
+    ]
+    await open(detail([], { closed: true }))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.queryByLabelText('Descrizione')).toBeNull()
+    expect(screen.getByRole('heading', { name: /Manga Ottobre/ })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    expect(screen.getByLabelText('Descrizione')).toHaveValue('Manga Ottobre')
+    expect(screen.getByLabelText('Mese')).toHaveValue('2026-10')
+    await user.clear(screen.getByLabelText('Descrizione'))
+    await user.type(screen.getByLabelText('Descrizione'), 'Fumetti')
+    fireEvent.change(screen.getByLabelText('Mese'), {
+      target: { value: '2027-03' },
+    })
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() =>
+      expect(bodyOf('PATCH', '/purchase-lists/l1')).toEqual({
+        description: 'Fumetti',
+        month: 3,
+        year: 2027,
+      }),
+    )
+    expect(
+      await screen.findByRole('heading', { name: /Fumetti · marzo 2027/ }),
+    ).toBeVisible()
+  })
+
+  it('editListHeaderShowsFieldError', async () => {
+    replies['PATCH /purchase-lists/l1'] = [
+      400,
+      {
+        detail: 'Dati non validi',
+        errors: [{ field: 'description', message: 'non deve essere vuoto' }],
+      },
+    ]
+    await open(detail([]))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    const msg = await screen.findByText('non deve essere vuoto')
+    expect(screen.getByLabelText('Descrizione')).toHaveAccessibleDescription(
+      msg.textContent!,
+    )
+  })
+
+  it('discountEditorIsPrefilledAndCancelable', async () => {
+    await open(detail([item()], { discountCents: 500, discountAuto: false }))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Modifica sconto' }))
+    expect(screen.getByLabelText('Sconto (CHF)')).toHaveValue('5.00')
+    expect(screen.getByRole('button', { name: 'Torna al 10%' })).toBeVisible()
+    fetchMock.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.queryByLabelText('Sconto (CHF)')).toBeNull()
+    expect(bodyOf('PATCH', '/purchase-lists/l1')).toBeUndefined()
   })
 
   it('pointsDiscountSaved', async () => {
@@ -550,6 +656,7 @@ describe('purchase list detail', () => {
     await open(detail([item()]))
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Modifica sconto' }))
+    await user.clear(screen.getByLabelText('Sconto (CHF)'))
     await user.type(screen.getByLabelText('Sconto (CHF)'), '99')
     await user.click(screen.getByRole('button', { name: 'Salva sconto' }))
     const msg = await screen.findByText('supera il subtotale')

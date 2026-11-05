@@ -48,10 +48,12 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
       if (current.current !== editionId) return // a newer pick won the race
       setVolume(p.volume === null ? '' : String(p.volume))
       setDate(p.releaseDate ?? '')
-      if (p.priceEurCents !== null) {
-        setEur(amountText(p.priceEurCents))
-        setChf(amountText(proposeChf(p.priceEurCents, settings.chfRate)))
-      }
+      setEur(p.priceEurCents === null ? '' : amountText(p.priceEurCents))
+      setChf(
+        p.priceEurCents === null
+          ? ''
+          : amountText(proposeChf(p.priceEurCents, settings.chfRate)),
+      )
     } catch {
       // proposals are only a convenience
     }

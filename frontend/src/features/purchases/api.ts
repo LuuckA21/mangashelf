@@ -63,9 +63,13 @@ export function useListChange(id: string) {
     onSuccess: (detail) => {
       client.setQueryData(['purchase-list', id], detail)
       return Promise.all(
-        ['purchase-lists', 'collection', 'edition', 'collection-entry'].map(
-          (k) => client.invalidateQueries({ queryKey: [k] }),
-        ),
+        [
+          'purchase-lists',
+          'collection',
+          'edition',
+          'collection-entry',
+          'series-detail',
+        ].map((k) => client.invalidateQueries({ queryKey: [k] })),
       )
     },
   })
