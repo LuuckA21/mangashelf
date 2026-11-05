@@ -63,7 +63,7 @@ public class AppUser {
   }
 
   public void setPurchaseSettings(BigDecimal chfRate, int discountPercent) {
-    this.chfRate = chfRate;
+    this.chfRate = chfRate.setScale(2);
     this.discountPercent = discountPercent;
   }
 
