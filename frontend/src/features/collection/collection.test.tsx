@@ -145,18 +145,17 @@ describe('collection page', () => {
     replies[listUrl('&incomplete=true')] = [200, pageOf([])]
     renderApp('/')
     await screen.findByText('Deluxe')
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Solo incomplete' }),
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Incomplete' }))
     expect(
       await screen.findByText('Nessuna edizione in collezione.'),
     ).toBeInTheDocument()
     expect(fetchMock.mock.calls.map((c) => c[0])).toContain(
       '/api/v1/collection?page=0&size=20&incomplete=true',
     )
-    expect(
-      screen.getByRole('button', { name: 'Solo incomplete' }),
-    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Incomplete' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('filtersComeFromTheUrl', async () => {

@@ -22,7 +22,7 @@ export const it = {
   'collection.searchLabel': 'Cerca per serie o edizione',
   'collection.filterType': 'Tipo',
   'collection.filterStatus': 'Stato',
-  'collection.incompleteOnly': 'Solo incomplete',
+  'collection.incompleteOnly': 'Incomplete',
   'collection.empty': 'Nessuna edizione in collezione.',
   'collection.ownedOf': 'posseduti',
   'collection.pagination': 'Paginazione',

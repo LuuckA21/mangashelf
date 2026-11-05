@@ -346,6 +346,18 @@ label {
   margin-bottom: calc(var(--s) * 1.5);
 }
 
+/* Edition page actions: one column of equally wide buttons. */
+.edition-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s);
+  max-width: 280px;
+}
+.edition-actions > button {
+  width: 100%;
+}
+
 /* Edition page: cover beside the title, details and actions. */
 .edition-head {
   display: flex;
@@ -689,14 +701,19 @@ button.danger:hover:not(:disabled) {
  * Filters read as a single row of switches rather than a dropdown: with
  * three options the choice and its state are both visible at a glance.
  */
+/* Filters line up in equal columns, so both rows of chips match in size. */
 .chips {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--s);
-  flex-wrap: wrap;
+  max-width: 420px;
+  margin-top: var(--s);
 }
 
 .chip {
-  padding: 6px 14px;
+  padding: 6px 8px;
+  text-align: center;
+  white-space: nowrap;
   background: transparent;
   color: var(--ash);
   border: 1px solid var(--ash-line);
@@ -858,6 +875,12 @@ button.danger:hover:not(:disabled) {
   /* The cover thumbnail stays beside the title instead of on a line alone. */
   .edition-row:has(> .thumb) .grow {
     flex: 1 1 0;
+  }
+  /* With a thumbnail the row's button or status drops to its own line. */
+  .edition-row:has(> .thumb) > button,
+  .edition-row:has(> .thumb) > .muted,
+  .edition-row:has(> .thumb) > .edition-progress {
+    flex: 1 1 100%;
   }
   .edition-row .inline-actions {
     width: 100%;

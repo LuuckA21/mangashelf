@@ -181,7 +181,7 @@ export default function EditionPage() {
               .filter(Boolean)
               .join(' · ')}
           </p>
-          <div className="inline-actions">
+          <div className="edition-actions">
             {edition.inMyCollection ? (
               <ConfirmDelete
                 label={t('edition.remove')}
