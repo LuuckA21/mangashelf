@@ -438,6 +438,23 @@ describe('collection stats', () => {
     ).toBeInTheDocument()
   })
 
+  it('singleVolumeUsesSingular', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({
+        editions: 1,
+        ownedVolumes: 1,
+        totalVolumes: 5,
+        byPublisher: [{ key: null, volumes: 1 }],
+      }),
+    ]
+    renderApp('/')
+    expect(
+      within(await panel()).getByText('Altri: 1 volume'),
+    ).toBeInTheDocument()
+  })
+
   it('hiddenWhenCollectionIsEmpty', async () => {
     replies[listUrl('')] = [200, pageOf([])]
     renderApp('/')

@@ -41,6 +41,7 @@ export const it = {
   'stats.byStatus': 'Per stato',
   'stats.others': 'Altri',
   'stats.bar': '{label}: {n} volumi',
+  'stats.barOne': '{label}: 1 volume',
   'stats.unavailable': 'Statistiche non disponibili',
   'stats.status.ONGOING': 'In corso',
   'stats.status.COMPLETED': 'Concluse',

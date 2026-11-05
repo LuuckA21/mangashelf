@@ -22,7 +22,9 @@ function Chart({
           return (
             <li key={b.key ?? ''}>
               <span className="sr-only">
-                {t('stats.bar', { label: name, n: b.volumes })}
+                {b.volumes === 1
+                  ? t('stats.barOne', { label: name })
+                  : t('stats.bar', { label: name, n: b.volumes })}
               </span>
               <span className="stat-row" aria-hidden="true">
                 <span className="stat-name">{name}</span>
