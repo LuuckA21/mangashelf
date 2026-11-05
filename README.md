@@ -83,7 +83,7 @@ migrations are backwards-compatible, so code rolls back without touching data.
 
 ## Backup & restore
 
-- RPO: 24h · RTO: <fill in>
+- RPO: 24h · RTO: under 1 minute (staging test, small database; measure again on production)
 - Backups: PostgreSQL and covers (`/app/uploads`) with `backup.sh`, restic / Swiss Backup, daily
 - Set-up and restore runbook: [`docs/runbooks/restore.md`](docs/runbooks/restore.md)
 - Last restore test: 2026-11-05 (staging, full restore; log in the runbook)

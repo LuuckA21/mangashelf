@@ -89,4 +89,4 @@ Open the site: users may have to log in again. Check a series you know, with its
 
 | Date | Environment | What | Result | Time (RTO) |
 |------|-------------|------|--------|------------|
-| 2026-11-05 | staging | Full restore (section 2) after deleting a test series with a cover | Restore OK | not measured |
+| 2026-11-05 | staging | Full restore (section 2) after deleting a test series with a cover | Series and cover back | < 1 min |
