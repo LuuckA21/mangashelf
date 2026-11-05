@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public record ItemRequest(
     @NotNull UUID editionId,
-    @NotNull @Min(1) Integer volume,
+    @NotNull @Min(1) @Max(9999) Integer volume,
     LocalDate releaseDate,
     @NotNull @Min(0) @Max(100_000_000) Long priceEurCents,
     @NotNull @Min(0) @Max(100_000_000) Long priceChfCents,

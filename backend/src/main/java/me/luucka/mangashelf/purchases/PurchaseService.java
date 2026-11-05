@@ -268,7 +268,6 @@ public class PurchaseService {
                 order by created_at desc, id desc limit 1
                 """)
             .param("listId", l.getId())
-            .param("userId", userId)
             .query((rs, n) -> rs.getObject(1, LocalDate.class))
             .list();
     return new Proposal(volume, eur, dates.isEmpty() ? null : dates.getFirst());
@@ -288,6 +287,9 @@ public class PurchaseService {
    * another closed list still acquires it (even if ticked by hand), the new one becomes owned.
    * Nothing happens when the acquired volume did not change, so a hand-unticked volume stays so.
    */
+  // shortcut: under READ COMMITTED two concurrent actions on the same user's volume (e.g. reopening
+  // two lists) can each see the other's row as still acquired, or both insert it (unique index ->
+  // 409); a row lock on the user's lists is the upgrade if it ever matters.
   private void sync(UUID userId, Acquired before, Acquired after) {
     if (Objects.equals(before, after)) {
       return;

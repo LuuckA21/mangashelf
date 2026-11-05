@@ -386,6 +386,20 @@ class PurchaseSyncIT {
   }
 
   @Test
+  void volumeAboveEditionLimitIs400AndLeavesCatalog() throws Exception {
+    var l = list("Agosto");
+    item(a, l, edition, 10000, null, 100, false)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("volume"));
+    item(l, 1, false);
+    patchItem(l, 1, "{\"volume\":10000}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("volume"));
+    mvc.perform(get("/api/v1/editions/" + edition).cookie(a))
+        .andExpect(jsonPath("$.volumeCount").value(10));
+  }
+
+  @Test
   void loweringVolumeCountBelowARowIs409() throws Exception {
     var l = list("Agosto");
     item(l, 8, false);
