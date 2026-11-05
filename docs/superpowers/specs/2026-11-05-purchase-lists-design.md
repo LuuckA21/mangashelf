@@ -38,7 +38,12 @@ Observed rules: CHF = EUR × 1.2 rounded to 0.10; discount = 10% of subtotal rou
   change. The user can type a fixed CHF amount instead; it then stays fixed when rows change, until the user
   goes back to automatic.
 - **Points discount**: CHF amount typed by the user, default 0.
-- **Total** = subtotal − discount − points discount. Amounts are not allowed below 0 (validation).
+- **Total** = subtotal − discount − points discount, **never below 0**:
+  - prices, discount and points discount are ≥ 0 (validation);
+  - saving a fixed discount or points discount that would make the total negative is refused (400 on the
+    field);
+  - if removing/moving rows later makes discounts exceed the subtotal, discounts stay as they are and the
+    total is shown and counted as **0**.
 - **Close**: if the list has non-booked rows, the UI asks for confirmation ("N righe non prenotate: non
   diventeranno possedute e restano nel totale. Chiudere comunque?").
 - **Reopen**: allowed; effects on the collection below.
@@ -74,6 +79,8 @@ A volume is **acquired** when it is a **booked** row in a **closed** list.
   edition/volume (the old one) — **unless** the same edition+volume is still acquired through another of the
   user's closed lists. It becomes missing even if the user had ticked it by hand before.
 - Ticking volumes by hand on the edition page keeps working as today and does not change any list.
+- Changing the edition or volume of a booked row in a closed list = the old volume stops being acquired, the
+  new one becomes acquired (rules above).
 
 ### Catalog safeguards
 
@@ -141,7 +148,7 @@ A volume is **acquired** when it is a **booked** row in a **closed** list.
   subtotal, discount (amount + automatic flag), points, total — computed server-side.
 - Collection sync and catalog bump/safeguards live in `PurchaseService` / `EditionService`, one transaction
   per action, using the existing `owned_volumes` / `collection_editions` tables.
-- Rounding: nearest 0.10 (half up) on cents: `round(x / 10) * 10`.
+- Rounding: nearest 0.10, exact halves up (9.95 → 10.00), on cents: `round(x / 10) * 10`.
 - Problem Details errors; Bean Validation at the API boundary; parameterized queries only.
 
 ### Frontend
