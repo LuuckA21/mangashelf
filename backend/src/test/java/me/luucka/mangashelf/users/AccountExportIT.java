@@ -125,6 +125,28 @@ class AccountExportIT {
         "{\"editionId\":\"%s\",\"volume\":3,\"priceEurCents\":1000,\"priceChfCents\":1100}"
             .formatted(edition));
 
+    users.save(
+        new AppUser("Bruno", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
+    var other =
+        cookie(login(mvc, "Bruno", "correct-horse-1").andReturn().getResponse(), "SESSION")
+            .orElseThrow();
+    String brunoList =
+        JsonPath.read(
+            send(
+                post("/api/v1/purchase-lists"),
+                other,
+                "{\"description\":\"Dicembre\",\"month\":12,\"year\":2026}"),
+            "$.id");
+    send(
+        post("/api/v1/purchase-lists/" + brunoList + "/items"),
+        other,
+        "{\"editionId\":\"%s\",\"volume\":7,\"priceEurCents\":500,\"priceChfCents\":600}"
+            .formatted(edition));
+
+    mvc.perform(get("/api/v1/account/export").cookie(other))
+        .andExpect(jsonPath("$.purchaseLists.length()").value(1))
+        .andExpect(jsonPath("$.purchaseLists[0].description").value("Dicembre"))
+        .andExpect(jsonPath("$.purchaseLists[0].items[0].volume").value(7));
     mvc.perform(get("/api/v1/account/export").cookie(s))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.purchaseSettings.discountPercent").value(10))

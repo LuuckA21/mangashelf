@@ -5,7 +5,7 @@ same PR that adds a field, a processor or a purpose. See project-standards 09-pr
 
 Controller: <name, address>, privacy contact: <email>
 EU representative (GDPR art. 27): <name / "not appointed, because …">
-Last reviewed: 2026-11-04
+Last reviewed: 2026-11-05
 
 ## Processing activities
 
