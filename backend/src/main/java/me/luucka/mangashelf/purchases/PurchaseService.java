@@ -86,6 +86,12 @@ public class PurchaseService {
         .list();
   }
 
+  /** Every list with its rows, in the same order as {@link #lists}. */
+  @Transactional(readOnly = true)
+  public List<ListDetail> exportAll(UUID userId) {
+    return lists(userId).stream().map(l -> get(userId, UUID.fromString(l.id()))).toList();
+  }
+
   @Transactional
   public ListDetail create(UUID userId, ListRequest r) {
     var l =

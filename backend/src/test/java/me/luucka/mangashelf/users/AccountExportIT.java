@@ -91,4 +91,45 @@ class AccountExportIT {
         .andExpect(jsonPath("$.username").value("Bruno"))
         .andExpect(jsonPath("$.collection[0].owned").isEmpty());
   }
+
+  @Test
+  void exportIncludesPurchases() throws Exception {
+    jdbc.update("DELETE FROM editions");
+    jdbc.update("DELETE FROM series");
+    users.deleteAll();
+    jdbc.update("DELETE FROM spring_session");
+    users.save(
+        new AppUser("Anna", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
+    var s =
+        cookie(login(mvc, "Anna", "correct-horse-1").andReturn().getResponse(), "SESSION")
+            .orElseThrow();
+    String series =
+        JsonPath.read(send(post("/api/v1/series"), s, "{\"title\":\"Berserk\"}"), "$.id");
+    String edition =
+        JsonPath.read(
+            send(
+                post("/api/v1/series/" + series + "/editions"),
+                s,
+                "{\"name\":\"Blu\",\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":10}"),
+            "$.id");
+    String list =
+        JsonPath.read(
+            send(
+                post("/api/v1/purchase-lists"),
+                s,
+                "{\"description\":\"Novembre\",\"month\":11,\"year\":2026}"),
+            "$.id");
+    send(
+        post("/api/v1/purchase-lists/" + list + "/items"),
+        s,
+        "{\"editionId\":\"%s\",\"volume\":3,\"priceEurCents\":1000,\"priceChfCents\":1100}"
+            .formatted(edition));
+
+    mvc.perform(get("/api/v1/account/export").cookie(s))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.purchaseSettings.discountPercent").value(10))
+        .andExpect(jsonPath("$.purchaseLists.length()").value(1))
+        .andExpect(jsonPath("$.purchaseLists[0].description").value("Novembre"))
+        .andExpect(jsonPath("$.purchaseLists[0].items[0].volume").value(3));
+  }
 }

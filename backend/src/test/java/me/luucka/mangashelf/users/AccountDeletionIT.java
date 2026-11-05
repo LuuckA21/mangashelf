@@ -6,9 +6,11 @@ import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import me.luucka.mangashelf.TestcontainersConfig;
@@ -79,5 +81,52 @@ class AccountDeletionIT {
   void lastAdminCannotDeleteAccountIs409() throws Exception {
     deleteAccount(session("Admin"), PASSWORD).andExpect(status().isConflict());
     assertThat(users.findByUsernameIgnoreCase("Admin")).isPresent();
+  }
+
+  private String postJson(Cookie session, String url, String body) throws Exception {
+    var token = xsrf(mvc);
+    return mvc.perform(
+            post(url)
+                .cookie(session, token)
+                .header("X-XSRF-TOKEN", token.getValue())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().is2xxSuccessful())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+  }
+
+  @Test
+  void deletingAccountDeletesPurchases() throws Exception {
+    var session = session("Mario");
+    String series =
+        JsonPath.read(postJson(session, "/api/v1/series", "{\"title\":\"Berserk\"}"), "$.id");
+    String edition =
+        JsonPath.read(
+            postJson(
+                session,
+                "/api/v1/series/" + series + "/editions",
+                "{\"name\":\"Blu\",\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":10}"),
+            "$.id");
+    String list =
+        JsonPath.read(
+            postJson(
+                session,
+                "/api/v1/purchase-lists",
+                "{\"description\":\"Novembre\",\"month\":11,\"year\":2026}"),
+            "$.id");
+    postJson(
+        session,
+        "/api/v1/purchase-lists/" + list + "/items",
+        "{\"editionId\":\"%s\",\"volume\":3,\"priceEurCents\":1000,\"priceChfCents\":1100}"
+            .formatted(edition));
+    assertThat(jdbc.queryForObject("select count(*) from purchase_items", Integer.class))
+        .isEqualTo(1);
+
+    deleteAccount(session, PASSWORD).andExpect(status().isNoContent());
+
+    assertThat(jdbc.queryForObject("select count(*) from purchase_lists", Integer.class)).isZero();
+    assertThat(jdbc.queryForObject("select count(*) from purchase_items", Integer.class)).isZero();
   }
 }
