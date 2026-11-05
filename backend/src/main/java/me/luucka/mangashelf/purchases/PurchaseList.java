@@ -56,6 +56,11 @@ public class PurchaseList {
     return closed;
   }
 
+  public void setClosed(boolean closed, Instant now) {
+    this.closed = closed;
+    this.updatedAt = now;
+  }
+
   /** Null means the automatic discount applies. */
   public Integer getDiscountCents() {
     return discountCents;

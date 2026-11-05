@@ -106,6 +106,10 @@ public class Edition {
     return volumeCount;
   }
 
+  void setVolumeCount(int volumeCount) {
+    this.volumeCount = volumeCount;
+  }
+
   public String getCoverFile() {
     return coverFile;
   }

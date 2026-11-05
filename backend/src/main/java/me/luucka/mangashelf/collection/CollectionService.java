@@ -208,6 +208,23 @@ public class CollectionService {
     return entry(userId, editionId);
   }
 
+  /** Idempotent: adds the edition to the collection if missing, then the volume if missing. */
+  @Transactional
+  public void addOwned(UUID userId, UUID editionId, int volume) {
+    var ce = ensure(userId, editionId);
+    if (!volumes.existsByCollectionEditionIdAndNumber(ce.getId(), volume)) {
+      volumes.saveAndFlush(new OwnedVolume(ce.getId(), volume, Instant.now()));
+    }
+  }
+
+  /** No-op when the volume is not owned; the edition stays in the collection. */
+  @Transactional
+  public void removeOwned(UUID userId, UUID editionId, int volume) {
+    collection
+        .findByUserIdAndEditionId(userId, editionId)
+        .ifPresent(ce -> volumes.deleteByCollectionEditionIdAndNumber(ce.getId(), volume));
+  }
+
   private CollectionEdition ensure(UUID userId, UUID editionId) {
     return collection
         .findByUserIdAndEditionId(userId, editionId)

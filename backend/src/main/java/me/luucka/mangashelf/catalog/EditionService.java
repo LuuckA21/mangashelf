@@ -9,6 +9,7 @@ import me.luucka.mangashelf.collection.OwnedVolumeRepository;
 import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.NotFoundException;
+import me.luucka.mangashelf.purchases.PurchaseItemRepository;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class EditionService {
   private final SeriesRepository series;
   private final CollectionEditionRepository collection;
   private final OwnedVolumeRepository ownedVolumes;
+  private final PurchaseItemRepository purchaseItems;
   private final CoverStorage covers;
 
   public EditionService(
@@ -34,11 +36,13 @@ public class EditionService {
       SeriesRepository series,
       CollectionEditionRepository collection,
       OwnedVolumeRepository ownedVolumes,
+      PurchaseItemRepository purchaseItems,
       CoverStorage covers) {
     this.editions = editions;
     this.series = series;
     this.collection = collection;
     this.ownedVolumes = ownedVolumes;
+    this.purchaseItems = purchaseItems;
     this.covers = covers;
   }
 
@@ -84,6 +88,9 @@ public class EditionService {
     if (ownedVolumes.findMaxNumberByEditionId(id).orElse(0) > r.volumeCount()) {
       throw new ConflictException("Alcuni utenti possiedono volumi oltre questo numero");
     }
+    if (purchaseItems.findMaxVolumeByEditionId(id).orElse(0) > r.volumeCount()) {
+      throw new ConflictException("Alcune liste acquisti hanno volumi oltre questo numero");
+    }
     e.update(r.name().strip(), publisher(r), r.type(), r.status(), r.volumeCount());
     return toResponse(editions.saveAndFlush(e), me);
   }
@@ -92,8 +99,23 @@ public class EditionService {
   public void delete(UUID id, AppUserPrincipal me) {
     SeriesService.requireAdmin(me);
     var e = require(id);
+    if (purchaseItems.existsByEditionId(id)) {
+      throw new ConflictException("L'edizione è in una lista acquisti");
+    }
     editions.delete(e);
     afterCompletion(e.getCoverFile(), null);
+  }
+
+  /**
+   * A purchase row above the count raises it, for everyone; no client version needed, but a
+   * concurrent edit of the edition still fails on @Version.
+   */
+  @Transactional
+  public void raiseVolumeCount(UUID editionId, int volume) {
+    var e = require(editionId);
+    if (volume > e.getVolumeCount()) {
+      e.setVolumeCount(volume);
+    }
   }
 
   @Transactional

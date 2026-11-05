@@ -9,6 +9,8 @@ import me.luucka.mangashelf.purchases.dto.ListDetail;
 import me.luucka.mangashelf.purchases.dto.ListPatch;
 import me.luucka.mangashelf.purchases.dto.ListRequest;
 import me.luucka.mangashelf.purchases.dto.ListSummary;
+import me.luucka.mangashelf.purchases.dto.MoveRequest;
+import me.luucka.mangashelf.purchases.dto.Proposal;
 import me.luucka.mangashelf.purchases.dto.PurchaseSettings;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -100,5 +103,31 @@ public class PurchaseController {
       @PathVariable UUID id,
       @PathVariable UUID itemId) {
     return service.deleteItem(me.id(), id, itemId);
+  }
+
+  @PostMapping(LISTS + "/{id}/close")
+  public ListDetail close(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID id) {
+    return service.close(me.id(), id);
+  }
+
+  @PostMapping(LISTS + "/{id}/reopen")
+  public ListDetail reopen(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable UUID id) {
+    return service.reopen(me.id(), id);
+  }
+
+  @PostMapping(LISTS + "/{id}/items/move")
+  public ListDetail move(
+      @AuthenticationPrincipal AppUserPrincipal me,
+      @PathVariable UUID id,
+      @Valid @RequestBody MoveRequest body) {
+    return service.move(me.id(), id, body);
+  }
+
+  @GetMapping(LISTS + "/{id}/proposal")
+  public Proposal proposal(
+      @AuthenticationPrincipal AppUserPrincipal me,
+      @PathVariable UUID id,
+      @RequestParam UUID editionId) {
+    return service.proposal(me.id(), id, editionId);
   }
 }

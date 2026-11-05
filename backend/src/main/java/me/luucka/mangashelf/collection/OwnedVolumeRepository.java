@@ -14,6 +14,14 @@ public interface OwnedVolumeRepository extends JpaRepository<OwnedVolume, UUID> 
           + "(select c.id from CollectionEdition c where c.editionId = :editionId)")
   Optional<Integer> findMaxNumberByEditionId(UUID editionId);
 
+  boolean existsByCollectionEditionIdAndNumber(UUID collectionEditionId, int number);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "delete from OwnedVolume v where v.collectionEditionId = :collectionEditionId"
+          + " and v.number = :number")
+  void deleteByCollectionEditionIdAndNumber(UUID collectionEditionId, int number);
+
   // Bulk delete runs immediately; derived deletes would be flushed after the re-inserts.
   @Modifying(flushAutomatically = true)
   @Query("delete from OwnedVolume v where v.collectionEditionId = :collectionEditionId")

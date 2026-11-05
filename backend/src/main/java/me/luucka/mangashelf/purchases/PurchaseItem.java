@@ -56,6 +56,25 @@ public class PurchaseItem {
     return listId;
   }
 
+  public UUID getEditionId() {
+    return editionId;
+  }
+
+  public int getVolume() {
+    return volume;
+  }
+
+  public boolean isBooked() {
+    return booked;
+  }
+
+  /** A null date keeps the row's own date. */
+  public void moveTo(UUID listId, LocalDate releaseDate, Instant now) {
+    this.listId = listId;
+    if (releaseDate != null) this.releaseDate = releaseDate;
+    this.updatedAt = now;
+  }
+
   public void update(
       UUID editionId,
       Integer volume,
