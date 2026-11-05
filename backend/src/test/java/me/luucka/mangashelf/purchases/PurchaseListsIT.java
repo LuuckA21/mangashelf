@@ -258,6 +258,19 @@ class PurchaseListsIT {
   }
 
   @Test
+  void loweringDiscountAllowedWhenTotalAlreadyClamped() throws Exception {
+    var id = list("Ok", 1, 2026);
+    item(id, 1, null, 100, 950);
+    patchList(id, "{\"discountCents\":900,\"pointsDiscountCents\":50}").andExpect(status().isOk());
+    send(delete(URL + "/" + id + "/items/" + firstItem(id)), a, null).andExpect(status().isOk());
+    patchList(id, "{\"pointsDiscountCents\":0}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.pointsDiscountCents").value(0));
+    patchList(id, "{\"discountCents\":100}").andExpect(status().isOk());
+    patchList(id, "{\"description\":\"a\\nb\"}").andExpect(status().isOk());
+  }
+
+  @Test
   void keptDiscountDoesNotBlockUnrelatedPatch() throws Exception {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 950);

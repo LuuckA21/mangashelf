@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 /** Null = unchanged; discountAuto=true clears the fixed discount. */
 public record ListPatch(
-    @Size(max = 100) @Pattern(regexp = ".*\\S.*", message = "non deve essere vuoto")
+    @Size(max = 100) @Pattern(regexp = "(?s).*\\S.*", message = "non deve essere vuoto")
         String description,
     @Min(1) @Max(12) Integer month,
     @Min(2000) @Max(2100) Integer year,

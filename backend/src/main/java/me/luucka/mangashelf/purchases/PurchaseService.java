@@ -108,6 +108,7 @@ public class PurchaseService {
   @Transactional
   public ListDetail update(UUID userId, UUID id, ListPatch p) {
     var l = require(userId, id);
+    var before = detail(userId, l);
     boolean auto = Boolean.TRUE.equals(p.discountAuto());
     l.update(
         p.description() == null ? null : p.description().trim(),
@@ -119,8 +120,11 @@ public class PurchaseService {
         Instant.now());
     var d = detail(userId, l);
     // Only saving a discount can trip this; removing rows later just clamps the total at 0.
-    boolean fixedSent = p.discountCents() != null && !auto;
-    boolean pointsSent = p.pointsDiscountCents() != null;
+    // Lowering a value is always allowed, even if the total is already clamped at 0.
+    boolean fixedSent =
+        p.discountCents() != null && !auto && d.discountCents() > before.discountCents();
+    boolean pointsSent =
+        p.pointsDiscountCents() != null && d.pointsDiscountCents() > before.pointsDiscountCents();
     if ((fixedSent || pointsSent)
         && d.subtotalCents() - d.discountCents() - d.pointsDiscountCents() < 0) {
       boolean blamePoints =
