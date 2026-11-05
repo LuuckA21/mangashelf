@@ -105,6 +105,19 @@ describe('purchases', () => {
     expect(screen.getByText('CHF 216.90')).toBeVisible()
   })
 
+  it('listCountsUseSingularUnbooked', async () => {
+    replies['GET /purchase-lists'] = [
+      200,
+      [
+        summary({ itemCount: 4, unbookedCount: 1 }),
+        summary({ id: 'l9', itemCount: 1, unbookedCount: 1 }),
+      ],
+    ]
+    renderApp('/purchases')
+    expect(await screen.findByText('4 volumi, 1 non prenotato')).toBeVisible()
+    expect(screen.getByText('1 volume, 1 non prenotato')).toBeVisible()
+  })
+
   it('createListGoesToItsPage', async () => {
     replies['POST /purchase-lists'] = [201, summary({ id: 'new1' })]
     replies['GET /purchase-lists/new1'] = [
@@ -734,5 +747,44 @@ describe('purchase list actions', () => {
       .setup()
       .click(within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }))
     expect((await axe(container)).violations).toEqual([])
+  })
+
+  it('cancelKeepsSelection', async () => {
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('checkbox', { name: /Alfa.*Vol\. 1/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Beta.*Vol\. 2/ }))
+    await user.click(screen.getByRole('button', { name: 'Sposta selezionate' }))
+    await user.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('2 selezionate')).toBeVisible()
+    expect(screen.getAllByRole('checkbox', { checked: true })).toHaveLength(2)
+  })
+
+  it('moveDialogPreselectsFirstTarget', async () => {
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(
+      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+    )
+    const dialog = screen.getByRole('dialog')
+    await waitFor(() =>
+      expect(
+        within(dialog).getByLabelText('Lista di destinazione'),
+      ).toHaveValue('l2'),
+    )
+    expect(within(dialog).getByRole('button', { name: 'Sposta' })).toBeEnabled()
+  })
+
+  it('closeQuestionIsSingularForOneRow', async () => {
+    await open(detail([item({ id: 'a' })]))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Chiudi lista' }))
+    expect(
+      screen.getByText(
+        '1 riga non prenotata: non diventerà posseduta e resta nel totale. Chiudere comunque?',
+      ),
+    ).toBeVisible()
   })
 })

@@ -76,13 +76,14 @@ function Row({
 
   return (
     <li className={`edition-row item-row${item.booked ? ' booked' : ''}`}>
-      <input
-        type="checkbox"
-        className="row-select"
-        checked={selected}
-        onChange={(e) => onSelect(e.target.checked)}
-        aria-label={t('purchases.select', { name, volume })}
-      />
+      <label className="row-select">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(e) => onSelect(e.target.checked)}
+          aria-label={t('purchases.select', { name, volume })}
+        />
+      </label>
       <div className="grow">
         <span className="name">{item.seriesTitle}</span>{' '}
         <span className="muted">{item.editionName}</span>
@@ -143,11 +144,16 @@ export default function PurchaseListPage() {
   const settings = usePurchaseSettings().data
   const change = useListChange(id)
   const navigate = useNavigate()
-  const [selected, setSelected] = useState<string[]>([])
+  const [picked, setPicked] = useState<string[]>([])
   const [moving, setMoving] = useState<string[] | null>(null)
+  // Rows that are gone (deleted, moved) cannot stay selected.
+  const selected = picked.filter((x) => data?.items.some((i) => i.id === x))
   const unbooked = data?.items.filter((i) => !i.booked).length ?? 0
   return (
     <>
+      <Link to="/purchases" className="back-link">
+        {t('purchases.back')}
+      </Link>
       <div className="page-head">
         <h1>
           {data
@@ -177,7 +183,11 @@ export default function PurchaseListPage() {
                     className="quiet"
                     label={t('purchases.close')}
                     what=""
-                    question={t('purchases.closeQuestion', { count: unbooked })}
+                    question={
+                      unbooked === 1
+                        ? t('purchases.closeQuestionOne')
+                        : t('purchases.closeQuestion', { count: unbooked })
+                    }
                     yesLabel={t('purchases.yesClose')}
                     busyLabel={t('purchases.closing')}
                     onConfirm={async () => {
@@ -241,7 +251,7 @@ export default function PurchaseListPage() {
                     settings={settings}
                     selected={selected.includes(i.id)}
                     onSelect={(on) =>
-                      setSelected((s) =>
+                      setPicked((s) =>
                         on ? [...s, i.id] : s.filter((x) => x !== i.id),
                       )
                     }
@@ -270,15 +280,11 @@ export default function PurchaseListPage() {
             <MoveDialog
               listId={id}
               itemIds={moving}
-              onClose={() => {
-                setMoving(null)
-                setSelected((s) => s.filter((x) => !moving.includes(x)))
-              }}
+              onClose={() => setMoving(null)}
             />
           )}
         </>
       )}
-      <Link to="/purchases">{t('purchases.back')}</Link>
     </>
   )
 }

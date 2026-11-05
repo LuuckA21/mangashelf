@@ -21,6 +21,7 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
   const titleId = useId()
   const panel = useRef<HTMLDivElement>(null)
   const targets = (lists ?? []).filter((l) => l.id !== listId)
+  const chosen = target || targets[0]?.id || ''
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null
@@ -53,7 +54,7 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
         path: '/items/move',
         body: {
           itemIds,
-          targetListId: target,
+          targetListId: chosen,
           ...(date ? { releaseDate: date } : {}),
         },
       })
@@ -85,12 +86,11 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
             <label htmlFor={`${titleId}-t`}>{t('purchases.moveTarget')}</label>
             <select
               id={`${titleId}-t`}
-              value={target}
+              value={chosen}
               onChange={(e) => setTarget(e.target.value)}
               required
               aria-invalid={!!fieldMessage(error, 'targetListId')}
             >
-              <option value="" />
               {targets.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.description} · {monthLabel(l.month, l.year)}
@@ -125,7 +125,7 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
             </p>
           )}
           <div className="inline-actions">
-            <button type="submit" disabled={!target || change.isPending}>
+            <button type="submit" disabled={!chosen || change.isPending}>
               {change.isPending ? t('purchases.moving') : t('purchases.move')}
             </button>
             <button type="button" className="quiet" onClick={onClose}>

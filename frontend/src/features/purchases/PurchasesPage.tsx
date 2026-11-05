@@ -120,8 +120,12 @@ export default function PurchasesPage() {
                 <div className="muted">
                   {t(
                     l.itemCount === 1
-                      ? 'purchases.countOne'
-                      : 'purchases.counts',
+                      ? l.unbookedCount === 1
+                        ? 'purchases.countOneOneUnbooked'
+                        : 'purchases.countOne'
+                      : l.unbookedCount === 1
+                        ? 'purchases.countsOneUnbooked'
+                        : 'purchases.counts',
                     {
                       count: l.itemCount,
                       unbooked: l.unbookedCount,

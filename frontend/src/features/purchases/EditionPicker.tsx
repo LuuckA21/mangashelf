@@ -28,7 +28,7 @@ export default function EditionPicker({
 
   return (
     <div className="edition-picker">
-      <form className="inline-actions" onSubmit={search} role="search">
+      <form className="search-form" onSubmit={search} role="search">
         <div className="field">
           <label htmlFor="picker-q">{t('purchases.searchSeries')}</label>
           <input
@@ -37,7 +37,9 @@ export default function EditionPicker({
             onChange={(e) => setText(e.target.value)}
           />
         </div>
-        <button type="submit">{t('purchases.search')}</button>
+        <button type="submit" className="quiet">
+          {t('purchases.search')}
+        </button>
       </form>
       {q && !seriesId && (
         <ul className="chips">

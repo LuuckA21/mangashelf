@@ -1162,9 +1162,18 @@ button[aria-pressed='true'] {
 
 /* Move rows: selection bar and modal panel. */
 .row-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.row-select input {
   width: auto;
   min-height: 0;
-  flex: none;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: calc(var(--s) * 2);
 }
 .selection-bar {
   position: sticky;
@@ -1195,5 +1204,10 @@ button[aria-pressed='true'] {
   .row-select {
     width: 44px;
     height: 44px;
+  }
+  /* The checkbox stays beside the name instead of on a line alone. */
+  .item-row:has(> .row-select) .grow {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }

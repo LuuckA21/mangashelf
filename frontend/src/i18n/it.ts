@@ -152,6 +152,8 @@ export const it = {
   'purchases.open': 'Aperta',
   'purchases.closed': 'Chiusa',
   'purchases.counts': '{count} volumi, {unbooked} non prenotati',
+  'purchases.countsOneUnbooked': '{count} volumi, 1 non prenotato',
+  'purchases.countOneOneUnbooked': '1 volume, 1 non prenotato',
   'purchases.countOne': '1 volume, {unbooked} non prenotati',
   'purchases.listTitle': '{description} · {month}',
   'purchases.back': 'Tutte le liste',
@@ -198,6 +200,8 @@ export const it = {
   'purchases.yesClose': 'Sì, chiudi',
   'purchases.closeQuestion':
     '{count} righe non prenotate: non diventeranno possedute e restano nel totale. Chiudere comunque?',
+  'purchases.closeQuestionOne':
+    '1 riga non prenotata: non diventerà posseduta e resta nel totale. Chiudere comunque?',
   'purchases.reopen': 'Riapri lista',
   'purchases.deleteList': 'Elimina lista',
   'purchases.listDeleteWhat': 'la lista «{name}»',
