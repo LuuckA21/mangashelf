@@ -6,6 +6,9 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 
 ## [Unreleased]
 
+### Added
+- Purchase lists: monthly lists of volumes to buy, with release dates, EUR and CHF prices, discount and totals; mark rows booked, move rows between lists, close a list (booked rows become owned) and reopen it.
+
 ## [0.1.0] - 2026-11-04
 
 First release.

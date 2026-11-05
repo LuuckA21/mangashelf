@@ -552,3 +552,187 @@ describe('purchase list detail', () => {
     expect((await axe(container)).violations).toEqual([])
   })
 })
+
+describe('purchase list actions', () => {
+  const two = [
+    item({ id: 'a', seriesTitle: 'Alfa', volume: 1 }),
+    item({ id: 'b', seriesTitle: 'Beta', volume: 2 }),
+  ]
+  const open = async (d: ListDetail) => {
+    replies['GET /purchase-lists/l1'] = [200, d]
+    replies['GET /purchase-lists'] = [
+      200,
+      [
+        summary(),
+        summary({ id: 'l2', description: 'Manga Novembre', month: 11 }),
+      ],
+    ]
+    const view = renderApp('/purchases/l1')
+    await screen.findByRole('heading', { name: /Manga Ottobre/ })
+    return view
+  }
+
+  it('moveSelectedRows', async () => {
+    replies['POST /purchase-lists/l1/items/move'] = [200, detail([])]
+    await open(detail(two))
+    const user = userEvent.setup()
+    expect(
+      screen.queryByRole('button', { name: 'Sposta selezionate' }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /Alfa.*Vol\. 1/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Beta.*Vol\. 2/ }))
+    await user.click(screen.getByRole('button', { name: 'Sposta selezionate' }))
+    const dialog = screen.getByRole('dialog')
+    const target = within(dialog).getByLabelText('Lista di destinazione')
+    expect(
+      within(target as HTMLElement).queryByText(/Manga Ottobre/),
+    ).not.toBeInTheDocument()
+    await user.selectOptions(target, 'l2')
+    await user.type(
+      within(dialog).getByLabelText('Data di uscita'),
+      '2026-12-01',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Sposta' }))
+    await waitFor(() =>
+      expect(bodyOf('POST', '/purchase-lists/l1/items/move')).toEqual({
+        itemIds: ['a', 'b'],
+        targetListId: 'l2',
+        releaseDate: '2026-12-01',
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+  })
+
+  it('moveSingleRowKeepsDateWhenEmpty', async () => {
+    replies['POST /purchase-lists/l1/items/move'] = [200, detail([])]
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(
+      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+    )
+    const dialog = screen.getByRole('dialog')
+    await user.selectOptions(
+      within(dialog).getByLabelText('Lista di destinazione'),
+      'l2',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Sposta' }))
+    await waitFor(() =>
+      expect(bodyOf('POST', '/purchase-lists/l1/items/move')).toEqual({
+        itemIds: ['b'],
+        targetListId: 'l2',
+      }),
+    )
+  })
+
+  it('moveDialogClosesOnEscape', async () => {
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(
+      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+    )
+    expect(screen.getByRole('dialog')).toBeVisible()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('closeWithUnbookedAsksConfirmation', async () => {
+    replies['POST /purchase-lists/l1/close'] = [
+      200,
+      detail(two, { closed: true }),
+    ]
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Chiudi lista' }))
+    expect(
+      screen.getByText(
+        '2 righe non prenotate: non diventeranno possedute e restano nel totale. Chiudere comunque?',
+      ),
+    ).toBeVisible()
+    expect(fetchMock.mock.calls.some(([u]) => u.endsWith('/close'))).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Sì, chiudi' }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Riapri lista' }),
+      ).toBeVisible(),
+    )
+  })
+
+  it('closeWithAllBookedClosesDirectly', async () => {
+    const booked = [item({ id: 'a', booked: true })]
+    replies['POST /purchase-lists/l1/close'] = [
+      200,
+      detail(booked, { closed: true }),
+    ]
+    await open(detail(booked))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Chiudi lista' }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Riapri lista' }),
+      ).toBeVisible(),
+    )
+  })
+
+  it('reopenClosedList', async () => {
+    replies['POST /purchase-lists/l1/reopen'] = [200, detail(two)]
+    await open(detail(two, { closed: true }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Riapri lista' }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Chiudi lista' }),
+      ).toBeVisible(),
+    )
+  })
+
+  it('deleteOnlyWhenOpen', async () => {
+    const closed = await open(detail(two, { closed: true }))
+    expect(
+      screen.queryByRole('button', { name: 'Elimina lista' }),
+    ).not.toBeInTheDocument()
+    closed.unmount()
+    replies['DELETE /purchase-lists/l1'] = [204]
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Elimina lista' }))
+    await user.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent(/^\/purchases$/),
+    )
+  })
+
+  it('closeInvalidatesCollection', async () => {
+    replies['POST /purchase-lists/l1/close'] = [
+      200,
+      detail(two, { closed: true }),
+    ]
+    const { client } = await open(detail(two))
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Chiudi lista' }))
+    await user.click(screen.getByRole('button', { name: 'Sì, chiudi' }))
+    await waitFor(() => {
+      const keys = spy.mock.calls.map(([f]) => (f?.queryKey as string[])[0])
+      expect(keys).toEqual(
+        expect.arrayContaining([
+          'purchase-lists',
+          'collection',
+          'edition',
+          'collection-entry',
+        ]),
+      )
+    })
+  })
+
+  it('moveDialogHasNoA11yViolations', async () => {
+    const { container } = await open(detail(two))
+    await userEvent
+      .setup()
+      .click(within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }))
+    expect((await axe(container)).violations).toEqual([])
+  })
+})

@@ -1,6 +1,6 @@
 # mangashelf
 
-App web self-hosted per me e pochi amici: ognuno tiene traccia della propria collezione manga, volume per volume, su un catalogo di serie ed edizioni condiviso.
+App web self-hosted per me e pochi amici: ognuno tiene traccia della propria collezione manga, volume per volume, su un catalogo di serie ed edizioni condiviso. Include le liste di acquisto mensili (prezzi EUR/CHF, sconto, righe prenotate, spostamento tra liste, chiusura che rende possedute le righe prenotate).
 
 ## Tech stack
 

@@ -1159,3 +1159,41 @@ button[aria-pressed='true'] {
     min-height: 44px;
   }
 }
+
+/* Move rows: selection bar and modal panel. */
+.row-select {
+  width: auto;
+  min-height: 0;
+  flex: none;
+}
+.selection-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s);
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--s) * 2);
+  background: rgb(0 0 0 / 0.45);
+  z-index: 10;
+}
+.modal {
+  width: min(100%, 28rem);
+  margin: 0;
+}
+@media (max-width: 700px) {
+  /* Checkboxes get a 44px target too. */
+  .row-select {
+    width: 44px;
+    height: 44px;
+  }
+}

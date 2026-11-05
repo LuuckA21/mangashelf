@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import type { ItemView } from '../../api/types'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import { t } from '../../i18n/t'
 import { usePurchaseList, useListChange, usePurchaseSettings } from './api'
+import MoveDialog from './MoveDialog'
 import ItemForm from './ItemForm'
 import { formatChf, formatEur } from './money'
 import { monthLabel } from './monthLabel'
@@ -39,9 +40,15 @@ function Row({
   listId,
   item,
   settings,
+  selected,
+  onSelect,
+  onMove,
 }: {
   listId: string
   item: ItemView
+  selected: boolean
+  onSelect: (on: boolean) => void
+  onMove: () => void
   settings: { chfRate: number; discountPercent: number }
 }) {
   const change = useListChange(listId)
@@ -69,6 +76,13 @@ function Row({
 
   return (
     <li className={`edition-row item-row${item.booked ? ' booked' : ''}`}>
+      <input
+        type="checkbox"
+        className="row-select"
+        checked={selected}
+        onChange={(e) => onSelect(e.target.checked)}
+        aria-label={t('purchases.select', { name, volume })}
+      />
       <div className="grow">
         <span className="name">{item.seriesTitle}</span>{' '}
         <span className="muted">{item.editionName}</span>
@@ -104,6 +118,9 @@ function Row({
         >
           {t('purchases.editRow')}
         </button>
+        <button type="button" className="quiet" onClick={onMove}>
+          {t('purchases.move')}
+        </button>
         <ConfirmDelete
           what={t('purchases.rowDeleteWhat', {
             name: `${name} ${volume}`,
@@ -124,6 +141,11 @@ export default function PurchaseListPage() {
   const { id = '' } = useParams()
   const { data, isPending, isError } = usePurchaseList(id)
   const settings = usePurchaseSettings().data
+  const change = useListChange(id)
+  const navigate = useNavigate()
+  const [selected, setSelected] = useState<string[]>([])
+  const [moving, setMoving] = useState<string[] | null>(null)
+  const unbooked = data?.items.filter((i) => !i.booked).length ?? 0
   return (
     <>
       <div className="page-head">
@@ -135,6 +157,62 @@ export default function PurchaseListPage() {
               })
             : t('purchases.title')}
         </h1>
+        {data && (
+          <div className="inline-actions">
+            {data.closed ? (
+              <button
+                type="button"
+                className="quiet"
+                disabled={change.isPending}
+                onClick={() =>
+                  change.mutate({ method: 'POST', path: '/reopen' })
+                }
+              >
+                {t('purchases.reopen')}
+              </button>
+            ) : (
+              <>
+                {unbooked > 0 ? (
+                  <ConfirmDelete
+                    className="quiet"
+                    label={t('purchases.close')}
+                    what=""
+                    question={t('purchases.closeQuestion', { count: unbooked })}
+                    yesLabel={t('purchases.yesClose')}
+                    busyLabel={t('purchases.closing')}
+                    onConfirm={async () => {
+                      await change.mutateAsync({
+                        method: 'POST',
+                        path: '/close',
+                      })
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="quiet"
+                    disabled={change.isPending}
+                    onClick={() =>
+                      change.mutate({ method: 'POST', path: '/close' })
+                    }
+                  >
+                    {t('purchases.close')}
+                  </button>
+                )}
+                <ConfirmDelete
+                  label={t('purchases.deleteList')}
+                  what={t('purchases.listDeleteWhat', {
+                    name: data.description,
+                  })}
+                  onConfirm={async () => {
+                    await change.mutateAsync({ method: 'DELETE' })
+                    navigate('/purchases')
+                  }}
+                />
+              </>
+            )}
+          </div>
+        )}
       </div>
       {isPending && <p className="muted">{t('common.loading')}</p>}
       {isError && (
@@ -156,12 +234,48 @@ export default function PurchaseListPage() {
               <h2>{g.date ? dayLabel(g.date) : t('purchases.undated')}</h2>
               <ul className="edition-list">
                 {g.rows.map((i) => (
-                  <Row key={i.id} listId={id} item={i} settings={settings} />
+                  <Row
+                    key={i.id}
+                    listId={id}
+                    item={i}
+                    settings={settings}
+                    selected={selected.includes(i.id)}
+                    onSelect={(on) =>
+                      setSelected((s) =>
+                        on ? [...s, i.id] : s.filter((x) => x !== i.id),
+                      )
+                    }
+                    onMove={() => setMoving([i.id])}
+                  />
                 ))}
               </ul>
             </section>
           ))}
           <Totals list={data} settings={settings} />
+          {selected.length > 0 && (
+            <div
+              className="selection-bar"
+              role="region"
+              aria-label={t('purchases.moveSelected')}
+            >
+              <span>
+                {t('purchases.selectedCount', { count: selected.length })}
+              </span>
+              <button type="button" onClick={() => setMoving(selected)}>
+                {t('purchases.moveSelected')}
+              </button>
+            </div>
+          )}
+          {moving && (
+            <MoveDialog
+              listId={id}
+              itemIds={moving}
+              onClose={() => {
+                setMoving(null)
+                setSelected((s) => s.filter((x) => !moving.includes(x)))
+              }}
+            />
+          )}
         </>
       )}
       <Link to="/purchases">{t('purchases.back')}</Link>
