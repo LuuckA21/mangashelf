@@ -1096,3 +1096,66 @@ button.danger:hover:not(:disabled) {
   font-family: var(--font-data);
   white-space: nowrap;
 }
+
+.item-group > h2 {
+  font-size: 19px;
+  margin: calc(var(--s) * 3) 0 var(--s);
+}
+.item-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--s) * 2);
+  margin-bottom: calc(var(--s) * 2);
+}
+.item-fields .field {
+  flex: 1 1 120px;
+}
+.item-row.booked {
+  background: var(--indigo-wash);
+}
+.item-row .num {
+  font-family: var(--font-data);
+  white-space: nowrap;
+}
+button[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--paper-raised);
+}
+.totals dl {
+  margin: 0 0 calc(var(--s) * 2);
+}
+.totals dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--s) * 2);
+}
+.totals dt {
+  color: var(--ash);
+}
+.totals dd {
+  margin: 0;
+  font-family: var(--font-data);
+}
+.totals .grand {
+  font-size: 21px;
+  font-weight: 600;
+  border-top: 1px solid var(--indigo-deep);
+  padding-top: var(--s);
+}
+.totals .grand dt {
+  color: inherit;
+}
+@media (max-width: 700px) {
+  .item-row {
+    flex-wrap: wrap;
+  }
+  .item-row .grow {
+    flex-basis: 100%;
+  }
+  .item-row button,
+  .item-form button,
+  .totals button,
+  .edition-picker button {
+    min-height: 44px;
+  }
+}

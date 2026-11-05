@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
-import type { ListDetail, ListSummary, PurchaseSettings } from '../../api/types'
+import type {
+  ListDetail,
+  ListSummary,
+  Proposal,
+  PurchaseSettings,
+} from '../../api/types'
 
 const json = (method: string, body: unknown): RequestInit => ({
   method,
@@ -45,3 +50,26 @@ export function useSavePurchaseSettings() {
     onSuccess: (saved) => client.setQueryData(['purchase-settings'], saved),
   })
 }
+
+/** Any change to a list: the answer is the new detail. A row in a closed list changes owned volumes. */
+export function useListChange(id: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (c: { method: string; path?: string; body?: unknown }) =>
+      api<ListDetail>(
+        `/purchase-lists/${id}${c.path ?? ''}`,
+        c.body === undefined ? { method: c.method } : json(c.method, c.body),
+      ),
+    onSuccess: (detail) => {
+      client.setQueryData(['purchase-list', id], detail)
+      return Promise.all(
+        ['purchase-lists', 'collection', 'edition', 'collection-entry'].map(
+          (k) => client.invalidateQueries({ queryKey: [k] }),
+        ),
+      )
+    },
+  })
+}
+
+export const fetchProposal = (id: string, editionId: string) =>
+  api<Proposal>(`/purchase-lists/${id}/proposal?editionId=${editionId}`)
