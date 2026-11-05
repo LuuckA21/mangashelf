@@ -701,6 +701,24 @@ button.danger:hover:not(:disabled) {
  * Filters read as a single row of switches rather than a dropdown: with
  * three options the choice and its state are both visible at a glance.
  */
+/* Search: the field and its button share one row and the full width; the button
+   lines up with the input (not with the label above it) and has the same height. */
+.search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--s);
+  align-items: end;
+  max-width: 520px;
+  margin-bottom: calc(var(--s) * 2);
+}
+.search-form .field {
+  margin-bottom: 0;
+}
+.search-form input,
+.search-form button {
+  height: 44px;
+}
+
 /* Filters line up in equal columns, so both rows of chips match in size. */
 .chips {
   display: grid;
