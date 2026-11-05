@@ -258,6 +258,21 @@ class PurchaseListsIT {
   }
 
   @Test
+  void keptDiscountDoesNotBlockUnrelatedPatch() throws Exception {
+    var id = list("Ok", 1, 2026);
+    item(id, 1, null, 100, 950);
+    patchList(id, "{\"discountCents\":900,\"pointsDiscountCents\":50}").andExpect(status().isOk());
+    send(delete(URL + "/" + id + "/items/" + firstItem(id)), a, null).andExpect(status().isOk());
+    patchList(id, "{\"description\":\"x\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.description").value("x"))
+        .andExpect(jsonPath("$.discountCents").value(900))
+        .andExpect(jsonPath("$.pointsDiscountCents").value(50))
+        .andExpect(jsonPath("$.totalCents").value(0));
+    patchList(id, "{\"discountAuto\":true}").andExpect(status().isOk());
+  }
+
+  @Test
   void deleteOpenListRemovesRows() throws Exception {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 100);

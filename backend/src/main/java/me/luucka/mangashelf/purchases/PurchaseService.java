@@ -103,9 +103,14 @@ public class PurchaseService {
         Instant.now());
     var d = detail(userId, l);
     // Only saving a discount can trip this; removing rows later just clamps the total at 0.
-    if (d.subtotalCents() - d.discountCents() - d.pointsDiscountCents() < 0) {
+    boolean fixedSent = p.discountCents() != null && !auto;
+    boolean pointsSent = p.pointsDiscountCents() != null;
+    if ((fixedSent || pointsSent)
+        && d.subtotalCents() - d.discountCents() - d.pointsDiscountCents() < 0) {
+      boolean blamePoints =
+          pointsSent && (!fixedSent || d.subtotalCents() - d.discountCents() >= 0);
       throw new FieldValidationException(
-          p.discountCents() != null && !auto ? "discountCents" : "pointsDiscountCents", OVER);
+          blamePoints ? "pointsDiscountCents" : "discountCents", OVER);
     }
     return d;
   }
