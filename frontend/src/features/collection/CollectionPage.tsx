@@ -8,6 +8,7 @@ import type {
 import CoverThumb from '../../components/CoverThumb'
 import { t } from '../../i18n/t'
 import { useCollection } from './api'
+import { CollectionStats } from './CollectionStats'
 import { formatMissing } from './formatMissing'
 
 const TYPES: EditionType[] = ['REGULAR', 'VARIANT', 'JAPANESE']
@@ -110,87 +111,95 @@ export default function CollectionPage() {
       <div className="page-head">
         <h1>{t('collection.title')}</h1>
       </div>
-      <form role="search" className="search-form" onSubmit={submit}>
-        <div className="field">
-          <label htmlFor="q">{t('collection.searchLabel')}</label>
-          <input
-            id="q"
-            type="search"
-            value={search}
-            onChange={(ev) => setSearch(ev.target.value)}
-          />
-        </div>
-        <button type="submit">{t('collection.search')}</button>
-      </form>
-      <div
-        className="chips"
-        role="group"
-        aria-label={t('collection.filterType')}
-      >
-        {TYPES.map((x) =>
-          chip(t(`type.${x}`), type === x, () =>
-            set({ type: type === x ? undefined : x }),
-          ),
-        )}
-      </div>
-      <div
-        className="chips"
-        role="group"
-        aria-label={t('collection.filterStatus')}
-      >
-        {STATUSES.map((x) =>
-          chip(t(`status.${x}`), status === x, () =>
-            set({ status: status === x ? undefined : x }),
-          ),
-        )}
-        {chip(t('collection.incompleteOnly'), incomplete, () =>
-          set({ incomplete: incomplete ? undefined : 'true' }),
-        )}
-      </div>
+      <div className="collection-layout">
+        <div className="collection-main">
+          <form role="search" className="search-form" onSubmit={submit}>
+            <div className="field">
+              <label htmlFor="q">{t('collection.searchLabel')}</label>
+              <input
+                id="q"
+                type="search"
+                value={search}
+                onChange={(ev) => setSearch(ev.target.value)}
+              />
+            </div>
+            <button type="submit">{t('collection.search')}</button>
+          </form>
+          <div
+            className="chips"
+            role="group"
+            aria-label={t('collection.filterType')}
+          >
+            {TYPES.map((x) =>
+              chip(t(`type.${x}`), type === x, () =>
+                set({ type: type === x ? undefined : x }),
+              ),
+            )}
+          </div>
+          <div
+            className="chips"
+            role="group"
+            aria-label={t('collection.filterStatus')}
+          >
+            {STATUSES.map((x) =>
+              chip(t(`status.${x}`), status === x, () =>
+                set({ status: status === x ? undefined : x }),
+              ),
+            )}
+            {chip(t('collection.incompleteOnly'), incomplete, () =>
+              set({ incomplete: incomplete ? undefined : 'true' }),
+            )}
+          </div>
 
-      {isPending && <p className="muted">{t('common.loading')}</p>}
-      {isError && (
-        <div className="error" role="alert">
-          {t('error.generic')}{' '}
-          <button className="quiet" onClick={() => refetch()}>
-            {t('common.retry')}
-          </button>
+          {isPending && <p className="muted">{t('common.loading')}</p>}
+          {isError && (
+            <div className="error" role="alert">
+              {t('error.generic')}{' '}
+              <button className="quiet" onClick={() => refetch()}>
+                {t('common.retry')}
+              </button>
+            </div>
+          )}
+          {data && groups.length === 0 && (
+            <p className="empty">{t('collection.empty')}</p>
+          )}
+          {groups.map((g) => (
+            <section key={g.id} className="series-group">
+              <h2>{g.title}</h2>
+              <ul className="edition-list">
+                {g.entries.map((e) => (
+                  <Entry key={e.editionId} e={e} />
+                ))}
+              </ul>
+            </section>
+          ))}
+          {data && data.page.totalPages > 1 && (
+            <nav
+              className="inline-actions"
+              aria-label={t('collection.pagination')}
+            >
+              <button
+                className="quiet"
+                disabled={page <= 1}
+                onClick={() => set({ page: String(page - 1) })}
+              >
+                {t('collection.prev')}
+              </button>
+              <span>
+                {t('collection.pageOf', { page, total: data.page.totalPages })}
+              </span>
+              <button
+                className="quiet"
+                disabled={page >= data.page.totalPages}
+                onClick={() => set({ page: String(page + 1) })}
+              >
+                {t('collection.next')}
+              </button>
+            </nav>
+          )}
         </div>
-      )}
-      {data && groups.length === 0 && (
-        <p className="empty">{t('collection.empty')}</p>
-      )}
-      {groups.map((g) => (
-        <section key={g.id} className="series-group">
-          <h2>{g.title}</h2>
-          <ul className="edition-list">
-            {g.entries.map((e) => (
-              <Entry key={e.editionId} e={e} />
-            ))}
-          </ul>
-        </section>
-      ))}
-      {data && data.page.totalPages > 1 && (
-        <nav className="inline-actions" aria-label={t('collection.pagination')}>
-          <button
-            className="quiet"
-            disabled={page <= 1}
-            onClick={() => set({ page: String(page - 1) })}
-          >
-            {t('collection.prev')}
-          </button>
-          <span>
-            {t('collection.pageOf', { page, total: data.page.totalPages })}
-          </span>
-          <button
-            className="quiet"
-            disabled={page >= data.page.totalPages}
-            onClick={() => set({ page: String(page + 1) })}
-          >
-            {t('collection.next')}
-          </button>
-        </nav>
-      )}
+        <CollectionStats />
+      </div>
     </>
   )
 }

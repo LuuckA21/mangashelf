@@ -63,3 +63,17 @@ export type CollectionEntry = {
   version: number
   owned: number[]
 }
+
+/** One chart bar: owned volumes per key (publisher, enum name, or null for "Altri"). */
+export type StatBar = { key: string | null; volumes: number }
+
+export type CollectionStats = {
+  editions: number
+  series: number
+  ownedVolumes: number
+  totalVolumes: number
+  completedEditions: number
+  byPublisher: StatBar[]
+  byType: StatBar[]
+  byStatus: StatBar[]
+}

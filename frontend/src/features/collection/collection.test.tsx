@@ -1,10 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '../../App'
-import type { CollectionEntry, EditionResponse } from '../../api/types'
+import type {
+  CollectionEntry,
+  CollectionStats as Stats,
+  EditionResponse,
+} from '../../api/types'
+import { CollectionStats } from './CollectionStats'
 import { axe } from '../../test/axe'
 
 const fetchMock = vi.fn()
@@ -42,6 +47,17 @@ const edition = (over: Partial<EditionResponse> = {}): EditionResponse => ({
   inMyCollection: true,
   ...over,
 })
+const stats = (over: Partial<Stats> = {}): Stats => ({
+  editions: 0,
+  series: 0,
+  ownedVolumes: 0,
+  totalVolumes: 0,
+  completedEditions: 0,
+  byPublisher: [],
+  byType: [],
+  byStatus: [],
+  ...over,
+})
 const pageOf = (content: CollectionEntry[]) => ({
   content,
   page: { size: 20, number: 0, totalElements: content.length, totalPages: 1 },
@@ -53,6 +69,7 @@ beforeEach(() => {
       200,
       { id: '1', username: 'anna', role: 'USER', mustChangePassword: false },
     ],
+    'GET /collection/stats': [200, stats()],
   }
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const r = replies[`${init.method} ${url.replace('/api/v1', '')}`] ?? [
@@ -361,5 +378,140 @@ describe('edition page', () => {
     ).toBeInTheDocument()
     expect(await tile(1, false)).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('collection stats', () => {
+  const panel = () => screen.findByRole('region', { name: 'Statistiche' })
+  const value = (region: HTMLElement, label: string) =>
+    within(region).getByText(label).nextElementSibling
+
+  it('showsNumbersMissingAndRoundedDownPercent', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({
+        editions: 14,
+        series: 9,
+        ownedVolumes: 411,
+        totalVolumes: 412,
+        completedEditions: 5,
+      }),
+    ]
+    renderApp('/')
+    const region = await panel()
+    expect(value(region, 'Volumi')).toHaveTextContent('411')
+    expect(value(region, 'Edizioni')).toHaveTextContent('14')
+    expect(value(region, 'Serie')).toHaveTextContent('9')
+    expect(value(region, 'Completate')).toHaveTextContent('5')
+    expect(value(region, 'Mancanti')).toHaveTextContent('1')
+    expect(value(region, 'Completamento')).toHaveTextContent('99%')
+  })
+
+  it('rendersBarsAsText', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({
+        editions: 3,
+        ownedVolumes: 240,
+        totalVolumes: 300,
+        byPublisher: [
+          { key: 'Star Comics', volumes: 210 },
+          { key: null, volumes: 30 },
+        ],
+        byType: [{ key: 'REGULAR', volumes: 240 }],
+        byStatus: [{ key: 'COMPLETED', volumes: 240 }],
+      }),
+    ]
+    renderApp('/')
+    const region = await panel()
+    for (const text of [
+      'Star Comics: 210 volumi',
+      'Altri: 30 volumi',
+      'Regolare: 240 volumi',
+      'Concluse: 240 volumi',
+    ])
+      expect(within(region).getByText(text)).toBeInTheDocument()
+    expect(
+      within(region).getByRole('heading', { name: 'Per editore' }),
+    ).toBeInTheDocument()
+  })
+
+  it('hiddenWhenCollectionIsEmpty', async () => {
+    replies[listUrl('')] = [200, pageOf([])]
+    renderApp('/')
+    await screen.findByText('Nessuna edizione in collezione.')
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/collection/stats',
+        expect.anything(),
+      ),
+    )
+    expect(
+      screen.queryByRole('region', { name: 'Statistiche' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('statsErrorKeepsTheList', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [500, { detail: 'boom' }]
+    renderApp('/')
+    expect(await screen.findByText('Deluxe')).toBeInTheDocument()
+    const message = await screen.findByText('Statistiche non disponibili')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 2, totalVolumes: 5 }),
+    ]
+    await userEvent.click(
+      within(message.closest('section')!).getByRole('button', {
+        name: 'Riprova',
+      }),
+    )
+    expect(value(await panel(), 'Volumi')).toHaveTextContent('2')
+  })
+
+  it('refreshesAfterTickingAVolume', async () => {
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 3, totalVolumes: 5 }),
+    ]
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <CollectionStats />
+      </QueryClientProvider>,
+    )
+    expect(value(await panel(), 'Volumi')).toHaveTextContent('3')
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 4, totalVolumes: 5 }),
+    ]
+    await client.invalidateQueries({ queryKey: ['collection'] })
+    await waitFor(async () =>
+      expect(value(await panel(), 'Volumi')).toHaveTextContent('4'),
+    )
+  })
+
+  it('statsPanelHasNoAxeViolations', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({
+        editions: 2,
+        series: 1,
+        ownedVolumes: 5,
+        totalVolumes: 8,
+        byPublisher: [{ key: 'Panini', volumes: 5 }],
+        byType: [{ key: 'VARIANT', volumes: 5 }],
+        byStatus: [{ key: 'ONGOING', volumes: 5 }],
+      }),
+    ]
+    const { container } = renderApp('/')
+    await panel()
+    expect((await axe(container)).violations).toEqual([])
   })
 })

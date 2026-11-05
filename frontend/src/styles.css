@@ -979,3 +979,101 @@ button.danger:hover:not(:disabled) {
   width: auto;
   margin-top: 5px;
 }
+
+/* ---------------------------------------------------- collection stats */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.collection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: calc(var(--s) * 4);
+  align-items: start;
+}
+/* Stays in view beside a long list; scrolls inside itself on short windows. */
+.stats-panel {
+  position: sticky;
+  top: calc(var(--s) * 2);
+  max-height: calc(100vh - var(--s) * 4);
+  overflow-y: auto;
+  margin-top: 0;
+}
+.stats-panel h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ash);
+  margin: calc(var(--s) * 3) 0 var(--s);
+}
+.stat-numbers {
+  margin: 0;
+}
+.stat-numbers > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s);
+  padding: calc(var(--s) * 0.5) 0;
+  border-bottom: 1px solid var(--ash-line);
+}
+.stat-numbers dt {
+  color: var(--ash);
+}
+.stat-numbers dd {
+  margin: 0;
+  font-family: var(--font-data);
+  color: var(--indigo-deep);
+}
+.stat-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stat-bars li + li {
+  margin-top: var(--s);
+}
+.stat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: calc(var(--s) * 0.5) var(--s);
+}
+.stat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-n {
+  font-family: var(--font-data);
+}
+.stat-track {
+  grid-column: 1 / -1;
+  height: 8px;
+  background: var(--indigo-wash);
+  border-radius: var(--radius);
+}
+.stat-bar {
+  display: block;
+  height: 100%;
+  background: var(--indigo);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 700px) {
+  .collection-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stats-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-top: calc(var(--s) * 4);
+  }
+}

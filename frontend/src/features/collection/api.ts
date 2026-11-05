@@ -8,6 +8,7 @@ import {
 import { api } from '../../api/client'
 import type {
   CollectionEntry,
+  CollectionStats,
   EditionResponse,
   EditionStatus,
   EditionType,
@@ -24,6 +25,14 @@ export type CollectionFilters = {
 }
 
 type Owned = { owned: number[] }
+
+/** Under the 'collection' key, so every collection invalidation refreshes it too. */
+export function useCollectionStats() {
+  return useQuery({
+    queryKey: ['collection', 'stats'],
+    queryFn: () => api<CollectionStats>('/collection/stats'),
+  })
+}
 
 export function useCollection(filters: CollectionFilters) {
   return useQuery({
