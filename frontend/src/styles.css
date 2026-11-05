@@ -1207,7 +1207,12 @@ button[aria-pressed='true'] {
   }
   /* The checkbox stays beside the name instead of on a line alone. */
   .item-row:has(> .row-select) .grow {
-    flex: 1 1 0;
+    flex: 1 1 calc(100% - 44px - var(--s) * 2);
     min-width: 0;
+  }
+  /* Line 2: prices and actions share the line instead of the actions taking all of it. */
+  .item-row .inline-actions {
+    width: auto;
+    flex: 1 1 auto;
   }
 }
