@@ -90,7 +90,8 @@ export function useSetOwned(editionId: string) {
 
   function show(owned: number[]) {
     client.setQueriesData<Page<CollectionEntry>>(
-      { queryKey: ['collection'] },
+      // The stats share the 'collection' prefix but are not a page of entries.
+      { queryKey: ['collection'], predicate: (q) => q.queryKey[1] !== 'stats' },
       (page) =>
         page && {
           ...page,

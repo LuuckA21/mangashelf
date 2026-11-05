@@ -496,6 +496,61 @@ describe('collection stats', () => {
     )
   })
 
+  it('tickingAVolumeSavesWhileStatsAreCached', async () => {
+    replies[listUrl('')] = [200, pageOf([entry({ owned: [1] })])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 1, totalVolumes: 5 }),
+    ]
+    replies['GET /editions/e1'] = [200, edition()]
+    replies['GET /collection/editions/e1'] = [200, entry({ owned: [1] })]
+    replies['PUT /collection/editions/e1/volumes'] = [
+      200,
+      entry({ owned: [1, 3] }),
+    ]
+    renderApp('/')
+    await panel()
+    await userEvent.click(screen.getByRole('link', { name: 'Deluxe' }))
+    const tile3 = await screen.findByRole('button', {
+      name: 'Volume 3, mancante',
+    })
+    // What the server returns once the save went through.
+    replies['GET /collection/editions/e1'] = [200, entry({ owned: [1, 3] })]
+    await userEvent.click(tile3)
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/collection/editions/e1/volumes',
+        expect.objectContaining({ method: 'PUT' }),
+      ),
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Volume 3, posseduto' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('percentIsExactForValuesFloatingPointGetsWrong', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 29, totalVolumes: 100 }),
+    ]
+    renderApp('/')
+    expect(value(await panel(), 'Completamento')).toHaveTextContent('29%')
+  })
+
+  it('statsPanelIsKeyboardScrollable', async () => {
+    replies[listUrl('')] = [200, pageOf([entry()])]
+    replies['GET /collection/stats'] = [
+      200,
+      stats({ editions: 1, ownedVolumes: 1, totalVolumes: 5 }),
+    ]
+    renderApp('/')
+    // It scrolls inside itself on short windows: keyboard users must reach it.
+    expect(await panel()).toHaveAttribute('tabindex', '0')
+  })
+
   it('statsPanelHasNoAxeViolations', async () => {
     replies[listUrl('')] = [200, pageOf([entry()])]
     replies['GET /collection/stats'] = [

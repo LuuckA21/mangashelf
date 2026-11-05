@@ -64,14 +64,20 @@ export function CollectionStats() {
     [t('stats.series'), data.series],
     [t('stats.completed'), data.completedEditions],
     [t('stats.missing'), data.totalVolumes - data.ownedVolumes],
-    // Rounded down: 100% only when nothing is missing.
+    // Rounded down (100% only when nothing is missing); multiply first so it stays exact.
     [
       t('stats.completion'),
-      `${Math.floor((data.ownedVolumes / data.totalVolumes) * 100)}%`,
+      `${Math.floor((data.ownedVolumes * 100) / data.totalVolumes)}%`,
     ],
   ]
   return (
-    <section className="panel stats-panel" aria-labelledby="stats-title">
+    <section
+      className="panel stats-panel"
+      aria-labelledby="stats-title"
+      // Scrolls inside itself on short windows: focusable so the keyboard can scroll it.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
       <h2 id="stats-title">{t('stats.title')}</h2>
       <dl className="stat-numbers">
         {numbers.map(([label, value]) => (
