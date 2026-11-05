@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client'
 import { t } from '../../i18n/t'
 import ChangePasswordForm from '../auth/ChangePasswordForm'
 import { useExportData } from './api'
+import PurchaseSettingsForm from './PurchaseSettingsForm'
 import DeleteAccount from './DeleteAccount'
 
 export default function AccountPage() {
@@ -27,6 +28,8 @@ export default function AccountPage() {
           }
         />
       </section>
+
+      <PurchaseSettingsForm />
 
       <section className="panel settings-panel settings-section">
         <h2>{t('account.exportTitle')}</h2>

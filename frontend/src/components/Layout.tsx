@@ -22,6 +22,7 @@ export default function Layout() {
                   {t('nav.collection')}
                 </NavLink>
                 <NavLink to="/catalog">{t('nav.catalog')}</NavLink>
+                <NavLink to="/purchases">{t('nav.purchases')}</NavLink>
                 {me.role === 'ADMIN' && (
                   <NavLink to="/admin/users">{t('nav.users')}</NavLink>
                 )}

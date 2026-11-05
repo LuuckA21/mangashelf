@@ -1077,3 +1077,22 @@ button.danger:hover:not(:disabled) {
     margin-top: calc(var(--s) * 4);
   }
 }
+
+/* ------------------------------------------------------------- purchases -- */
+.purchase-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--s) * 2);
+}
+.purchase-create .field {
+  flex: 1 1 200px;
+}
+.purchase-row .chip {
+  display: inline-block;
+  min-height: 0;
+}
+.purchase-row .num {
+  font-family: var(--font-data);
+  white-space: nowrap;
+}

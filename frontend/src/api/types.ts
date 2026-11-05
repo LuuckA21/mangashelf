@@ -77,3 +77,52 @@ export type CollectionStats = {
   byType: StatBar[]
   byStatus: StatBar[]
 }
+
+export type PurchaseSettings = { chfRate: number; discountPercent: number }
+
+export type ListSummary = {
+  id: string
+  description: string
+  month: number
+  year: number
+  closed: boolean
+  itemCount: number
+  unbookedCount: number
+  totalCents: number
+}
+
+export type ItemView = {
+  id: string
+  editionId: string
+  seriesId: string
+  seriesTitle: string
+  editionName: string
+  editionVolumeCount: number
+  volume: number
+  releaseDate: string | null
+  priceEurCents: number
+  priceChfCents: number
+  booked: boolean
+  alsoIn: string[]
+}
+
+export type ListDetail = {
+  id: string
+  description: string
+  month: number
+  year: number
+  closed: boolean
+  items: ItemView[]
+  subtotalCents: number
+  discountCents: number
+  discountAuto: boolean
+  pointsDiscountCents: number
+  totalCents: number
+}
+
+/** Values proposed by the add-row form; null = nothing to propose. */
+export type Proposal = {
+  volume: number | null
+  priceEurCents: number | null
+  releaseDate: string | null
+}

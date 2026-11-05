@@ -19,6 +19,10 @@ beforeEach(() => {
       200,
       { id: 'u1', username: 'anna', role: 'USER', mustChangePassword: false },
     ],
+    'GET /account/purchase-settings': [
+      200,
+      { chfRate: 1.2, discountPercent: 10 },
+    ],
   }
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const key = `${init.method} ${url.replace('/api/v1', '')}`
