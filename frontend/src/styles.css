@@ -1067,6 +1067,12 @@ button.danger:hover:not(:disabled) {
 }
 
 @media (max-width: 700px) {
+  .purchase-create > h2 {
+    flex-basis: 100%;
+  }
+  .purchase-create > button {
+    flex: 1 1 120px;
+  }
   .collection-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1087,6 +1093,12 @@ button.danger:hover:not(:disabled) {
 }
 .purchase-create .field {
   flex: 1 1 200px;
+  /* Margin would push the button below the input it sits beside. */
+  margin-bottom: 0;
+}
+.purchase-create input,
+.purchase-create > button {
+  height: 44px;
 }
 .purchase-row .chip {
   display: inline-block;
