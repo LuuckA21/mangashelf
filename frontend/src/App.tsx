@@ -21,6 +21,7 @@ const PurchaseListPage = lazy(
   () => import('./features/purchases/PurchaseListPage'),
 )
 const UsersPage = lazy(() => import('./features/users/UsersPage'))
+const AdminPage = lazy(() => import('./features/admin/AdminPage'))
 const AccountPage = lazy(() => import('./features/account/AccountPage'))
 const PrivacyPage = lazy(() => import('./features/account/PrivacyPage'))
 
@@ -42,6 +43,7 @@ export function AppRoutes() {
             <Route path="/account" element={<AccountPage />} />
           </Route>
           <Route element={<RequireAuth admin />}>
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />

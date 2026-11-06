@@ -33,6 +33,7 @@ export type EditionResponse = {
   seriesId: string
   seriesTitle: string
   name: string
+  publisherId: string | null
   publisher: string | null
   type: EditionType
   status: EditionStatus
@@ -126,3 +127,5 @@ export type Proposal = {
   priceEurCents: number | null
   releaseDate: string | null
 }
+
+export type Publisher = { id: string; name: string }

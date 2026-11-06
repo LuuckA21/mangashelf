@@ -7,6 +7,8 @@ type Props = {
   onConfirm: () => Promise<void>
   /** Text of the first button; defaults to "Elimina". */
   label?: string
+  /** Accessible name of the first button when the visible label is not enough. */
+  ariaLabel?: string
   /** Replaces "Eliminare {what}?" when the action is not a delete. */
   question?: string
   yesLabel?: string
@@ -20,6 +22,7 @@ export default function ConfirmDelete({
   what,
   onConfirm,
   label,
+  ariaLabel,
   question,
   yesLabel,
   busyLabel,
@@ -46,6 +49,7 @@ export default function ConfirmDelete({
       <button
         ref={trigger}
         className={className ?? 'danger'}
+        aria-label={ariaLabel}
         onClick={() => setArmed(true)}
       >
         {label ?? t('common.delete')}

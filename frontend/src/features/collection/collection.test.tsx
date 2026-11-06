@@ -36,6 +36,7 @@ const edition = (over: Partial<EditionResponse> = {}): EditionResponse => ({
   seriesId: 's1',
   seriesTitle: 'Berserk',
   name: 'Deluxe',
+  publisherId: 'p2',
   publisher: 'Panini',
   type: 'REGULAR',
   status: 'ONGOING',
