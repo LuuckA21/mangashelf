@@ -2,7 +2,9 @@ package me.luucka.mangashelf.catalog;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import me.luucka.mangashelf.catalog.dto.EditionRequest;
@@ -186,7 +188,7 @@ public class EditionService {
         me,
         collection.existsByUserIdAndEditionId(me.id(), e.getId()),
         collection.countByEditionId(e.getId()),
-        publisherNames(java.util.List.of(e)));
+        publisherNames(List.of(e)));
   }
 
   EditionResponse toResponse(
@@ -214,8 +216,7 @@ public class EditionService {
 
   /** One query for the names of all publishers used by these editions. */
   Map<UUID, String> publisherNames(Collection<Edition> list) {
-    var ids =
-        list.stream().map(Edition::getPublisherId).filter(java.util.Objects::nonNull).toList();
+    var ids = list.stream().map(Edition::getPublisherId).filter(Objects::nonNull).toList();
     return ids.isEmpty()
         ? Map.of()
         : publishers.findAllById(ids).stream()

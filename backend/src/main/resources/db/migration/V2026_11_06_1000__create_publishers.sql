@@ -4,7 +4,7 @@ CREATE TABLE publishers (
     created_at timestamptz NOT NULL,
     updated_at timestamptz NOT NULL,
     CONSTRAINT pk_publishers PRIMARY KEY (id),
-    CONSTRAINT ck_publishers_name_length CHECK (char_length(name) BETWEEN 1 AND 100)
+    CONSTRAINT ck_publishers_name CHECK (char_length(name) BETWEEN 1 AND 100)
 );
 
 CREATE UNIQUE INDEX uq_publishers_name ON publishers (lower(name));
