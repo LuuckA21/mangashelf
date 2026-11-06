@@ -263,3 +263,67 @@ describe('admin page', () => {
     expect((await axe(container)).violations).toEqual([])
   })
 })
+
+describe('phone layout', () => {
+  // jsdom has no matchMedia: pretend to be a phone (max-width: 700px).
+  beforeEach(() =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('max-width: 700px'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })),
+  )
+
+  it('adminGearMenuOpensAndCloses', async () => {
+    renderApp('/')
+    const gear = await screen.findByRole('button', {
+      name: 'Menu amministrazione',
+    })
+    expect(gear).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('link', { name: 'Utenti' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(gear)
+    expect(gear).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Utenti' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Amministrazione' })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+    expect(gear).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('link', { name: 'Utenti' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('userHasNoGearMenu', async () => {
+    replies['GET /auth/me'] = [200, me('USER')]
+    renderApp('/')
+    await screen.findByRole('link', { name: /Collezione/ })
+    expect(
+      screen.queryByRole('button', { name: 'Menu amministrazione' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('logoutLivesInTheAccountPage', async () => {
+    renderApp('/')
+    await screen.findByRole('link', { name: /Collezione/ })
+    expect(
+      screen.queryByRole('button', { name: 'Esci' }),
+    ).not.toBeInTheDocument()
+    renderApp('/account')
+    expect(
+      await within(screen.getAllByRole('main')[1]).findByRole('button', {
+        name: 'Esci',
+      }),
+    ).toBeVisible()
+  })
+
+  it('bottomBarHasTheFourUserEntries', async () => {
+    renderApp('/')
+    const nav = await screen.findByRole('navigation', { name: /principale/i })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['Collezione', 'Catalogo', 'Acquisti', 'Account'])
+  })
+})

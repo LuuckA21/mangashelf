@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -552,14 +552,53 @@ describe('edition form publisher', () => {
     replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
     renderApp('/series/s1')
     await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
-    await vi.waitFor(() =>
-      expect(document.querySelectorAll('datalist option')).toHaveLength(2),
-    )
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
     if (publisher)
       await userEvent.type(screen.getByLabelText(/^Editore/), publisher)
     await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
   }
   const sent = () => JSON.parse(calls('POST', '/series/s1/editions')[0][1].body)
+
+  async function openForm() {
+    replies['GET /publishers'] = [200, [star, panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [201, edition({ id: 'e9' })]
+    replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    return screen.getByRole('combobox', { name: /^Editore/ })
+  }
+
+  it('suggestionsFilterAsYouType', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'com')
+    const list = await screen.findByRole('listbox')
+    expect(
+      within(list)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['Star Comics'])
+    expect(input).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('tapSuggestionPicksIt', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'pan')
+    await userEvent.click(await screen.findByRole('option', { name: 'Panini' }))
+    expect(input).toHaveValue('Panini')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p2'))
+  })
+
+  it('keyboardPicksSuggestionWithoutSubmitting', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'st')
+    await screen.findByRole('listbox')
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+    expect(input).toHaveValue('Star Comics')
+    expect(calls('POST', '/series/s1/editions')).toHaveLength(0)
+  })
 
   it('pickPublisherSendsId', async () => {
     await fill('Panini')

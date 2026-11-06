@@ -9,6 +9,7 @@ import { ApiError } from '../../api/client'
 import type { EditionStatus, EditionType } from '../../api/types'
 import { t } from '../../i18n/t'
 import { usePublishers } from '../admin/api'
+import PublisherInput from './PublisherInput'
 
 export type EditionFormValues = {
   name: string
@@ -151,22 +152,17 @@ export default function EditionForm({
       {field(
         'publisher',
         t('edition.publisherLabel'),
-        <input
+        <PublisherInput
           {...aria('publisher')}
-          list={`${prefix}-publisher-options`}
           maxLength={100}
           value={publisher}
-          onChange={(e) => {
-            setPublisher(e.target.value)
+          options={publishers}
+          onChange={(v) => {
+            setPublisher(v)
             setPickError(false)
           }}
         />,
       )}
-      <datalist id={`${prefix}-publisher-options`}>
-        {publishers.map((p) => (
-          <option key={p.id} value={p.name} />
-        ))}
-      </datalist>
       {publisherList.isError && (
         <p className="muted" role="status">
           {t('edition.publishersUnavailable')}

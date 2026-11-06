@@ -1228,3 +1228,118 @@ button[aria-pressed='true'] {
     flex: 1 1 auto;
   }
 }
+
+/* ------------------------------------------------- phone tab bar and gear -- */
+
+.nav-icon {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  /* The bar is fixed: leave room so the last content is never hidden under it. */
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  .topbar-inner {
+    padding: var(--s) calc(var(--s) * 2);
+  }
+  .topbar nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    width: auto;
+    order: 0;
+    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    background: var(--paper-raised);
+    border-top: 1px solid var(--ash-line);
+  }
+  .topbar nav a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    font-size: 12px;
+  }
+  .nav-icon {
+    display: block;
+  }
+  .admin-menu {
+    position: relative;
+    margin-left: auto;
+  }
+  .admin-menu .gear {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .admin-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 30;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--s) * 0.5) 0;
+    background: var(--paper-raised);
+    border: 1px solid var(--ash-line);
+    border-radius: var(--radius);
+  }
+  .admin-menu-panel a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 calc(var(--s) * 2);
+    color: var(--indigo-deep);
+    text-decoration: none;
+  }
+  .admin-menu-panel a.active {
+    color: var(--indigo);
+    font-weight: 600;
+  }
+  /* Esci sits beside the Account title. */
+  .page-head:has(> button) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s);
+  }
+}
+
+/* ------------------------------------------------- suggestion list (combo) -- */
+
+.combo {
+  position: relative;
+}
+.combo-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 10;
+  margin: 0;
+  padding: calc(var(--s) * 0.5) 0;
+  list-style: none;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+}
+.combo-list li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 calc(var(--s) * 1.5);
+  cursor: pointer;
+}
+.combo-list li:hover,
+.combo-list li[aria-selected='true'] {
+  background: var(--indigo-wash);
+}

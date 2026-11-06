@@ -2,6 +2,7 @@
 export const it = {
   'app.name': 'MangaShelf',
   'nav.main': 'Principale',
+  'nav.adminMenu': 'Menu amministrazione',
   'nav.collection': 'Collezione',
   'nav.catalog': 'Catalogo',
   'nav.users': 'Utenti',
