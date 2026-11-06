@@ -14,6 +14,7 @@ import me.luucka.mangashelf.purchases.dto.Proposal;
 import me.luucka.mangashelf.purchases.dto.PurchaseSettings;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 public class PurchaseController {
@@ -54,10 +56,11 @@ public class PurchaseController {
   }
 
   @PostMapping(LISTS)
-  @ResponseStatus(HttpStatus.CREATED)
-  public ListDetail create(
+  public ResponseEntity<ListDetail> create(
       @AuthenticationPrincipal AppUserPrincipal me, @Valid @RequestBody ListRequest body) {
-    return service.create(me.id(), body);
+    var list = service.create(me.id(), body);
+    var location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").build(list.id());
+    return ResponseEntity.created(location).body(list);
   }
 
   @GetMapping(LISTS + "/{id}")

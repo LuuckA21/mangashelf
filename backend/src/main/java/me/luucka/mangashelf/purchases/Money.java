@@ -1,7 +1,6 @@
 package me.luucka.mangashelf.purchases;
 
-import java.math.BigDecimal;
-
+/** CHF prices are proposed in the frontend (money.ts proposeChf); here only the discount. */
 final class Money {
 
   private Money() {}
@@ -9,10 +8,6 @@ final class Money {
   /** Nearest 0.10 (10 cents) of numerator/denominator cents, halves up, integer only. */
   static long roundTo10(long numerator, long denominator) {
     return Math.floorDiv(2 * numerator + 10 * denominator, 20 * denominator) * 10;
-  }
-
-  static long chf(long eurCents, BigDecimal rate) {
-    return roundTo10(eurCents * rate.movePointRight(2).longValueExact(), 100);
   }
 
   static long discount(long subtotalCents, int percent) {

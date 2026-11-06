@@ -122,6 +122,18 @@ class PurchaseListsIT {
   }
 
   @Test
+  void createReturnsLocationOfTheNewList() throws Exception {
+    var r =
+        send(post(URL), a, "{\"description\":\"Ottobre\",\"month\":10,\"year\":2026}")
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse();
+    String id = com.jayway.jsonpath.JsonPath.read(r.getContentAsString(), "$.id");
+    org.assertj.core.api.Assertions.assertThat(r.getHeader("Location"))
+        .endsWith("/api/v1/purchase-lists/" + id);
+  }
+
+  @Test
   void createAndListOrderedByMonthDesc() throws Exception {
     list("Agosto", 8, 2026);
     list("Ottobre", 10, 2026);

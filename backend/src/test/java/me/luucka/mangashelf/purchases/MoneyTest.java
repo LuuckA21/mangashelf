@@ -2,19 +2,9 @@ package me.luucka.mangashelf.purchases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
 class MoneyTest {
-
-  @Test
-  void chfRoundsToNearestTenCents() {
-    var rate = new BigDecimal("1.20");
-    assertThat(Money.chf(790, rate)).isEqualTo(950);
-    assertThat(Money.chf(995, rate)).isEqualTo(1190);
-    assertThat(Money.chf(1250, rate)).isEqualTo(1500);
-    assertThat(Money.chf(6400, rate)).isEqualTo(7680);
-  }
 
   @Test
   void discountRoundsToNearestTenCents() {
