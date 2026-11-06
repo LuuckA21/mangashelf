@@ -26,7 +26,9 @@ export default function Layout() {
                 {me.role === 'ADMIN' && (
                   <>
                     <NavLink to="/admin/users">{t('nav.users')}</NavLink>
-                    <NavLink to="/admin">{t('nav.admin')}</NavLink>
+                    <NavLink to="/admin" end>
+                      {t('nav.admin')}
+                    </NavLink>
                   </>
                 )}
                 <NavLink to="/account">{t('nav.account')}</NavLink>

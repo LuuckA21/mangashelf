@@ -41,6 +41,7 @@ function NameField({
       <input
         id={id}
         required
+        maxLength={100}
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -56,7 +57,7 @@ function NameField({
   )
 }
 
-function AddForm() {
+function AddForm({ onStart }: { onStart: () => void }) {
   const { create } = usePublisherMutations()
   const [name, setName] = useState('')
   const id = useId()
@@ -64,6 +65,7 @@ function AddForm() {
 
   async function submit(e: SyntheticEvent) {
     e.preventDefault()
+    onStart()
     try {
       await create.mutateAsync(name)
       setName('')
@@ -157,6 +159,7 @@ function PublisherRow({
           aria-label={t('publishers.renameLabel', { name: publisher.name })}
           onClick={() => {
             rename.reset()
+            onError(null)
             setName(publisher.name)
             setEditing(true)
           }}
@@ -167,9 +170,10 @@ function PublisherRow({
           what={t('publishers.deleteWhat', { name: publisher.name })}
           label={t('common.delete')}
           ariaLabel={t('publishers.deleteLabel', { name: publisher.name })}
-          onConfirm={() =>
-            remove.mutateAsync(publisher.id).then(() => onError(null), onError)
-          }
+          onConfirm={() => {
+            onError(null)
+            return remove.mutateAsync(publisher.id).then(() => {}, onError)
+          }}
         />
       </span>
     </li>
@@ -186,7 +190,7 @@ export default function PublishersSection() {
   return (
     <section className="panel" aria-labelledby="publishers-title">
       <h2 id="publishers-title">{t('publishers.title')}</h2>
-      <AddForm />
+      <AddForm onStart={() => setError(null)} />
       {message && (
         <p className="error" role="alert">
           {message}

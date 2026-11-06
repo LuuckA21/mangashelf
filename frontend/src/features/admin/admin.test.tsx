@@ -85,7 +85,7 @@ describe('admin page', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('listsPublishersInServerOrder', async () => {
+  it('showsPublishersInServerOrder', async () => {
     renderApp()
     await screen.findByText('Star Comics')
     const items = screen.getAllByRole('listitem')
@@ -93,6 +93,31 @@ describe('admin page', () => {
       'Panini',
       'Star Comics',
     ])
+  })
+
+  it('onlyOneNavLinkIsCurrent', async () => {
+    renderApp('/admin/users')
+    const users = await screen.findByRole('link', { name: 'Utenti' })
+    expect(users).toHaveAttribute('aria-current', 'page')
+    expect(
+      screen.getByRole('link', { name: 'Amministrazione' }),
+    ).not.toHaveAttribute('aria-current')
+  })
+
+  it('addClearsTheDeleteError', async () => {
+    replies['DELETE /publishers/p1'] = [409, { detail: 'In uso' }]
+    replies['POST /publishers'] = [201, { id: 'p3', name: 'Jpop' }]
+    renderApp()
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Elimina Star Comics' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('In uso')
+    await userEvent.type(screen.getByLabelText('Nome'), 'Jpop')
+    await userEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
+    )
   })
 
   it('addPublisher', async () => {
