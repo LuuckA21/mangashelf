@@ -3,6 +3,7 @@ package me.luucka.mangashelf.config;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
 import me.luucka.mangashelf.users.AppUserDetailsService;
 import me.luucka.mangashelf.users.MustChangePasswordFilter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -41,8 +42,12 @@ public class SecurityConfig {
   /** Spring Session ignores server.servlet.session.cookie.*; reuse the secure flag from there. */
   @Bean
   CookieSerializer cookieSerializer(
-      @Value("${server.servlet.session.cookie.secure:true}") boolean secure) {
+      @Value("${server.servlet.session.cookie.secure:true}") boolean secure,
+      @Value("${spring.session.timeout}") Duration timeout) {
     var serializer = new DefaultCookieSerializer();
+    // A persistent cookie: closing the browser must not log the user out (see
+    // SessionCookieRefreshFilter).
+    serializer.setCookieMaxAge((int) timeout.toSeconds());
     serializer.setUseHttpOnlyCookie(true);
     serializer.setSameSite("Lax");
     serializer.setUseSecureCookie(secure);
@@ -66,12 +71,14 @@ public class SecurityConfig {
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       CsrfTokenRepository csrfTokenRepository,
+      CookieSerializer cookieSerializer,
       @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver)
       throws Exception {
     return http.requestCache(c -> c.disable())
         .csrf(c -> c.spa().csrfTokenRepository(csrfTokenRepository))
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .addFilterAfter(new MustChangePasswordFilter(exceptionResolver), HeaderWriterFilter.class)
+        .addFilterAfter(new SessionCookieRefreshFilter(cookieSerializer), HeaderWriterFilter.class)
         .headers(h ->
             h.contentSecurityPolicy(
                     csp -> csp.policyDirectives("default-src 'self'; img-src 'self' blob:"))

@@ -5,7 +5,7 @@ same PR that adds a field, a processor or a purpose. See project-standards 09-pr
 
 Controller: <name, address>, privacy contact: <email>
 EU representative (GDPR art. 27): <name / "not appointed, because …">
-Last reviewed: 2026-11-05
+Last reviewed: 2026-11-06
 
 ## Processing activities
 
@@ -27,7 +27,7 @@ Last reviewed: 2026-11-05
 ## Technical and organizational measures
 
 - HTTPS everywhere (HSTS at the proxy); encrypted backups (restic)
-- Passwords stored only as bcrypt hashes; session cookies HttpOnly, SameSite=Lax, CSRF protection on
+- Passwords stored only as bcrypt hashes; session cookie HttpOnly, SameSite=Lax, kept by the browser until 14 days of inactivity (renewed on each visit), CSRF protection on
 - Secrets in Bitwarden
 - Access to servers: SSH keys only, separate admin and app users (06)
 - Personal data deleted physically; deleted data stays in encrypted backups until they expire (max 12 months)
