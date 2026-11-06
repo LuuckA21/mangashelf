@@ -86,11 +86,16 @@ export default function EditionForm({
   function submit(ev: SyntheticEvent) {
     ev.preventDefault()
     const typed = publisher.trim().toLowerCase()
+    // Unchanged publisher keeps its id even if the list failed to load or the name was renamed.
+    const unchanged =
+      typed !== '' &&
+      !!initial?.publisherId &&
+      typed === initial.publisher?.trim().toLowerCase()
     const match = publishers.find((p) => p.name.toLowerCase() === typed)
-    if (typed && !match) return setPickError(true)
+    if (typed && !match && !unchanged) return setPickError(true)
     onSubmit({
       name: name.trim(),
-      publisherId: match?.id ?? null,
+      publisherId: match?.id ?? (unchanged ? initial.publisherId! : null),
       type,
       status,
       volumeCount: Number(volumeCount),
@@ -147,8 +152,8 @@ export default function EditionForm({
         t('edition.publisherLabel'),
         <input
           {...aria('publisher')}
-          list="publisher-options"
-          maxLength={200}
+          list={`${prefix}-publisher-options`}
+          maxLength={100}
           value={publisher}
           onChange={(e) => {
             setPublisher(e.target.value)
@@ -156,7 +161,7 @@ export default function EditionForm({
           }}
         />,
       )}
-      <datalist id="publisher-options">
+      <datalist id={`${prefix}-publisher-options`}>
         {publishers.map((p) => (
           <option key={p.id} value={p.name} />
         ))}

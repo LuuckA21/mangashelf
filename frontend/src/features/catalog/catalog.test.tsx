@@ -553,9 +553,7 @@ describe('edition form publisher', () => {
     renderApp('/series/s1')
     await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
     await vi.waitFor(() =>
-      expect(
-        document.querySelectorAll('#publisher-options option'),
-      ).toHaveLength(2),
+      expect(document.querySelectorAll('datalist option')).toHaveLength(2),
     )
     if (publisher)
       await userEvent.type(screen.getByLabelText(/^Editore/), publisher)
@@ -614,6 +612,25 @@ describe('edition form publisher', () => {
       await screen.findByRole('button', { name: 'Modifica edizione' }),
     )
     expect(screen.getByLabelText(/^Editore/)).toHaveValue('Panini')
+  })
+
+  it('unchangedPublisherSavesWithoutPublisherList', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [500, { detail: 'boom' }]
+    replies['GET /editions/e1'] = [200, edition()]
+    replies['PUT /editions/e1'] = [200, edition({ volumeCount: 6 })]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    const count = screen.getByLabelText(/^Numero di volumi/)
+    await userEvent.clear(count)
+    await userEvent.type(count, '6')
+    await userEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await vi.waitFor(() => expect(calls('PUT', '/editions/e1')).toHaveLength(1))
+    expect(
+      JSON.parse(calls('PUT', '/editions/e1')[0][1].body).publisherId,
+    ).toBe('p2')
   })
 
   it('hasNoAxeViolations', async () => {
