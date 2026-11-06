@@ -33,6 +33,7 @@ public class CollectionService {
       from collection_editions ce
       join editions e on e.id = ce.edition_id
       join series s on s.id = e.series_id
+      left join publishers p on p.id = e.publisher_id
       where ce.user_id = :userId
       """;
 
@@ -85,7 +86,7 @@ public class CollectionService {
         totals[2],
         totals[3],
         totals[4],
-        topPublishers(ownedBy(userId, "e.publisher")),
+        topPublishers(ownedBy(userId, "p.name")),
         inOrder(EditionType.values(), ownedBy(userId, "e.type")),
         inOrder(EditionStatus.values(), ownedBy(userId, "e.status")));
   }
@@ -98,6 +99,7 @@ public class CollectionService {
                 + column
                 + " k, count(ov.id) volumes from collection_editions ce"
                 + " join editions e on e.id = ce.edition_id"
+                + " left join publishers p on p.id = e.publisher_id"
                 + " left join owned_volumes ov on ov.collection_edition_id = ce.id"
                 + " where ce.user_id = :userId group by "
                 + column)
@@ -247,7 +249,7 @@ public class CollectionService {
       StringBuilder where, Map<String, Object> params, String paging, Pageable pageable) {
     var sql =
         """
-        select e.id edition_id, s.id series_id, s.title, e.name, e.publisher, e.type, e.status,
+        select e.id edition_id, s.id series_id, s.title, e.name, p.name publisher, e.type, e.status,
                e.volume_count, e.cover_file is not null has_cover, e.version,
                array(select ov.number from owned_volumes ov
                      where ov.collection_edition_id = ce.id order by ov.number) owned

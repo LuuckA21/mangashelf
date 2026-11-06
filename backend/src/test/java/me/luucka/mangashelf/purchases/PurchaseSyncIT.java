@@ -102,7 +102,7 @@ class PurchaseSyncIT {
         send(
             post("/api/v1/series/" + seriesId + "/editions"),
             a,
-            "{\"name\":\"%s\",\"publisher\":null,\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":%d}"
+            "{\"name\":\"%s\",\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":%d}"
                 .formatted(name, volumeCount)),
         "$.id");
   }

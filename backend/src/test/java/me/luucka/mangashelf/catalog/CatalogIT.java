@@ -146,17 +146,6 @@ class CatalogIT {
   }
 
   @Test
-  void blankPublisherBecomesNull() throws Exception {
-    var id = createSeries("One Piece");
-    send(
-            post("/api/v1/series/" + id + "/editions"),
-            mario,
-            EDITION.replace("{", "{\"publisher\":\"  \","))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.publisher").value(org.hamcrest.Matchers.nullValue()));
-  }
-
-  @Test
   void listSeriesSearchesAndPaginates() throws Exception {
     createEdition(createSeries("One Piece"), EDITION);
     createSeries("Naruto");

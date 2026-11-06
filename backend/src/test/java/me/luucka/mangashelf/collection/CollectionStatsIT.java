@@ -54,6 +54,7 @@ class CollectionStatsIT {
   void seed() throws Exception {
     jdbc.update("DELETE FROM editions");
     jdbc.update("DELETE FROM series");
+    jdbc.update("DELETE FROM publishers");
     users.deleteAll();
     jdbc.update("DELETE FROM spring_session");
     users.save(new AppUser("Anna", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
@@ -85,12 +86,24 @@ class CollectionStatsIT {
   private String edition(
       String seriesId, String name, String publisher, String type, String status, int volumes)
       throws Exception {
-    var pub = publisher == null ? "null" : "\"%s\"".formatted(publisher);
+    var pub = publisher == null ? "null" : "\"%s\"".formatted(publisherId(publisher));
     var json =
-        "{\"name\":\"%s\",\"publisher\":%s,\"type\":\"%s\",\"status\":\"%s\",\"volumeCount\":%d}"
+        "{\"name\":\"%s\",\"publisherId\":%s,\"type\":\"%s\",\"status\":\"%s\",\"volumeCount\":%d}"
             .formatted(name, pub, type, status, volumes);
     var r = send(post("/api/v1/series/" + seriesId + "/editions"), a, json);
     return JsonPath.read(r.andReturn().getResponse().getContentAsString(), "$.id");
+  }
+
+  /** Id of the publisher with this name, created on first use. */
+  private String publisherId(String name) {
+    var ids =
+        jdbc.queryForList("SELECT id::text FROM publishers WHERE name = ?", String.class, name);
+    if (!ids.isEmpty()) {
+      return ids.get(0);
+    }
+    var id = java.util.UUID.randomUUID();
+    jdbc.update("INSERT INTO publishers VALUES (?, ?, now(), now())", id, name);
+    return id.toString();
   }
 
   /** A REGULAR, ONGOING edition in its own series. */
@@ -178,15 +191,6 @@ class CollectionStatsIT {
         .andExpect(jsonPath("$.byPublisher[0:5].key").value(contains("P1", "P2", "P3", "Aa", "Ab")))
         .andExpect(jsonPath("$.byPublisher[*].volumes").value(contains(6, 5, 4, 3, 3, 3)))
         .andExpect(jsonPath("$.byPublisher[5].key").value(nullValue()));
-  }
-
-  @Test
-  void publishersAreCountedExactlyAsWritten() throws Exception {
-    own(a, edition("E1", "Star Comics", 2), upTo(2));
-    own(a, edition("E2", "star comics", 1), upTo(1));
-    stats(a)
-        .andExpect(jsonPath("$.byPublisher[*].key").value(contains("Star Comics", "star comics")))
-        .andExpect(jsonPath("$.byPublisher[*].volumes").value(contains(2, 1)));
   }
 
   @Test

@@ -64,7 +64,7 @@ class PurchaseListsIT {
         send(
             post("/api/v1/series/" + sid + "/editions"),
             a,
-            "{\"name\":\"Deluxe\",\"publisher\":null,\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":10}");
+            "{\"name\":\"Deluxe\",\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":10}");
     edition = JsonPath.read(e.andReturn().getResponse().getContentAsString(), "$.id");
   }
 

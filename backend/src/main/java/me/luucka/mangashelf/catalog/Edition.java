@@ -27,7 +27,8 @@ public class Edition {
   private Series series;
 
   private String name;
-  private String publisher;
+  // editions.publisher (text) is legacy and deliberately unmapped.
+  private UUID publisherId;
 
   @Enumerated(EnumType.STRING)
   private EditionType type;
@@ -51,7 +52,7 @@ public class Edition {
   public Edition(
       Series series,
       String name,
-      String publisher,
+      UUID publisherId,
       EditionType type,
       EditionStatus status,
       int volumeCount,
@@ -61,7 +62,7 @@ public class Edition {
     this.createdBy = createdBy;
     this.createdAt = now;
     this.updatedAt = now;
-    update(name, publisher, type, status, volumeCount);
+    update(name, publisherId, type, status, volumeCount);
   }
 
   @PreUpdate
@@ -70,9 +71,9 @@ public class Edition {
   }
 
   public void update(
-      String name, String publisher, EditionType type, EditionStatus status, int volumeCount) {
+      String name, UUID publisherId, EditionType type, EditionStatus status, int volumeCount) {
     this.name = name;
-    this.publisher = publisher;
+    this.publisherId = publisherId;
     this.type = type;
     this.status = status;
     this.volumeCount = volumeCount;
@@ -90,8 +91,8 @@ public class Edition {
     return name;
   }
 
-  public String getPublisher() {
-    return publisher;
+  public UUID getPublisherId() {
+    return publisherId;
   }
 
   public EditionType getType() {

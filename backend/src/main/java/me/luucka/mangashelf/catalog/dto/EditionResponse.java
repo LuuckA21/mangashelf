@@ -8,6 +8,7 @@ public record EditionResponse(
     String seriesId,
     String seriesTitle,
     String name,
+    String publisherId,
     String publisher,
     EditionType type,
     EditionStatus status,
