@@ -51,7 +51,8 @@ export default function EditionForm({
   const [name, setName] = useState(initial?.name ?? '')
   const [publisher, setPublisher] = useState(initial?.publisher ?? '')
   const [pickError, setPickError] = useState(false)
-  const publishers = usePublishers().data ?? []
+  const publisherList = usePublishers()
+  const publishers = publisherList.data ?? []
   const [type, setType] = useState<EditionType>(initial?.type ?? 'REGULAR')
   const [status, setStatus] = useState<EditionStatus>(
     initial?.status ?? 'ONGOING',
@@ -166,6 +167,11 @@ export default function EditionForm({
           <option key={p.id} value={p.name} />
         ))}
       </datalist>
+      {publisherList.isError && (
+        <p className="muted" role="status">
+          {t('edition.publishersUnavailable')}
+        </p>
+      )}
       {field(
         'type',
         t('edition.typeLabel'),

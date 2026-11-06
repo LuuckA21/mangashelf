@@ -633,6 +633,21 @@ describe('edition form publisher', () => {
     ).toBe('p2')
   })
 
+  it('failedPublisherListIsAnnounced', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [500, { detail: 'boom' }]
+    replies['GET /editions/e1'] = [200, edition()]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    expect(
+      await screen.findByText(
+        "Elenco degli editori non disponibile: puoi tenere l'editore attuale o lasciarlo vuoto.",
+      ),
+    ).toBeVisible()
+  })
+
   it('hasNoAxeViolations', async () => {
     replies['GET /publishers'] = [200, [panini]]
     replies['GET /series/s1'] = [200, detail([])]

@@ -238,6 +238,25 @@ describe('admin page', () => {
     expect(alert).toHaveClass('error')
   })
 
+  it('cancellingADeleteClearsTheMessage', async () => {
+    replies['DELETE /publishers/p1'] = [
+      409,
+      { detail: "L'editore è usato da alcune edizioni" },
+    ]
+    renderApp()
+    const del = await screen.findByRole('button', {
+      name: 'Elimina Star Comics',
+    })
+    await userEvent.click(del)
+    await userEvent.click(screen.getByRole('button', { name: 'Sì, elimina' }))
+    await screen.findByRole('alert')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Elimina Star Comics' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('hasNoAccessibilityViolations', async () => {
     const { container } = renderApp()
     await screen.findByText('Star Comics')

@@ -191,6 +191,7 @@ function Row({
           type="button"
           className="quiet"
           aria-pressed={item.booked}
+          aria-label={t('purchases.bookedFor', { name, volume })}
           disabled={change.isPending}
           onClick={() =>
             change.mutate({
@@ -206,13 +207,20 @@ function Row({
           type="button"
           className="quiet"
           onClick={() => setEditing(true)}
+          aria-label={t('purchases.editRowFor', { name, volume })}
         >
           {t('purchases.editRow')}
         </button>
-        <button type="button" className="quiet" onClick={onMove}>
+        <button
+          type="button"
+          className="quiet"
+          onClick={onMove}
+          aria-label={t('purchases.moveFor', { name, volume })}
+        >
           {t('purchases.move')}
         </button>
         <ConfirmDelete
+          ariaLabel={t('purchases.deleteFor', { name, volume })}
           what={t('purchases.rowDeleteWhat', {
             name: `${name} ${volume}`,
           })}
@@ -230,7 +238,7 @@ function Row({
 
 export default function PurchaseListPage() {
   const { id = '' } = useParams()
-  const { data, isPending, isError } = usePurchaseList(id)
+  const { data, isPending, isError, error } = usePurchaseList(id)
   const settings = usePurchaseSettings().data
   const change = useListChange(id)
   const navigate = useNavigate()
@@ -249,7 +257,7 @@ export default function PurchaseListPage() {
         {editingHead && data ? (
           <HeaderForm list={data} onDone={() => setEditingHead(false)} />
         ) : (
-          <h1>
+          <h1 tabIndex={-1}>
             {data
               ? t('purchases.listTitle', {
                   description: data.description,
@@ -265,6 +273,7 @@ export default function PurchaseListPage() {
                 type="button"
                 className="quiet"
                 onClick={() => setEditingHead(true)}
+                aria-label={t('purchases.editListLabel')}
               >
                 {t('purchases.editList')}
               </button>
@@ -331,7 +340,9 @@ export default function PurchaseListPage() {
       {isPending && <p className="muted">{t('common.loading')}</p>}
       {isError && (
         <p className="error" role="alert">
-          {t('error.generic')}
+          {error instanceof ApiError && error.status === 404
+            ? t('purchases.notFound')
+            : t('error.generic')}
         </p>
       )}
       {data && settings && (
@@ -373,7 +384,9 @@ export default function PurchaseListPage() {
               aria-label={t('purchases.moveSelected')}
             >
               <span>
-                {t('purchases.selectedCount', { count: selected.length })}
+                {selected.length === 1
+                  ? t('purchases.selectedOne')
+                  : t('purchases.selectedCount', { count: selected.length })}
               </span>
               <button type="button" onClick={() => setMoving(selected)}>
                 {t('purchases.moveSelected')}

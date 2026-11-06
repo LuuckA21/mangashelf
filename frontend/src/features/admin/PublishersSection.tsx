@@ -170,6 +170,7 @@ function PublisherRow({
           what={t('publishers.deleteWhat', { name: publisher.name })}
           label={t('common.delete')}
           ariaLabel={t('publishers.deleteLabel', { name: publisher.name })}
+          onCancel={() => onError(null)}
           onConfirm={() => {
             onError(null)
             return remove.mutateAsync(publisher.id).then(() => {}, onError)

@@ -55,7 +55,8 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
           : amountText(proposeChf(p.priceEurCents, settings.chfRate)),
       )
     } catch {
-      // proposals are only a convenience
+      // Proposals are only a convenience, but never leave the last volume ready to be added twice.
+      if (current.current === editionId) setVolume('')
     }
   }
 

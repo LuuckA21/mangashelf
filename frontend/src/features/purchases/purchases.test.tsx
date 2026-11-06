@@ -430,12 +430,30 @@ describe('purchase list detail', () => {
     )
   })
 
+  it('failedProposalAfterAddClearsTheVolume', async () => {
+    replies['GET /purchase-lists/l1/proposal?editionId=e1'] = [
+      200,
+      { volume: 21, priceEurCents: 590, releaseDate: null },
+    ]
+    replies['POST /purchase-lists/l1/items'] = [201, detail([item()])]
+    await open(detail([]))
+    const user = userEvent.setup()
+    await pickBerserk(user)
+    await waitFor(() => expect(screen.getByLabelText('Volume')).toHaveValue(21))
+    replies['GET /purchase-lists/l1/proposal?editionId=e1'] = [500, {}]
+    await user.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    // The just-added volume must not stay ready for a second, duplicate click.
+    await waitFor(() =>
+      expect(screen.getByLabelText('Volume')).toHaveValue(null),
+    )
+  })
+
   it('editedChfIsNotOverwrittenByEur', async () => {
     replies['PATCH /purchase-lists/l1/items/i1'] = [200, detail([item()])]
     await open(detail([item()]))
     const user = userEvent.setup()
     const row = within(rowOf('Berserk'))
-    await user.click(row.getByRole('button', { name: 'Modifica' }))
+    await user.click(row.getByRole('button', { name: /^Modifica / }))
     const eur = row.getByLabelText('Prezzo EUR')
     const chf = row.getByLabelText('Prezzo CHF')
     await user.clear(eur)
@@ -464,7 +482,7 @@ describe('purchase list detail', () => {
     const spy = vi.spyOn(client, 'invalidateQueries')
     const user = userEvent.setup()
     const toggle = within(rowOf('Berserk')).getByRole('button', {
-      name: 'Prenotata',
+      name: /^Prenotata /,
     })
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await user.click(toggle)
@@ -475,7 +493,7 @@ describe('purchase list detail', () => {
     )
     await waitFor(() =>
       expect(
-        within(rowOf('Berserk')).getByRole('button', { name: 'Prenotata' }),
+        within(rowOf('Berserk')).getByRole('button', { name: /^Prenotata / }),
       ).toHaveAttribute('aria-pressed', 'true'),
     )
     expect(rowOf('Berserk')).toHaveClass('booked')
@@ -490,7 +508,7 @@ describe('purchase list detail', () => {
     await open(detail([item()]))
     const user = userEvent.setup()
     await user.click(
-      within(rowOf('Berserk')).getByRole('button', { name: 'Elimina' }),
+      within(rowOf('Berserk')).getByRole('button', { name: /^Elimina / }),
     )
     expect(fetchMock.mock.calls.some(([, i]) => i.method === 'DELETE')).toBe(
       false,
@@ -574,11 +592,11 @@ describe('purchase list detail', () => {
     ]
     await open(detail([], { closed: true }))
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Modifica lista' }))
     await user.click(screen.getByRole('button', { name: 'Annulla' }))
     expect(screen.queryByLabelText('Descrizione')).toBeNull()
     expect(screen.getByRole('heading', { name: /Manga Ottobre/ })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Modifica lista' }))
     expect(screen.getByLabelText('Descrizione')).toHaveValue('Manga Ottobre')
     expect(screen.getByLabelText('Mese')).toHaveValue('2026-10')
     await user.clear(screen.getByLabelText('Descrizione'))
@@ -609,7 +627,7 @@ describe('purchase list detail', () => {
     ]
     await open(detail([]))
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Modifica lista' }))
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     const msg = await screen.findByText('non deve essere vuoto')
     expect(screen.getByLabelText('Descrizione')).toHaveAccessibleDescription(
@@ -663,6 +681,24 @@ describe('purchase list detail', () => {
     expect(screen.getByLabelText('Sconto (CHF)')).toHaveAccessibleDescription(
       msg.textContent!,
     )
+  })
+
+  it('rowButtonsNameTheirVolume', async () => {
+    await open(detail([item()]))
+    const row = within(rowOf('Berserk'))
+    for (const action of ['Prenotata', 'Modifica', 'Sposta', 'Elimina'])
+      expect(
+        row.getByRole('button', {
+          name: `${action} Berserk · Deluxe Vol. 114`,
+        }),
+      ).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Modifica lista' })).toBeVisible()
+  })
+
+  it('unknownListShowsNotFound', async () => {
+    replies['GET /purchase-lists/l1'] = [404, { detail: 'Lista non trovata' }]
+    renderApp('/purchases/l1')
+    expect(await screen.findByText('Lista non trovata.')).toBeVisible()
   })
 
   it('detailPageHasNoA11yViolations', async () => {
@@ -730,7 +766,7 @@ describe('purchase list actions', () => {
     await open(detail(two))
     const user = userEvent.setup()
     await user.click(
-      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+      within(rowOf('Beta')).getByRole('button', { name: /^Sposta / }),
     )
     const dialog = screen.getByRole('dialog')
     await user.selectOptions(
@@ -746,11 +782,30 @@ describe('purchase list actions', () => {
     )
   })
 
+  it('focusGoesToTheTitleWhenTheMovedRowIsGone', async () => {
+    replies['POST /purchase-lists/l1/items/move'] = [200, detail([two[0]])]
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(
+      within(rowOf('Beta')).getByRole('button', { name: /^Sposta / }),
+    )
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Sposta',
+      }),
+    )
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { level: 1 }),
+      ),
+    )
+  })
+
   it('moveDialogClosesOnEscape', async () => {
     await open(detail(two))
     const user = userEvent.setup()
     await user.click(
-      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+      within(rowOf('Beta')).getByRole('button', { name: /^Sposta / }),
     )
     expect(screen.getByRole('dialog')).toBeVisible()
     await user.keyboard('{Escape}')
@@ -852,7 +907,7 @@ describe('purchase list actions', () => {
     const { container } = await open(detail(two))
     await userEvent
       .setup()
-      .click(within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }))
+      .click(within(rowOf('Beta')).getByRole('button', { name: /^Sposta / }))
     expect((await axe(container)).violations).toEqual([])
   })
 
@@ -868,11 +923,18 @@ describe('purchase list actions', () => {
     expect(screen.getAllByRole('checkbox', { checked: true })).toHaveLength(2)
   })
 
+  it('oneSelectedIsSingular', async () => {
+    await open(detail(two))
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('checkbox', { name: /Alfa.*Vol\. 1/ }))
+    expect(screen.getByText('1 selezionata')).toBeVisible()
+  })
+
   it('moveDialogPreselectsFirstTarget', async () => {
     await open(detail(two))
     const user = userEvent.setup()
     await user.click(
-      within(rowOf('Beta')).getByRole('button', { name: 'Sposta' }),
+      within(rowOf('Beta')).getByRole('button', { name: /^Sposta / }),
     )
     const dialog = screen.getByRole('dialog')
     await waitFor(() =>

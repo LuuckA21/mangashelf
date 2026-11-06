@@ -40,7 +40,13 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
-      opener?.focus()
+      // After the render that may remove the moved row: fall back to the page title.
+      setTimeout(() =>
+        (opener?.isConnected
+          ? opener
+          : document.querySelector<HTMLElement>('h1')
+        )?.focus(),
+      )
     }
     // onClose is a fresh closure each render; the listener only needs the latest at call time.
     // eslint-disable-next-line react-hooks/exhaustive-deps

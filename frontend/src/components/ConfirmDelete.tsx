@@ -15,6 +15,7 @@ type Props = {
   busyLabel?: string
   /** Class of the first button; defaults to "danger". */
   className?: string
+  onCancel?: () => void
 }
 
 /** A delete control that asks once, inline, naming exactly what will go. */
@@ -27,6 +28,7 @@ export default function ConfirmDelete({
   yesLabel,
   busyLabel,
   className,
+  onCancel,
 }: Props) {
   const [armed, setArmed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -83,6 +85,7 @@ export default function ConfirmDelete({
         onClick={() => {
           cancelled.current = true
           setArmed(false)
+          onCancel?.()
         }}
         disabled={busy}
       >
