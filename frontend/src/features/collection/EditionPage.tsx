@@ -70,7 +70,7 @@ function EditPanel({
       {/* A new version (after a stale-edit refetch) remounts the form with fresh values. */}
       <EditionForm
         key={edition.version}
-        initial={{ ...edition, publisher: edition.publisher ?? '' }}
+        initial={edition}
         submitLabel={t('common.save')}
         pending={update.isPending}
         error={update.error}

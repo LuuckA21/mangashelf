@@ -6,7 +6,12 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 
 ## [Unreleased]
 
+### Changed
+
+- The publisher of an edition is now chosen from a list managed by admins on the new Amministrazione page. Existing editions start without a publisher.
+
 ### Added
+
 - Purchase lists: monthly lists of volumes to buy, with release dates, EUR and CHF prices, discount and totals; mark rows booked, move rows between lists, close a list (booked rows become owned) and reopen it.
 
 ## [0.1.0] - 2026-11-04
@@ -14,6 +19,7 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 First release.
 
 ### Added
+
 - Personal manga collection tracked volume by volume on a shared catalog of series and editions.
 - Catalog: series and editions (type, status, volume count), with a cover for each edition.
 - Collection: search and filters (type, status, only incomplete), covers, progress and missing volumes per edition.

@@ -8,10 +8,11 @@ import {
 import { ApiError } from '../../api/client'
 import type { EditionStatus, EditionType } from '../../api/types'
 import { t } from '../../i18n/t'
+import { usePublishers } from '../admin/api'
 
 export type EditionFormValues = {
   name: string
-  publisher: string
+  publisherId: string | null
   type: EditionType
   status: EditionStatus
   volumeCount: number
@@ -19,6 +20,8 @@ export type EditionFormValues = {
 
 const TYPES: EditionType[] = ['REGULAR', 'VARIANT', 'JAPANESE']
 const STATUSES: EditionStatus[] = ['ONGOING', 'COMPLETED']
+// The server reports the publisher under `publisherId`.
+const serverField = (f: string) => (f === 'publisher' ? 'publisherId' : f)
 const FIELDS = ['name', 'publisher', 'type', 'status', 'volumeCount'] as const
 
 /** Used to create and to edit. The caller owns the request and passes its error back. */
@@ -32,7 +35,8 @@ export default function EditionForm({
   conflictNote,
   children,
 }: {
-  initial?: Partial<EditionFormValues>
+  /** `publisher` is the current publisher's name (an EditionResponse fits). */
+  initial?: Partial<EditionFormValues> & { publisher?: string | null }
   submitLabel: string
   pending: boolean
   error: unknown
@@ -46,6 +50,8 @@ export default function EditionForm({
   const prefix = useId()
   const [name, setName] = useState(initial?.name ?? '')
   const [publisher, setPublisher] = useState(initial?.publisher ?? '')
+  const [pickError, setPickError] = useState(false)
+  const publishers = usePublishers().data ?? []
   const [type, setType] = useState<EditionType>(initial?.type ?? 'REGULAR')
   const [status, setStatus] = useState<EditionStatus>(
     initial?.status ?? 'ONGOING',
@@ -55,10 +61,13 @@ export default function EditionForm({
   )
 
   const fieldErrors = error instanceof ApiError ? error.errors : []
-  const message = (f: string) => fieldErrors.find((e) => e.field === f)?.message
+  const message = (f: string) =>
+    f === 'publisher' && pickError
+      ? t('edition.publisherUnknown')
+      : fieldErrors.find((e) => e.field === serverField(f))?.message
   // Errors for fields this form does not show (e.g. `version`) must not vanish.
   const unmatched = fieldErrors.filter(
-    (e) => !(FIELDS as readonly string[]).includes(e.field),
+    (e) => !(FIELDS.map(serverField) as string[]).includes(e.field),
   )
   const general =
     error instanceof ApiError
@@ -76,9 +85,12 @@ export default function EditionForm({
 
   function submit(ev: SyntheticEvent) {
     ev.preventDefault()
+    const typed = publisher.trim().toLowerCase()
+    const match = publishers.find((p) => p.name.toLowerCase() === typed)
+    if (typed && !match) return setPickError(true)
     onSubmit({
       name: name.trim(),
-      publisher,
+      publisherId: match?.id ?? null,
       type,
       status,
       volumeCount: Number(volumeCount),
@@ -135,11 +147,20 @@ export default function EditionForm({
         t('edition.publisherLabel'),
         <input
           {...aria('publisher')}
+          list="publisher-options"
           maxLength={200}
           value={publisher}
-          onChange={(e) => setPublisher(e.target.value)}
+          onChange={(e) => {
+            setPublisher(e.target.value)
+            setPickError(false)
+          }}
         />,
       )}
+      <datalist id="publisher-options">
+        {publishers.map((p) => (
+          <option key={p.id} value={p.name} />
+        ))}
+      </datalist>
       {field(
         'type',
         t('edition.typeLabel'),

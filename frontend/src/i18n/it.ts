@@ -100,6 +100,7 @@ export const it = {
   'edition.delete': 'Elimina edizione',
   'edition.deleteWhat': 'questa edizione (è in {n} collezioni)',
   'edition.nameLabel': 'Nome edizione',
+  'edition.publisherUnknown': 'Scegli un editore dalla lista',
   'edition.publisherLabel': 'Editore (facoltativo)',
   'edition.typeLabel': 'Tipo',
   'edition.statusLabel': 'Stato',

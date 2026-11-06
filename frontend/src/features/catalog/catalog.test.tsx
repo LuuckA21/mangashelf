@@ -47,7 +47,7 @@ function login(role: Role) {
 }
 
 beforeEach(() => {
-  replies = {}
+  replies = { 'GET /publishers': [200, [{ id: 'p2', name: 'Panini' }]] }
   login('USER')
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const r = replies[`${init.method} ${url.replace('/api/v1', '')}`] ?? [
@@ -193,7 +193,7 @@ describe('series page', () => {
     expect(JSON.parse(calls('POST', '/series/s1/editions')[0][1].body)).toEqual(
       {
         name: 'Perfect',
-        publisher: null,
+        publisherId: null,
         type: 'VARIANT',
         status: 'ONGOING',
         volumeCount: 12,
@@ -539,5 +539,88 @@ describe('review fixes', () => {
     expect(
       await screen.findByText('Regolare · In corso · Volumi 5'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('edition form publisher', () => {
+  const panini = { id: 'p2', name: 'Panini' }
+  const star = { id: 'p1', name: 'Star Comics' }
+  async function fill(publisher: string) {
+    replies['GET /publishers'] = [200, [star, panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [201, edition({ id: 'e9' })]
+    replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() =>
+      expect(
+        document.querySelectorAll('#publisher-options option'),
+      ).toHaveLength(2),
+    )
+    if (publisher)
+      await userEvent.type(screen.getByLabelText(/^Editore/), publisher)
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+  }
+  const sent = () => JSON.parse(calls('POST', '/series/s1/editions')[0][1].body)
+
+  it('pickPublisherSendsId', async () => {
+    await fill('Panini')
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p2'))
+  })
+
+  it('emptyPublisherSendsNull', async () => {
+    await fill('')
+    await vi.waitFor(() => expect(sent().publisherId).toBeNull())
+  })
+
+  it('pickIgnoresCase', async () => {
+    await fill('  star COMICS ')
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p1'))
+  })
+
+  it('unknownPublisherShowsErrorAndDoesNotSave', async () => {
+    await fill('Nessuno')
+    const input = screen.getByLabelText(/^Editore/)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription('Scegli un editore dalla lista')
+    expect(input).toHaveFocus()
+    expect(calls('POST', '/series/s1/editions')).toHaveLength(0)
+  })
+
+  it('serverPublisherIdErrorShowsOnField', async () => {
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [
+      400,
+      {
+        detail: 'Invalid',
+        errors: [{ field: 'publisherId', message: 'Editore non trovato' }],
+      },
+    ]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+    expect(
+      await screen.findByLabelText(/^Editore/),
+    ).toHaveAccessibleDescription('Editore non trovato')
+  })
+
+  it('editShowsCurrentPublisher', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /editions/e1'] = [200, edition()]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    expect(screen.getByLabelText(/^Editore/)).toHaveValue('Panini')
+  })
+
+  it('hasNoAxeViolations', async () => {
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    const { container } = renderApp('/series/s1')
+    await screen.findByLabelText('Nome edizione')
+    expect((await axe(container)).violations).toEqual([])
   })
 })
