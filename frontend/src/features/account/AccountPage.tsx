@@ -5,27 +5,23 @@ import ChangePasswordForm from '../auth/ChangePasswordForm'
 import { useExportData } from './api'
 import PurchaseSettingsForm from './PurchaseSettingsForm'
 import DeleteAccount from './DeleteAccount'
-import { useIsPhone } from '../../components/useIsPhone'
 import { useLogout } from '../auth/useLogout'
 
 export default function AccountPage() {
   const navigate = useNavigate()
   const exportData = useExportData()
   const exportError = exportData.error
-  // On a phone the header has no room for Esci: it lives here.
-  const phone = useIsPhone()
+  // Esci lives here, not in the header.
   const { logout, failed: logoutFailed } = useLogout()
   return (
     <>
       <div className="page-head">
         <h1>{t('account.title')}</h1>
-        {phone && (
-          <button className="quiet" onClick={logout}>
-            {t('nav.logout')}
-          </button>
-        )}
+        <button className="quiet" onClick={logout}>
+          {t('nav.logout')}
+        </button>
       </div>
-      {phone && logoutFailed && (
+      {logoutFailed && (
         <p className="error" role="alert">
           {t('error.generic')}
         </p>

@@ -9,10 +9,13 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 ### Changed
 
 - The publisher of an edition is now chosen from a list managed by admins on the new Amministrazione page. Existing editions start without a publisher.
+- New navigation: icons beside each entry; on phones a bottom bar. Admins reach Utenti and Amministrazione from the ⚙ button; Esci is on the Account page.
+- You stay logged in after closing the browser, until 14 days without opening the app.
 
 ### Added
 
 - Purchase lists: monthly lists of volumes to buy, with release dates, EUR and CHF prices, discount and totals; mark rows booked, move rows between lists, close a list (booked rows become owned) and reopen it.
+- Collection statistics beside the list: volumes, editions, series, completed, missing, completion, and charts by publisher, type and status.
 
 ## [0.1.0] - 2026-11-04
 

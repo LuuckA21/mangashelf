@@ -1231,8 +1231,60 @@ button[aria-pressed='true'] {
 
 /* ------------------------------------------------- phone tab bar and gear -- */
 
+/* Esci sits beside the Account title. */
+.page-head:has(> button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s);
+}
+
+/* Same icons as the phone tab bar, beside the label on a computer. */
+.topbar nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .nav-icon {
-  display: none;
+  width: 18px;
+  height: 18px;
+}
+.admin-menu {
+  position: relative;
+  margin-left: auto;
+}
+.admin-menu .gear {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--s) * 0.5) 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+}
+.admin-menu-panel a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 calc(var(--s) * 2);
+  color: var(--indigo-deep);
+  text-decoration: none;
+}
+.admin-menu-panel a.active {
+  color: var(--indigo);
+  font-weight: 600;
 }
 
 @media (max-width: 700px) {
@@ -1267,54 +1319,12 @@ button[aria-pressed='true'] {
   }
   .nav-icon {
     display: block;
+    width: 22px;
+    height: 22px;
   }
   /* While typing, the keyboard and any open list need the room: hide the bar. */
   body:has(input:focus, textarea:focus) .topbar nav {
     display: none;
-  }
-  .admin-menu {
-    position: relative;
-    margin-left: auto;
-  }
-  .admin-menu .gear {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .admin-menu-panel {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
-    z-index: 30;
-    min-width: 200px;
-    display: flex;
-    flex-direction: column;
-    padding: calc(var(--s) * 0.5) 0;
-    background: var(--paper-raised);
-    border: 1px solid var(--ash-line);
-    border-radius: var(--radius);
-  }
-  .admin-menu-panel a {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    padding: 0 calc(var(--s) * 2);
-    color: var(--indigo-deep);
-    text-decoration: none;
-  }
-  .admin-menu-panel a.active {
-    color: var(--indigo);
-    font-weight: 600;
-  }
-  /* Esci sits beside the Account title. */
-  .page-head:has(> button) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--s);
   }
 }
 

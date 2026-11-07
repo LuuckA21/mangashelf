@@ -66,8 +66,11 @@ const rowOf = async (name: string) =>
 describe('admin page', () => {
   it('adminNavOnlyForAdmins', async () => {
     renderApp()
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Menu amministrazione' }),
+    )
     expect(
-      await screen.findByRole('link', { name: 'Amministrazione' }),
+      screen.getByRole('link', { name: 'Amministrazione' }),
     ).toHaveAttribute('href', '/admin')
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Amministrazione' }),
@@ -97,7 +100,10 @@ describe('admin page', () => {
 
   it('onlyOneNavLinkIsCurrent', async () => {
     renderApp('/admin/users')
-    const users = await screen.findByRole('link', { name: 'Utenti' })
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Menu amministrazione' }),
+    )
+    const users = screen.getByRole('link', { name: 'Utenti' })
     expect(users).toHaveAttribute('aria-current', 'page')
     expect(
       screen.getByRole('link', { name: 'Amministrazione' }),
@@ -264,16 +270,7 @@ describe('admin page', () => {
   })
 })
 
-describe('phone layout', () => {
-  // jsdom has no matchMedia: pretend to be a phone (max-width: 700px).
-  beforeEach(() =>
-    vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query.includes('max-width: 700px'),
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    })),
-  )
-
+describe('navigation', () => {
   it('adminGearMenuOpensAndCloses', async () => {
     renderApp('/')
     const gear = await screen.findByRole('button', {
@@ -317,7 +314,7 @@ describe('phone layout', () => {
     ).toBeVisible()
   })
 
-  it('bottomBarHasTheFourUserEntries', async () => {
+  it('mainNavHasTheFourUserEntries', async () => {
     renderApp('/')
     const nav = await screen.findByRole('navigation', { name: /principale/i })
     expect(

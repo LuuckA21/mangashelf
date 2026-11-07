@@ -167,7 +167,12 @@ describe('auth', () => {
   it('logoutClearsUserAndGoesToLogin', async () => {
     replies['GET /auth/me'] = [200, me()]
     replies['POST /auth/logout'] = [204]
-    const client = renderApp('/')
+    replies['GET /account/purchase-settings'] = [
+      200,
+      { chfRate: 1.2, discountPercent: 10 },
+    ]
+    // Esci lives in the Account page.
+    const client = renderApp('/account')
     const logout = await screen.findByRole('button', { name: 'Esci' })
     client.setQueryData(['collection'], ['previous user data'])
     await userEvent.click(logout)
@@ -180,13 +185,17 @@ describe('auth', () => {
   it('logoutFailureShowsErrorAndStays', async () => {
     replies['GET /auth/me'] = [200, me()]
     replies['POST /auth/logout'] = [500, { detail: 'boom' }]
-    renderApp('/')
+    replies['GET /account/purchase-settings'] = [
+      200,
+      { chfRate: 1.2, discountPercent: 10 },
+    ]
+    renderApp('/account')
     await userEvent.click(await screen.findByRole('button', { name: 'Esci' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Si è verificato un errore',
     )
     expect(
-      await screen.findByRole('heading', { name: 'La mia collezione' }),
+      await screen.findByRole('heading', { level: 1, name: 'Account' }),
     ).toBeInTheDocument()
   })
 
