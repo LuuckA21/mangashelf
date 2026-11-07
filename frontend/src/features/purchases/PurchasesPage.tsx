@@ -3,8 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError, fieldMessage } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useCreatePurchaseList, usePurchaseLists } from './api'
-import { formatChf } from './money'
-import { monthLabel } from './monthLabel'
+import { formatChfGrouped } from './money'
+import { monthLabel, monthShort } from './monthLabel'
 import SummaryTab from './SummaryTab'
 
 function CreateForm() {
@@ -118,7 +118,7 @@ function Tabs({ active }: { active: 'liste' | 'riepilogo' }) {
   }
   return (
     <div
-      className="chips purchase-tabs"
+      className="purchase-tabs"
       role="tablist"
       aria-label={t('purchases.tabs')}
     >
@@ -128,7 +128,7 @@ function Tabs({ active }: { active: 'liste' | 'riepilogo' }) {
           id={`tab-${x.id}`}
           type="button"
           role="tab"
-          className={`chip${x.id === active ? ' active' : ''}`}
+          className={`tab${x.id === active ? ' active' : ''}`}
           aria-selected={x.id === active}
           aria-controls="purchases-panel"
           tabIndex={x.id === active ? 0 : -1}
@@ -182,38 +182,71 @@ function ListsTab() {
       {data && data.length > 0 && (
         <ul className="edition-list">
           {data.map((l) => (
-            <li key={l.id} className="edition-row purchase-row">
-              <div className="grow">
-                <Link className="name" to={`/purchases/${l.id}`}>
-                  {t('purchases.listTitle', {
-                    description: l.description,
-                    month: monthLabel(l.month, l.year),
-                  })}
-                </Link>
-                <div className="muted">
-                  {t(
-                    l.itemCount === 1
-                      ? l.unbookedCount === 1
-                        ? 'purchases.countOneOneUnbooked'
-                        : 'purchases.countOne'
-                      : l.unbookedCount === 1
-                        ? 'purchases.countsOneUnbooked'
-                        : 'purchases.counts',
-                    {
-                      count: l.itemCount,
-                      unbooked: l.unbookedCount,
-                    },
-                  )}
-                </div>
-              </div>
-              <span className={`chip${l.closed ? '' : ' active'}`}>
-                {t(l.closed ? 'purchases.closed' : 'purchases.open')}
-              </span>
-              <span className="num">{formatChf(l.totalCents)}</span>
+            <li
+              key={l.id}
+              className={`edition-row purchase-row${l.closed ? ' closed' : ''}`}
+            >
+              <Link className="purchase-link" to={`/purchases/${l.id}`}>
+                <span className="month-badge" aria-hidden="true">
+                  <span className="m">{monthShort(l.month)}</span>
+                  <span className="y">{l.year}</span>
+                </span>
+                <span className="grow">
+                  <span className="name">
+                    {l.description}
+                    <span className="sr-only">
+                      {' · '}
+                      {monthLabel(l.month, l.year)}
+                    </span>
+                  </span>
+                  <span className="muted">
+                    {t(
+                      l.itemCount === 1
+                        ? l.unbookedCount === 1
+                          ? 'purchases.countOneOneUnbooked'
+                          : 'purchases.countOne'
+                        : l.unbookedCount === 1
+                          ? 'purchases.countsOneUnbooked'
+                          : 'purchases.counts',
+                      {
+                        count: l.itemCount,
+                        unbooked: l.unbookedCount,
+                      },
+                    )}
+                  </span>
+                </span>
+                <span className={`list-state ${l.closed ? 'closed' : 'open'}`}>
+                  {l.closed ? <LockIcon /> : <span className="dot" />}
+                  {t(l.closed ? 'purchases.closed' : 'purchases.open')}
+                </span>
+                <span className="list-total">
+                  {formatChfGrouped(l.totalCents)}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
       )}
     </>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

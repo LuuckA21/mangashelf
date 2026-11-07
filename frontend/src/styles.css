@@ -1102,13 +1102,127 @@ button.danger:hover:not(:disabled) {
 .purchase-create > button {
   height: 44px;
 }
-.purchase-row .chip {
-  display: inline-block;
-  min-height: 0;
+.purchase-row {
+  padding: 0;
 }
-.purchase-row .num {
-  font-family: var(--font-data);
+.purchase-row.closed {
+  background: var(--paper);
+  border-left-color: var(--ash-line);
+}
+.purchase-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 2);
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  min-width: 0;
+}
+.purchase-link .muted {
+  display: block;
+}
+.month-badge {
+  flex: none;
+  width: 56px;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  line-height: 1.1;
+}
+.month-badge .m {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--indigo);
+}
+.month-badge .y {
+  font-size: 12px;
+  color: var(--ash);
+}
+.closed .month-badge .m,
+.closed .name {
+  color: var(--ash);
+}
+.list-state {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
   white-space: nowrap;
+}
+.list-state.open {
+  color: var(--indigo);
+  background: var(--indigo-wash);
+  border: 1px solid var(--indigo);
+}
+.list-state.open .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--indigo);
+}
+.list-state.closed {
+  color: var(--ash);
+  border: 1px solid var(--ash-line);
+}
+.list-total {
+  flex: none;
+  min-width: 7.5em;
+  text-align: right;
+  font-family: var(--font-data);
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Tabs: the active one is underlined; a thin rule runs under both. */
+.purchase-tabs {
+  display: flex;
+  gap: calc(var(--s) * 3);
+  margin-bottom: calc(var(--s) * 3);
+  border-bottom: 1px solid var(--ash-line);
+}
+.purchase-tabs .tab {
+  padding: var(--s) 2px;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--ash);
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  font-size: 16px;
+}
+.purchase-tabs .tab:hover:not(.active) {
+  background: transparent;
+  color: var(--indigo);
+}
+.purchase-tabs .tab.active {
+  color: var(--indigo);
+  font-weight: 600;
+  border-bottom-color: var(--indigo);
+}
+@media (max-width: 700px) {
+  .purchase-link {
+    flex-wrap: wrap;
+    row-gap: var(--s);
+  }
+  .purchase-link .grow {
+    flex: 1 1 calc(100% - 56px - var(--s) * 2);
+  }
+  /* second line: state and total under the description */
+  .list-state {
+    margin-left: calc(56px + var(--s) * 2);
+  }
+  .list-total {
+    min-width: 0;
+    margin-left: auto;
+  }
 }
 
 .item-group > h2 {
@@ -1493,10 +1607,6 @@ button[aria-pressed='true'] {
 
 /* ------------------------------------------------------ purchase summary */
 
-.purchase-tabs {
-  grid-template-columns: repeat(2, max-content);
-  margin: 0 0 calc(var(--s) * 2);
-}
 .summary-year {
   max-width: 200px;
 }
@@ -1591,7 +1701,7 @@ button[aria-pressed='true'] {
   .summary-table {
     grid-column: 1;
   }
-  .purchase-tabs .chip {
+  .purchase-tabs .tab {
     min-height: 44px;
   }
   .summary-table th,

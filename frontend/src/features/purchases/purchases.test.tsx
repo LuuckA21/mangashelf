@@ -103,12 +103,26 @@ describe('purchases', () => {
 
   it('listsShowDescriptionMonthStateCountsAndTotal', async () => {
     renderApp('/purchases')
-    expect(
-      await screen.findByText('Manga Ottobre · ottobre 2026'),
-    ).toBeVisible()
-    expect(screen.getByText('Aperta')).toBeVisible()
+    const link = await screen.findByRole('link', { name: /Manga Ottobre/ })
+    expect(link).toHaveAttribute('href', '/purchases/l1')
+    expect(link).toHaveAccessibleName(/ottobre 2026/)
+    const badge = link.querySelector('.month-badge')!
+    expect(badge).toHaveTextContent('OTT2026')
+    expect(within(link).getByText('Aperta')).toHaveClass('list-state', 'open')
     expect(screen.getByText('24 volumi, 2 non prenotati')).toBeVisible()
-    expect(screen.getByText('CHF 216.90')).toBeVisible()
+    expect(screen.getByText('CHF 216.90')).toHaveClass('list-total')
+  })
+
+  it('closedListsAreMarkedAndTotalsUseTheApostrophe', async () => {
+    replies['GET /purchase-lists'] = [
+      200,
+      [summary({ closed: true, totalCents: 123456 })],
+    ]
+    renderApp('/purchases')
+    const link = await screen.findByRole('link', { name: /Manga Ottobre/ })
+    expect(link.closest('li')).toHaveClass('closed')
+    expect(within(link).getByText('Chiusa')).toHaveClass('list-state', 'closed')
+    expect(within(link).getByText("CHF 1'234.56")).toBeVisible()
   })
 
   it('listCountsUseSingularUnbooked', async () => {
@@ -144,7 +158,7 @@ describe('purchases', () => {
     ]
     renderApp('/purchases')
     const user = userEvent.setup()
-    await screen.findByText('Manga Ottobre · ottobre 2026')
+    await screen.findByRole('link', { name: /Manga Ottobre/ })
     await user.type(screen.getByLabelText('Descrizione'), 'Manga Novembre')
     await user.clear(screen.getByLabelText('Mese'))
     await user.type(screen.getByLabelText('Mese'), '2026-11')
@@ -170,7 +184,7 @@ describe('purchases', () => {
     ]
     renderApp('/purchases')
     const user = userEvent.setup()
-    await screen.findByText('Manga Ottobre · ottobre 2026')
+    await screen.findByRole('link', { name: /Manga Ottobre/ })
     await user.type(screen.getByLabelText('Descrizione'), '   ')
     await user.click(screen.getByRole('button', { name: 'Crea lista' }))
     expect(await screen.findByText('non deve essere vuoto')).toBeVisible()
@@ -215,7 +229,7 @@ describe('purchases', () => {
 
   it('listsPageHasNoA11yViolations', async () => {
     const { container } = renderApp('/purchases')
-    await screen.findByText('Manga Ottobre · ottobre 2026')
+    await screen.findByRole('link', { name: /Manga Ottobre/ })
     expect((await axe(container)).violations).toEqual([])
   })
 })
