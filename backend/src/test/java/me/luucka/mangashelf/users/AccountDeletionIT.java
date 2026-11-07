@@ -40,7 +40,11 @@ class AccountDeletionIT {
 
   @BeforeEach
   void seed() {
+    // users first: their lists and rows cascade, and rows restrict deleting editions
     users.deleteAll();
+    // the catalog is shared: another IT may have left a series with the same title
+    jdbc.update("DELETE FROM editions");
+    jdbc.update("DELETE FROM series");
     jdbc.update("DELETE FROM spring_session");
     users.save(new AppUser("Admin", encoder.encode(PASSWORD), Role.ADMIN, false, Instant.now()));
     users.save(new AppUser("Mario", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
