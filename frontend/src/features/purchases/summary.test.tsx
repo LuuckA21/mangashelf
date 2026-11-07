@@ -389,20 +389,23 @@ describe('purchase summary', () => {
     expect(screen.queryByText(/^Ottobre: speso/)).toBeNull()
   })
 
-  it('tooltipStaysInsideTheChart', async () => {
+  it('tooltipHasAFixedSpotAndHighlightsTheColumn', async () => {
     renderApp('/purchases?vista=riepilogo')
     const chart = await chartOf('Spesa per mese, 2026')
     const hits = chart.querySelectorAll('[data-testid="hit"]')
-    const tip = (i: number) => {
+    const spot = chart.parentElement!.querySelector('.chart-tip')!
+    expect(spot).toBeEmptyDOMElement()
+    for (const i of [0, 6, 11]) {
       fireEvent.pointerEnter(hits[i])
-      return screen.getByText(/^\w+: speso/)
+      expect(chart.parentElement!.querySelector('.chart-tip')).toBe(spot)
+      expect(spot).toHaveTextContent(/: speso/)
+      expect(spot).not.toHaveAttribute('style')
+      expect(chart.querySelectorAll('.hit.on')).toHaveLength(1)
+      expect(hits[i]).toHaveClass('on')
     }
-    expect(tip(0)).toHaveAttribute('data-align', 'start')
-    expect(tip(0).style.left).toBe('0%')
-    expect(tip(6)).toHaveAttribute('data-align', 'middle')
-    expect(tip(11)).toHaveAttribute('data-align', 'end')
-    expect(tip(11).style.right).toBe('0%')
-    expect(tip(11).style.left).toBe('')
+    fireEvent.pointerLeave(hits[11])
+    expect(spot).toBeEmptyDOMElement()
+    expect(chart.querySelector('.hit.on')).toBeNull()
   })
 
   it('aboveAverageColumnsHaveTheMarker', async () => {

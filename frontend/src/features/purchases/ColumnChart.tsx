@@ -47,16 +47,6 @@ export default function ColumnChart({
   const bar = Math.min(slot * 0.6, 40)
   const avgY = BASE - h(averageCents)
   const tip = shown === null ? null : columns[shown]
-  // Keep the box inside the chart: first third hangs right of its column,
-  // last third hangs left of it, the middle is centred.
-  const at = shown === null ? 0 : (shown + 0.5) / columns.length
-  const align = at < 1 / 3 ? 'start' : at > 2 / 3 ? 'end' : 'middle'
-  const tipStyle =
-    align === 'start'
-      ? { left: `${(shown! / columns.length) * 100}%` }
-      : align === 'end'
-        ? { right: `${(1 - (shown! + 1) / columns.length) * 100}%` }
-        : { left: `${at * 100}%` }
 
   return (
     <div className="summary-chart" ref={box}>
@@ -67,6 +57,14 @@ export default function ColumnChart({
         <span>
           <i className="swatch upcoming" /> {t('summary.upcoming')}
         </span>
+      </div>
+      <div className="chart-tip">
+        {tip &&
+          t('summary.tip', {
+            name: tip.full,
+            spent: formatChfGrouped(tip.spentCents),
+            upcoming: formatChfGrouped(tip.upcomingCents),
+          })}
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -160,26 +158,17 @@ export default function ColumnChart({
           <rect
             key={i}
             data-testid="hit"
+            className={shown === i ? 'hit on' : 'hit'}
             x={i * slot}
             y="0"
             width={slot}
             height={BASE}
-            fill="transparent"
             onPointerEnter={() => setShown(i)}
             onPointerLeave={() => setShown(null)}
             onClick={() => setShown(i)}
           />
         ))}
       </svg>
-      {tip && (
-        <div className="chart-tip" data-align={align} style={tipStyle}>
-          {t('summary.tip', {
-            name: tip.full,
-            spent: formatChfGrouped(tip.spentCents),
-            upcoming: formatChfGrouped(tip.upcomingCents),
-          })}
-        </div>
-      )}
     </div>
   )
 }

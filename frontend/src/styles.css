@@ -1537,22 +1537,20 @@ button[aria-pressed='true'] {
     var(--indigo) 3px 6px
   );
 }
-.chart-tip[data-align='middle'] {
-  transform: translateX(-50%);
-}
 .chart-svg {
   display: block;
 }
 .chart-tip {
-  position: absolute;
-  top: 28px;
-  max-width: 100%;
-  padding: 4px 8px;
+  min-height: 2.6em; /* reserves two lines so the chart does not jump */
+  margin-bottom: var(--s);
   font-size: 13px;
-  background: var(--paper-raised);
-  border: 1px solid var(--ash-line);
-  pointer-events: none;
-  z-index: 1;
+}
+.chart-svg .hit {
+  fill: transparent;
+}
+.chart-svg .hit.on {
+  fill: var(--indigo);
+  fill-opacity: 0.1;
 }
 .summary-table {
   grid-column: 2;
