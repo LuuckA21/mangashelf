@@ -1,5 +1,6 @@
-import { useId, useState, type InputHTMLAttributes } from 'react'
+import { useId, useRef, useState, type InputHTMLAttributes } from 'react'
 import type { Publisher } from '../../api/types'
+import { t } from '../../i18n/t'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
   value: string
@@ -7,11 +8,13 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
   options: Publisher[]
 }
 
-const MAX = 8
+const MAX = 20
+const NONE: Publisher = { id: '', name: '' }
 
 /**
  * Text field with its own suggestion list (ARIA combobox): mobile browsers show
- * <datalist> badly or not at all. Suggestions are names containing the typed text.
+ * <datalist> badly or not at all. Opening it shows every publisher; typing narrows
+ * it to the names containing the text.
  */
 export default function PublisherInput({
   value,
@@ -20,73 +23,98 @@ export default function PublisherInput({
   ...input
 }: Props) {
   const listId = useId()
+  const field = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
+  const [typed, setTyped] = useState(false)
   const [active, setActive] = useState(-1)
   const query = value.trim().toLowerCase()
-  const matches = query
-    ? options
-        .filter((p) => p.name.toLowerCase().includes(query))
-        .filter((p) => p.name.toLowerCase() !== query)
-        .slice(0, MAX)
-    : []
-  const shown = open && matches.length > 0
+  const shown =
+    typed && query
+      ? options.filter((p) => p.name.toLowerCase().includes(query))
+      : options
+  const items = [NONE, ...shown.slice(0, MAX)]
 
+  function show() {
+    setOpen(true)
+    setTyped(false)
+    setActive(-1)
+  }
   function choose(p: Publisher) {
     onChange(p.name)
     setOpen(false)
-    setActive(-1)
   }
 
   return (
     <div className="combo">
       <input
         {...input}
+        ref={field}
         role="combobox"
         aria-autocomplete="list"
-        aria-expanded={shown}
+        aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={
-          shown && active >= 0 ? `${listId}-${active}` : undefined
+          open && active >= 0 ? `${listId}-${active}` : undefined
         }
         autoComplete="off"
         value={value}
+        onFocus={show}
+        onClick={() => open || show()}
+        onBlur={() => setOpen(false)}
         onChange={(e) => {
           onChange(e.target.value)
           setOpen(true)
+          setTyped(true)
           setActive(-1)
         }}
-        onBlur={() => setOpen(false)}
         onKeyDown={(e) => {
-          if (!shown) return
-          if (e.key === 'ArrowDown') {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault()
-            setActive((a) => (a + 1) % matches.length)
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            setActive((a) => (a <= 0 ? matches.length - 1 : a - 1))
-          } else if (e.key === 'Enter' && active >= 0) {
+            if (!open) return show()
+            const step = e.key === 'ArrowDown' ? 1 : -1
+            setActive((a) => (a + step + items.length) % items.length)
+          } else if (e.key === 'Enter' && open && active >= 0) {
             e.preventDefault() // pick, do not submit the form
-            choose(matches[active])
+            choose(items[active])
           } else if (e.key === 'Escape') {
             setOpen(false)
           }
         }}
       />
-      {shown && (
+      <button
+        type="button"
+        className="quiet combo-toggle"
+        tabIndex={-1} // the field already opens it from the keyboard
+        aria-label={t('edition.showPublishers')}
+        aria-expanded={open}
+        aria-controls={listId}
+        // keep the focus in the field, so blur does not close the list first
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          if (open) setOpen(false)
+          else {
+            field.current?.focus()
+            show()
+          }
+        }}
+      >
+        ▾
+      </button>
+      {open && (
         <ul id={listId} role="listbox" className="combo-list">
-          {matches.map((p, i) => (
+          {items.map((p, i) => (
             // Keyboard lives on the input (arrows + Enter), as the combobox pattern expects.
             // eslint-disable-next-line jsx-a11y/click-events-have-key-events
             <li
-              key={p.id}
+              key={p.id || 'none'}
               id={`${listId}-${i}`}
               role="option"
-              aria-selected={i === active}
-              // mousedown would blur the input and close the list before the click
+              aria-selected={p.name.toLowerCase() === query}
+              className={i === active ? 'active' : undefined}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => choose(p)}
             >
-              {p.name}
+              {p === NONE ? t('edition.noPublisher') : p.name}
             </li>
           ))}
         </ul>

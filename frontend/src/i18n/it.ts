@@ -103,6 +103,8 @@ export const it = {
   'edition.nameLabel': 'Nome edizione',
   'edition.publishersUnavailable':
     "Elenco degli editori non disponibile: puoi tenere l'editore attuale o lasciarlo vuoto.",
+  'edition.showPublishers': 'Mostra editori',
+  'edition.noPublisher': 'Nessun editore',
   'edition.publisherUnknown': 'Scegli un editore dalla lista',
   'edition.publisherLabel': 'Editore (facoltativo)',
   'edition.typeLabel': 'Tipo',

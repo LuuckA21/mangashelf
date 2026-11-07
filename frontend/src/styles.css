@@ -1268,6 +1268,10 @@ button[aria-pressed='true'] {
   .nav-icon {
     display: block;
   }
+  /* While typing, the keyboard and any open list need the room: hide the bar. */
+  body:has(input:focus, textarea:focus) .topbar nav {
+    display: none;
+  }
   .admin-menu {
     position: relative;
     margin-left: auto;
@@ -1318,6 +1322,16 @@ button[aria-pressed='true'] {
 
 .combo {
   position: relative;
+  display: flex;
+}
+.combo > input {
+  flex: 1;
+  min-width: 0;
+}
+.combo-toggle {
+  width: 44px;
+  flex: none;
+  padding: 0;
 }
 .combo-list {
   position: absolute;
@@ -1331,6 +1345,8 @@ button[aria-pressed='true'] {
   background: var(--paper-raised);
   border: 1px solid var(--ash-line);
   border-radius: var(--radius);
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
 }
 .combo-list li {
   min-height: 44px;
@@ -1340,6 +1356,9 @@ button[aria-pressed='true'] {
   cursor: pointer;
 }
 .combo-list li:hover,
-.combo-list li[aria-selected='true'] {
+.combo-list li.active {
   background: var(--indigo-wash);
+}
+.combo-list li[aria-selected='true'] {
+  font-weight: 600;
 }

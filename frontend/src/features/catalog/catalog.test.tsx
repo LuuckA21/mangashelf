@@ -577,8 +577,67 @@ describe('edition form publisher', () => {
       within(list)
         .getAllByRole('option')
         .map((o) => o.textContent),
-    ).toEqual(['Star Comics'])
+    ).toEqual(['Nessun editore', 'Star Comics'])
     expect(input).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  const optionNames = () =>
+    within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map((o) => o.textContent)
+
+  it('tapOnTheFieldShowsTheWholeList', async () => {
+    const input = await openForm()
+    await userEvent.click(input)
+    expect(optionNames()).toEqual(['Nessun editore', 'Star Comics', 'Panini'])
+  })
+
+  it('arrowButtonOpensAndClosesTheList', async () => {
+    await openForm()
+    const arrow = screen.getByRole('button', { name: 'Mostra editori' })
+    await userEvent.click(arrow)
+    expect(screen.getByRole('listbox')).toBeVisible()
+    expect(arrow).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(arrow)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('showsAtMostTwentyPublishers', async () => {
+    replies['GET /publishers'] = [
+      200,
+      Array.from({ length: 25 }, (_, i) => ({
+        id: `m${i}`,
+        name: `Editore ${String(i + 1).padStart(2, '0')}`,
+      })),
+    ]
+    replies['GET /series/s1'] = [200, detail([])]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Editore/ }))
+    await vi.waitFor(() => expect(optionNames()).toHaveLength(21))
+    expect(optionNames()[20]).toBe('Editore 20')
+  })
+
+  it('noPublisherOptionEmptiesTheField', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'Pan')
+    await userEvent.click(
+      screen.getByRole('option', { name: 'Nessun editore' }),
+    )
+    expect(input).toHaveValue('')
+  })
+
+  it('reopeningShowsTheWholeListWithTheCurrentOneSelected', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'Panini')
+    await userEvent.click(screen.getByLabelText('Nome edizione'))
+    await userEvent.click(input)
+    expect(optionNames()).toEqual(['Nessun editore', 'Star Comics', 'Panini'])
+    expect(screen.getByRole('option', { name: 'Panini' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
   })
 
   it('tapSuggestionPicksIt', async () => {
@@ -595,7 +654,7 @@ describe('edition form publisher', () => {
     const input = await openForm()
     await userEvent.type(input, 'st')
     await screen.findByRole('listbox')
-    await userEvent.keyboard('{ArrowDown}{Enter}')
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
     expect(input).toHaveValue('Star Comics')
     expect(calls('POST', '/series/s1/editions')).toHaveLength(0)
   })
