@@ -133,6 +133,40 @@ describe('purchase summary', () => {
     expect(screen.getByText('Nuova lista')).toBeVisible()
   })
 
+  it('clickingTheActiveTabKeepsTheYear', async () => {
+    replies['GET /purchase-summary?year=2025'] = [200, summary({ year: 2025 })]
+    renderApp('/purchases?vista=riepilogo&anno=2025')
+    const user = userEvent.setup()
+    await screen.findByRole('heading', { name: 'Mesi' })
+    await user.click(screen.getByRole('tab', { name: 'Riepilogo' }))
+    expect(where()).toBe('/purchases?vista=riepilogo&anno=2025')
+  })
+
+  it('yearSelectShowsTheChosenYearWhileLoading', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const user = userEvent.setup()
+    const select = await screen.findByLabelText('Anno')
+    replies['GET /purchase-summary?year=2025'] = [200, summary({ year: 2025 })]
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
+      if (url.includes('year=2025')) await gate
+      return base(url, init)
+    })
+    await user.selectOptions(select, '2025')
+    expect(screen.getByLabelText('Anno')).toHaveValue('2025')
+    release()
+    await waitFor(() => expect(select).toHaveValue('2025'))
+  })
+
+  it('tooltipShowsDashesForMonthsWithoutLists', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    fireEvent.click(chart.querySelectorAll('[data-testid="hit"]')[0])
+    expect(screen.getByText('Gennaio: speso — · in arrivo —')).toBeVisible()
+  })
+
   it('arrowKeysMoveBetweenTabs', async () => {
     renderApp('/purchases')
     const user = userEvent.setup()
@@ -185,12 +219,15 @@ describe('purchase summary', () => {
   it('monthTableShowsBothColumnsAndTotals', async () => {
     renderApp('/purchases?vista=riepilogo')
     const block = await monthsTable()
-    const oct = within(rowOf(block, 'Ottobre')).getAllByRole('cell')
-    expect(oct.map((c) => c.textContent)).toEqual([
-      expect.stringContaining('Ottobre'),
-      "CHF 1'642.38",
-      'CHF 0.00',
-    ])
+    const octRow = rowOf(block, 'Ottobre')
+    expect(within(octRow).getByRole('rowheader').textContent).toContain(
+      'Ottobre',
+    )
+    expect(
+      within(octRow)
+        .getAllByRole('cell')
+        .map((c) => c.textContent),
+    ).toEqual(["CHF 1'642.38", 'CHF 0.00'])
     for (const h of ['Mese', 'Speso', 'In arrivo']) {
       expect(within(block).getByRole('columnheader', { name: h })).toBeVisible()
     }
@@ -200,6 +237,17 @@ describe('purchase summary', () => {
     expect(
       within(rowOf(block, 'Totale speso')).getByText("CHF 1'642.38"),
     ).toBeVisible()
+    // the amount sits in its own column, the other cell is empty
+    expect(
+      within(rowOf(block, 'Totale speso'))
+        .getAllByRole('cell')
+        .map((c) => c.textContent),
+    ).toEqual(["CHF 1'642.38", ''])
+    expect(
+      within(rowOf(block, 'Totale in arrivo'))
+        .getAllByRole('cell')
+        .map((c) => c.textContent),
+    ).toEqual(['', 'CHF 147.78'])
     expect(
       within(rowOf(block, 'Totale in arrivo')).getByText('CHF 147.78'),
     ).toBeVisible()
@@ -212,7 +260,7 @@ describe('purchase summary', () => {
       within(rowOf(block, 'Gennaio'))
         .getAllByRole('cell')
         .map((c) => c.textContent),
-    ).toEqual(['Gennaio', '—', '—'])
+    ).toEqual(['—', '—'])
     // a month with lists totalling zero shows amounts, not dashes
     expect(
       within(rowOf(block, 'Dicembre')).getAllByText('CHF 0.00'),

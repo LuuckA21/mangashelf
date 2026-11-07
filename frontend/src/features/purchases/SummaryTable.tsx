@@ -20,11 +20,12 @@ export default function SummaryTable({
   totals: SpendTotals
   firstColumn: string
 }) {
-  const foot: [string, number][] = [
-    [t('summary.total'), totals.totalCents],
-    [t('summary.average'), totals.averageCents],
-    [t('summary.totalSpent'), totals.spentCents],
-    [t('summary.totalUpcoming'), totals.upcomingCents],
+  // [label, amount, column]: the total and average span both columns.
+  const foot: [string, number, 'spent' | 'upcoming' | 'both'][] = [
+    [t('summary.total'), totals.totalCents, 'both'],
+    [t('summary.average'), totals.averageCents, 'both'],
+    [t('summary.totalSpent'), totals.spentCents, 'spent'],
+    [t('summary.totalUpcoming'), totals.upcomingCents, 'upcoming'],
   ]
   return (
     <table className="summary-table">
@@ -45,7 +46,7 @@ export default function SummaryTable({
             key={r.fullLabel}
             className={r.aboveAverage ? 'above' : undefined}
           >
-            <td>
+            <th scope="row">
               {r.fullLabel}
               {r.aboveAverage && (
                 <>
@@ -54,7 +55,7 @@ export default function SummaryTable({
                   <span className="sr-only">{t('summary.aboveAverage')}</span>
                 </>
               )}
-            </td>
+            </th>
             <td className="num">
               {r.hasLists ? formatChfGrouped(r.spentCents) : '—'}
             </td>
@@ -65,12 +66,23 @@ export default function SummaryTable({
         ))}
       </tbody>
       <tfoot>
-        {foot.map(([label, cents], i) => (
+        {foot.map(([label, cents, col], i) => (
           <tr key={label} className={i === 0 ? 'foot-first' : undefined}>
-            <td>{label}</td>
-            <td className="num" colSpan={2}>
-              {formatChfGrouped(cents)}
-            </td>
+            <th scope="row">{label}</th>
+            {col === 'both' ? (
+              <td className="num" colSpan={2}>
+                {formatChfGrouped(cents)}
+              </td>
+            ) : (
+              <>
+                <td className="num">
+                  {col === 'spent' && formatChfGrouped(cents)}
+                </td>
+                <td className="num">
+                  {col === 'upcoming' && formatChfGrouped(cents)}
+                </td>
+              </>
+            )}
           </tr>
         ))}
       </tfoot>

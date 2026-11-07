@@ -8,6 +8,7 @@ export interface ChartColumn {
   spentCents: number
   upcomingCents: number
   aboveAverage: boolean
+  hasLists: boolean
 }
 
 const W = 360
@@ -62,8 +63,8 @@ export default function ColumnChart({
         {tip &&
           t('summary.tip', {
             name: tip.full,
-            spent: formatChfGrouped(tip.spentCents),
-            upcoming: formatChfGrouped(tip.upcomingCents),
+            spent: tip.hasLists ? formatChfGrouped(tip.spentCents) : '—',
+            upcoming: tip.hasLists ? formatChfGrouped(tip.upcomingCents) : '—',
           })}
       </div>
       <svg

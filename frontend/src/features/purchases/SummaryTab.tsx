@@ -16,7 +16,8 @@ export default function SummaryTab() {
     Number.isInteger(anno) && anno >= 2000 && anno <= 2100
       ? anno
       : new Date().getFullYear()
-  const { data, isPending, isError, refetch } = usePurchaseSummary(requested)
+  const { data, isPending, isPlaceholderData, isError, refetch } =
+    usePurchaseSummary(requested)
 
   if (isPending) return <p className="muted">{t('common.loading')}</p>
   if (isError)
@@ -36,7 +37,7 @@ export default function SummaryTab() {
         <label htmlFor="summary-year">{t('summary.year')}</label>
         <select
           id="summary-year"
-          value={data.year}
+          value={isPlaceholderData ? requested : data.year}
           onChange={(e) => {
             const next = new URLSearchParams(params)
             next.set('anno', e.target.value)
@@ -82,6 +83,7 @@ export default function SummaryTab() {
             ...y,
             short: String(y.year),
             full: String(y.year),
+            hasLists: true,
           }))}
         />
         <SummaryTable

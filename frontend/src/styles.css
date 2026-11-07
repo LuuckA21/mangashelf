@@ -1567,6 +1567,7 @@ button[aria-pressed='true'] {
 .summary-table .num {
   text-align: right;
   font-family: var(--font-data);
+  white-space: nowrap;
 }
 .summary-table th {
   color: var(--ash);
@@ -1575,9 +1576,11 @@ button[aria-pressed='true'] {
 .summary-table tr.above {
   background: var(--highlight);
 }
+.summary-table tfoot th,
 .summary-table tfoot td {
   font-weight: 700;
 }
+.summary-table tfoot .foot-first th,
 .summary-table tfoot .foot-first td {
   border-top: 2px solid var(--indigo);
 }

@@ -95,6 +95,7 @@ const TABS = [
 function Tabs({ active }: { active: 'liste' | 'riepilogo' }) {
   const [, setParams] = useSearchParams()
   function select(id: string) {
+    if (id === active) return
     // Liste is the bare URL: no other param belongs to it.
     setParams(id === 'riepilogo' ? { vista: 'riepilogo' } : {})
   }
