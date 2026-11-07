@@ -98,6 +98,38 @@ describe('admin page', () => {
     ])
   })
 
+  it('countShowsTheTotal', async () => {
+    renderApp()
+    expect(await screen.findByText('2 editori')).toBeVisible()
+  })
+
+  it('searchFiltersTheListAsYouType', async () => {
+    renderApp()
+    await screen.findByText('Star Comics')
+    await userEvent.type(screen.getByLabelText('Cerca editore'), 'STA')
+    expect(
+      screen
+        .getAllByRole('listitem')
+        .map((i) => i.querySelector('.name')?.textContent),
+    ).toEqual(['Star Comics'])
+    expect(screen.getByText('1 di 2')).toBeVisible()
+  })
+
+  it('searchWithoutResultsSaysSo', async () => {
+    renderApp()
+    await screen.findByText('Star Comics')
+    await userEvent.type(screen.getByLabelText('Cerca editore'), 'zzz')
+    expect(screen.getByText('Nessun editore trovato.')).toBeVisible()
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+  })
+
+  it('newPublisherHasItsOwnPanel', async () => {
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Nuovo editore' }),
+    ).toBeVisible()
+  })
+
   it('onlyOneNavLinkIsCurrent', async () => {
     renderApp('/admin/users')
     await userEvent.click(

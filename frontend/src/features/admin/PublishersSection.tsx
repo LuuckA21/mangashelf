@@ -75,23 +75,26 @@ function AddForm({ onStart }: { onStart: () => void }) {
   }
 
   return (
-    <form onSubmit={submit}>
+    <div className="panel">
+      <h3>{t('publishers.newTitle')}</h3>
       {general && (
         <p className="error" role="alert">
           {general}
         </p>
       )}
-      <NameField
-        id={id}
-        label={t('publishers.name')}
-        value={name}
-        onChange={setName}
-        msg={msg}
-      />
-      <button type="submit" disabled={create.isPending}>
-        {t('publishers.add')}
-      </button>
-    </form>
+      <form className="search-form" onSubmit={submit}>
+        <NameField
+          id={id}
+          label={t('publishers.name')}
+          value={name}
+          onChange={setName}
+          msg={msg}
+        />
+        <button type="submit" disabled={create.isPending}>
+          {t('publishers.add')}
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -120,7 +123,7 @@ function PublisherRow({
 
   if (editing)
     return (
-      <li className="edition-row">
+      <li>
         <form className="grow" onSubmit={submit}>
           {general && (
             <p className="error" role="alert">
@@ -151,8 +154,8 @@ function PublisherRow({
     )
 
   return (
-    <li className="edition-row">
-      <span className="grow name">{publisher.name}</span>
+    <li>
+      <span className="name">{publisher.name}</span>
       <span className="inline-actions">
         <button
           className="quiet"
@@ -185,35 +188,68 @@ export default function PublishersSection() {
   const { data, isPending, isError, refetch } = usePublishers()
   // One slot for delete failures (409 publisher in use).
   const [error, setError] = useState<unknown>(null)
+  const [search, setSearch] = useState('')
+  const searchId = useId()
   const message =
     error instanceof ApiError ? error.detail : error ? t('error.generic') : ''
+  const query = search.trim().toLowerCase()
+  const shown = (data ?? []).filter((p) => p.name.toLowerCase().includes(query))
+  const total = data?.length ?? 0
+  const count = query
+    ? t('publishers.countFiltered', { shown: shown.length, total })
+    : total === 1
+      ? t('publishers.countOne')
+      : t('publishers.count', { n: total })
 
   return (
-    <section className="panel" aria-labelledby="publishers-title">
+    <section className="admin-section" aria-labelledby="publishers-title">
       <h2 id="publishers-title">{t('publishers.title')}</h2>
       <AddForm onStart={() => setError(null)} />
-      {message && (
-        <p className="error" role="alert">
-          {message}
-        </p>
-      )}
-      {isPending && <p className="muted">{t('common.loading')}</p>}
-      {isError && (
-        <div className="error" role="alert">
-          {t('error.generic')}{' '}
-          <button className="quiet" onClick={() => refetch()}>
-            {t('common.retry')}
-          </button>
-        </div>
-      )}
-      {data?.length === 0 && <p className="muted">{t('publishers.empty')}</p>}
-      {data && data.length > 0 && (
-        <ul className="edition-list" aria-label={t('publishers.list')}>
-          {data.map((p) => (
-            <PublisherRow key={p.id} publisher={p} onError={setError} />
-          ))}
-        </ul>
-      )}
+      <div className="panel">
+        {message && (
+          <p className="error" role="alert">
+            {message}
+          </p>
+        )}
+        {isPending && <p className="muted">{t('common.loading')}</p>}
+        {isError && (
+          <div className="error" role="alert">
+            {t('error.generic')}{' '}
+            <button className="quiet" onClick={() => refetch()}>
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+        {data?.length === 0 && <p className="muted">{t('publishers.empty')}</p>}
+        {data && data.length > 0 && (
+          <>
+            <div className="list-head">
+              <div className="field">
+                <label htmlFor={searchId}>{t('publishers.search')}</label>
+                <input
+                  id={searchId}
+                  type="search"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <p className="count" aria-live="polite">
+                {count}
+              </p>
+            </div>
+            {shown.length === 0 ? (
+              <p className="muted">{t('publishers.noMatch')}</p>
+            ) : (
+              <ul className="publisher-list" aria-label={t('publishers.list')}>
+                {shown.map((p) => (
+                  <PublisherRow key={p.id} publisher={p} onError={setError} />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
     </section>
   )
 }

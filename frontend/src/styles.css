@@ -1372,3 +1372,64 @@ button[aria-pressed='true'] {
 .combo-list li[aria-selected='true'] {
   font-weight: 600;
 }
+
+/* ------------------------------------------------------- admin: publishers -- */
+
+.admin-section > h2 {
+  margin: 0 0 calc(var(--s) * 1.5);
+}
+.admin-section .panel {
+  margin-top: calc(var(--s) * 2);
+}
+.admin-section .panel > h3 {
+  margin: 0 0 calc(var(--s) * 1.5);
+}
+.list-head {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--s) * 2);
+  margin-bottom: var(--s);
+}
+.list-head .field {
+  flex: 0 1 360px;
+  margin-bottom: 0;
+}
+.list-head .count {
+  margin: 0 0 10px auto;
+  color: var(--ash);
+  white-space: nowrap;
+}
+.publisher-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.publisher-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--s);
+  padding: var(--s) 0;
+  border-top: 1px solid var(--ash-line);
+}
+.publisher-list .name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.publisher-list .inline-actions button {
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 700px) {
+  .list-head .field {
+    flex: 1 1 auto;
+  }
+  .publisher-list li {
+    flex-wrap: wrap;
+  }
+  /* Short names keep their buttons on the same line; long ones wrap. */
+  .publisher-list .name {
+    flex: 1 1 120px;
+  }
+}
