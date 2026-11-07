@@ -1,4 +1,10 @@
-import { useId, useRef, useState, type InputHTMLAttributes } from 'react'
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+} from 'react'
 import type { Publisher } from '../../api/types'
 import { t } from '../../i18n/t'
 
@@ -24,6 +30,7 @@ export default function PublisherInput({
 }: Props) {
   const listId = useId()
   const field = useRef<HTMLInputElement>(null)
+  const list = useRef<HTMLUListElement>(null)
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState(false)
   const [active, setActive] = useState(-1)
@@ -33,6 +40,17 @@ export default function PublisherInput({
       ? options.filter((p) => p.name.toLowerCase().includes(query))
       : options
   const items = [NONE, ...shown.slice(0, MAX)]
+
+  // On opening, centre the current publisher in the list (its own scroll, not the page's).
+  useLayoutEffect(() => {
+    const ul = list.current
+    const li = ul?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!ul || !li) return
+    ul.scrollTop +=
+      li.getBoundingClientRect().top -
+      ul.getBoundingClientRect().top -
+      (ul.clientHeight - li.offsetHeight) / 2
+  }, [open])
 
   function show() {
     setOpen(true)
@@ -103,7 +121,7 @@ export default function PublisherInput({
         </button>
       </div>
       {open && (
-        <ul id={listId} role="listbox" className="combo-list">
+        <ul ref={list} id={listId} role="listbox" className="combo-list">
           {items.map((p, i) => (
             // Keyboard lives on the input (arrows + Enter), as the combobox pattern expects.
             // eslint-disable-next-line jsx-a11y/click-events-have-key-events

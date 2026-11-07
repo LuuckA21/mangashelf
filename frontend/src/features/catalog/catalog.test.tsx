@@ -640,6 +640,25 @@ describe('edition form publisher', () => {
     )
   })
 
+  it('openingScrollsTheListToTheCurrentPublisher', async () => {
+    // jsdom has no layout: put the current publisher 300px below the list's top
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const current = this.getAttribute('aria-selected') === 'true'
+        return { top: current ? 300 : 0 } as DOMRect
+      })
+    try {
+      const input = await openForm()
+      await userEvent.type(input, 'Panini')
+      await userEvent.click(screen.getByLabelText('Nome edizione'))
+      await userEvent.click(input)
+      expect(screen.getByRole('listbox').scrollTop).toBe(300)
+    } finally {
+      rect.mockRestore()
+    }
+  })
+
   it('tapSuggestionPicksIt', async () => {
     const input = await openForm()
     await userEvent.type(input, 'pan')
