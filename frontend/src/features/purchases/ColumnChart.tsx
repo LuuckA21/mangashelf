@@ -47,6 +47,16 @@ export default function ColumnChart({
   const bar = Math.min(slot * 0.6, 40)
   const avgY = BASE - h(averageCents)
   const tip = shown === null ? null : columns[shown]
+  // Keep the box inside the chart: first third hangs right of its column,
+  // last third hangs left of it, the middle is centred.
+  const at = shown === null ? 0 : (shown + 0.5) / columns.length
+  const align = at < 1 / 3 ? 'start' : at > 2 / 3 ? 'end' : 'middle'
+  const tipStyle =
+    align === 'start'
+      ? { left: `${(shown! / columns.length) * 100}%` }
+      : align === 'end'
+        ? { right: `${(1 - (shown! + 1) / columns.length) * 100}%` }
+        : { left: `${at * 100}%` }
 
   return (
     <div className="summary-chart" ref={box}>
@@ -162,10 +172,7 @@ export default function ColumnChart({
         ))}
       </svg>
       {tip && (
-        <div
-          className="chart-tip"
-          style={{ left: `${((shown! + 0.5) / columns.length) * 100}%` }}
-        >
+        <div className="chart-tip" data-align={align} style={tipStyle}>
           {t('summary.tip', {
             name: tip.full,
             spent: formatChfGrouped(tip.spentCents),

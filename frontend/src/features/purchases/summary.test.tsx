@@ -389,6 +389,22 @@ describe('purchase summary', () => {
     expect(screen.queryByText(/^Ottobre: speso/)).toBeNull()
   })
 
+  it('tooltipStaysInsideTheChart', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    const hits = chart.querySelectorAll('[data-testid="hit"]')
+    const tip = (i: number) => {
+      fireEvent.pointerEnter(hits[i])
+      return screen.getByText(/^\w+: speso/)
+    }
+    expect(tip(0)).toHaveAttribute('data-align', 'start')
+    expect(tip(0).style.left).toBe('0%')
+    expect(tip(6)).toHaveAttribute('data-align', 'middle')
+    expect(tip(11)).toHaveAttribute('data-align', 'end')
+    expect(tip(11).style.right).toBe('0%')
+    expect(tip(11).style.left).toBe('')
+  })
+
   it('aboveAverageColumnsHaveTheMarker', async () => {
     renderApp('/purchases?vista=riepilogo')
     const chart = await chartOf('Spesa per mese, 2026')
