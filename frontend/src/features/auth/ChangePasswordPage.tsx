@@ -3,6 +3,7 @@ import { t } from '../../i18n/t'
 import ChangePasswordForm from './ChangePasswordForm'
 import { useLogout } from './useLogout'
 import { useMe } from './useMe'
+import SiteFooter from '../../components/SiteFooter'
 
 export default function ChangePasswordPage() {
   const { data: me, isPending } = useMe()
@@ -13,27 +14,30 @@ export default function ChangePasswordPage() {
   if (!me) return <Navigate to="/login" replace />
 
   return (
-    <div className="auth-shell">
-      <main className="auth-card">
-        <h1>{t('auth.changePassword.title')}</h1>
-        <p className="subtitle">{t('auth.changePassword.intro')}</p>
-        <ChangePasswordForm
-          onSuccess={() =>
-            navigate('/login', {
-              replace: true,
-              state: { passwordChanged: true },
-            })
-          }
-        />
-        {failed && (
-          <p className="error" role="alert">
-            {t('error.generic')}
-          </p>
-        )}
-        <button type="button" className="quiet" onClick={logout}>
-          {t('nav.logout')}
-        </button>
-      </main>
-    </div>
+    <>
+      <div className="auth-shell">
+        <main className="auth-card">
+          <h1>{t('auth.changePassword.title')}</h1>
+          <p className="subtitle">{t('auth.changePassword.intro')}</p>
+          <ChangePasswordForm
+            onSuccess={() =>
+              navigate('/login', {
+                replace: true,
+                state: { passwordChanged: true },
+              })
+            }
+          />
+          {failed && (
+            <p className="error" role="alert">
+              {t('error.generic')}
+            </p>
+          )}
+          <button type="button" className="quiet" onClick={logout}>
+            {t('nav.logout')}
+          </button>
+        </main>
+      </div>
+      <SiteFooter />
+    </>
   )
 }

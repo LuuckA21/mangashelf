@@ -4,8 +4,12 @@ FROM node:24-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
+# vite.config.ts reads the app version from the pom
+COPY backend/pom.xml /src/backend/pom.xml
 COPY frontend/ ./
-RUN npm run build
+# Commit shown in the footer next to the version; only staging builds pass it (deploy.yml).
+ARG APP_COMMIT=
+RUN VITE_APP_COMMIT=$APP_COMMIT npm run build
 
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src

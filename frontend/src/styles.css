@@ -168,7 +168,7 @@ label {
 .auth-shell {
   display: grid;
   place-items: center;
-  min-height: 100vh;
+  flex: 1;
   padding: calc(var(--s) * 3);
 }
 .auth-card {
@@ -1288,8 +1288,8 @@ button[aria-pressed='true'] {
 }
 
 @media (max-width: 700px) {
-  /* The bar is fixed: leave room so the last content is never hidden under it. */
-  body {
+  /* The bar is fixed: leave room so the footer is never hidden under it. */
+  body:has(.topbar nav) #root {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
   .topbar-inner {
@@ -1457,4 +1457,34 @@ button[aria-pressed='true'] {
   .publisher-list .name {
     flex: 1 1 120px;
   }
+}
+
+/* ----------------------------------------------------------------- footer -- */
+
+/* The footer sits at the bottom of the window on short pages, after the content on long ones. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+#root > main {
+  flex: 1;
+  width: 100%;
+}
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 var(--s);
+  padding: calc(var(--s) * 2) calc(var(--s) * 3);
+  border-top: 1px solid var(--ash-line);
+  color: var(--ash);
+  font-size: 13px;
+}
+.site-footer > * + *::before {
+  content: '·' / '';
+  display: inline-block; /* keeps the link's underline off the dot */
+  margin-right: var(--s);
+  color: var(--ash);
 }

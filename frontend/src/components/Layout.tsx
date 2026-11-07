@@ -4,6 +4,7 @@ import { useMe } from '../features/auth/useMe'
 import { t } from '../i18n/t'
 import AdminMenu from './AdminMenu'
 import NavIcon from './NavIcon'
+import SiteFooter from './SiteFooter'
 
 export default function Layout() {
   const { data: me } = useMe()
@@ -48,9 +49,7 @@ export default function Layout() {
           <Outlet />
         </Suspense>
       </main>
-      <footer className="page">
-        <Link to="/privacy">{t('footer.privacy')}</Link>
-      </footer>
+      <SiteFooter />
     </>
   )
 }
