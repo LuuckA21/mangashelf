@@ -1,10 +1,11 @@
-import { useState, type SyntheticEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useState, type KeyboardEvent, type SyntheticEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError, fieldMessage } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useCreatePurchaseList, usePurchaseLists } from './api'
 import { formatChf } from './money'
 import { monthLabel } from './monthLabel'
+import SummaryTab from './SummaryTab'
 
 function CreateForm() {
   const navigate = useNavigate()
@@ -86,13 +87,84 @@ function CreateForm() {
   )
 }
 
+const TABS = [
+  { id: 'liste', label: 'purchases.tabLists' },
+  { id: 'riepilogo', label: 'purchases.tabSummary' },
+] as const
+
+function Tabs({ active }: { active: 'liste' | 'riepilogo' }) {
+  const [, setParams] = useSearchParams()
+  function select(id: string) {
+    // Liste is the bare URL: no other param belongs to it.
+    setParams(id === 'riepilogo' ? { vista: 'riepilogo' } : {})
+  }
+  function onKeyDown(e: KeyboardEvent<HTMLElement>) {
+    const i = TABS.findIndex((x) => x.id === active)
+    const to =
+      e.key === 'ArrowRight'
+        ? (i + 1) % TABS.length
+        : e.key === 'ArrowLeft'
+          ? (i + TABS.length - 1) % TABS.length
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? TABS.length - 1
+              : -1
+    if (to < 0) return
+    e.preventDefault()
+    select(TABS[to].id)
+    document.getElementById(`tab-${TABS[to].id}`)?.focus()
+  }
+  return (
+    <div
+      className="chips purchase-tabs"
+      role="tablist"
+      aria-label={t('purchases.tabs')}
+    >
+      {TABS.map((x) => (
+        <button
+          key={x.id}
+          id={`tab-${x.id}`}
+          type="button"
+          role="tab"
+          className={`chip${x.id === active ? ' active' : ''}`}
+          aria-selected={x.id === active}
+          aria-controls="purchases-panel"
+          tabIndex={x.id === active ? 0 : -1}
+          onClick={() => select(x.id)}
+          onKeyDown={onKeyDown}
+        >
+          {t(x.label)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function PurchasesPage() {
-  const { data, isPending, isError, refetch } = usePurchaseLists()
+  const [params] = useSearchParams()
+  const active = params.get('vista') === 'riepilogo' ? 'riepilogo' : 'liste'
   return (
     <>
       <div className="page-head">
         <h1>{t('purchases.title')}</h1>
       </div>
+      <Tabs active={active} />
+      <div
+        id="purchases-panel"
+        role="tabpanel"
+        aria-labelledby={`tab-${active}`}
+      >
+        {active === 'riepilogo' ? <SummaryTab /> : <ListsTab />}
+      </div>
+    </>
+  )
+}
+
+function ListsTab() {
+  const { data, isPending, isError, refetch } = usePurchaseLists()
+  return (
+    <>
       <CreateForm />
       {isPending && <p className="muted">{t('common.loading')}</p>}
       {isError && (

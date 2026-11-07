@@ -5,6 +5,7 @@ import type {
   ListSummary,
   Proposal,
   PurchaseSettings,
+  SpendingSummary,
 } from '../../api/types'
 
 const json = (method: string, body: unknown): RequestInit => ({
@@ -16,6 +17,13 @@ export function usePurchaseLists() {
   return useQuery({
     queryKey: ['purchase-lists'],
     queryFn: () => api<ListSummary[]>('/purchase-lists'),
+  })
+}
+
+export function usePurchaseSummary(year: number) {
+  return useQuery({
+    queryKey: ['purchase-summary', year],
+    queryFn: () => api<SpendingSummary>(`/purchase-summary?year=${year}`),
   })
 }
 
@@ -31,7 +39,12 @@ export function useCreatePurchaseList() {
   return useMutation({
     mutationFn: (body: { description: string; month: number; year: number }) =>
       api<ListSummary>('/purchase-lists', json('POST', body)),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['purchase-lists'] }),
+    onSuccess: () =>
+      Promise.all(
+        ['purchase-lists', 'purchase-summary'].map((k) =>
+          client.invalidateQueries({ queryKey: [k] }),
+        ),
+      ),
   })
 }
 
@@ -47,7 +60,10 @@ export function useSavePurchaseSettings() {
   return useMutation({
     mutationFn: (body: PurchaseSettings) =>
       api<PurchaseSettings>('/account/purchase-settings', json('PUT', body)),
-    onSuccess: (saved) => client.setQueryData(['purchase-settings'], saved),
+    onSuccess: (saved) => {
+      client.setQueryData(['purchase-settings'], saved)
+      return client.invalidateQueries({ queryKey: ['purchase-summary'] })
+    },
   })
 }
 
@@ -65,6 +81,7 @@ export function useListChange(id: string) {
       return Promise.all(
         [
           'purchase-lists',
+          'purchase-summary',
           'collection',
           'edition',
           'collection-entry',

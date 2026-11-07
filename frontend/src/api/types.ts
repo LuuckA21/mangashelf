@@ -129,3 +129,34 @@ export type Proposal = {
 }
 
 export type Publisher = { id: string; name: string }
+
+export type SpendTotals = {
+  totalCents: number
+  averageCents: number
+  spentCents: number
+  upcomingCents: number
+}
+
+export type MonthSpend = {
+  month: number
+  spentCents: number
+  upcomingCents: number
+  hasLists: boolean
+  aboveAverage: boolean
+}
+
+export type YearSpend = {
+  year: number
+  spentCents: number
+  upcomingCents: number
+  aboveAverage: boolean
+}
+
+export type SpendingSummary = {
+  years: number[]
+  year: number | null
+  months: MonthSpend[]
+  monthTotals: SpendTotals
+  byYear: YearSpend[]
+  yearTotals: SpendTotals
+}

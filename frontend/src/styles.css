@@ -17,6 +17,8 @@
   /* 4.59:1 on paper and 5.06:1 on raised paper: readable at text sizes. */
   --ash: #706b63;
   --ash-line: #d6d2c8;
+  /* Light yellow behind above-average rows; indigo-deep on it is ~13:1. */
+  --highlight: #fbf0b8;
 
   --font-display:
     'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
@@ -1487,4 +1489,75 @@ button[aria-pressed='true'] {
   display: inline-block; /* keeps the link's underline off the dot */
   margin-right: var(--s);
   color: var(--ash);
+}
+
+/* ------------------------------------------------------ purchase summary */
+
+.purchase-tabs {
+  grid-template-columns: repeat(2, max-content);
+  margin: 0 0 calc(var(--s) * 2);
+}
+.summary-year {
+  max-width: 200px;
+}
+.summary-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: calc(var(--s) * 2);
+  align-items: start;
+  margin-top: calc(var(--s) * 3);
+}
+.summary-block h2 {
+  grid-column: 1 / -1;
+}
+.summary-chart:empty {
+  display: none;
+}
+.summary-table {
+  grid-column: 2;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.summary-chart:empty + .summary-table {
+  grid-column: 1 / -1;
+}
+.summary-table th,
+.summary-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--ash-line);
+}
+.summary-table .num {
+  text-align: right;
+  font-family: var(--font-data);
+}
+.summary-table th {
+  color: var(--ash);
+  font-weight: 600;
+}
+.summary-table tr.above {
+  background: var(--highlight);
+}
+.summary-table tfoot td {
+  font-weight: 700;
+}
+.summary-table tfoot .foot-first td {
+  border-top: 2px solid var(--indigo);
+}
+@media (max-width: 700px) {
+  .summary-block {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-table,
+  .summary-chart:empty + .summary-table {
+    grid-column: 1;
+  }
+  .purchase-tabs .chip {
+    min-height: 44px;
+  }
+  .summary-table th,
+  .summary-table td {
+    padding: 10px 8px;
+  }
 }
