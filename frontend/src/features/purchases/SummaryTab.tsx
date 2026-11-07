@@ -8,9 +8,11 @@ const capitalised = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export default function SummaryTab() {
   const [params, setParams] = useSearchParams()
-  const anno = Number(params.get('anno'))
+  const raw = params.get('anno')
+  const anno = raw ? Number(raw) : NaN
+  // The server answers 400 outside 2000-2100, so anything else is ignored.
   const requested =
-    Number.isInteger(anno) && params.get('anno') !== null
+    Number.isInteger(anno) && anno >= 2000 && anno <= 2100
       ? anno
       : new Date().getFullYear()
   const { data, isPending, isError, refetch } = usePurchaseSummary(requested)

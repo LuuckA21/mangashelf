@@ -280,6 +280,78 @@ describe('purchase summary', () => {
     })
   })
 
+  it.each(['anno=1999', 'anno=', 'anno=2200', 'anno=abc'])(
+    'badYearInTheUrlFallsBackToTheCurrentYear (%s)',
+    async (q) => {
+      renderApp(`/purchases?vista=riepilogo&${q}`)
+      expect(await screen.findByLabelText('Anno')).toHaveValue('2026')
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/v1/purchase-summary?year=2026')
+      expect(urls.filter((u) => u.includes('purchase-summary'))).toHaveLength(1)
+    },
+  )
+
+  it('yearSelectKeepsFocusWhileTheNewYearLoads', async () => {
+    replies['GET /purchase-summary?year=2025'] = [200, summary({ year: 2025 })]
+    renderApp('/purchases?vista=riepilogo')
+    const user = userEvent.setup()
+    const select = await screen.findByLabelText('Anno')
+    await user.selectOptions(select, '2025')
+    expect(screen.getByLabelText('Anno')).toBe(select)
+    expect(select).toHaveFocus()
+    await waitFor(() => expect(select).toHaveValue('2025'))
+  })
+
+  const keysOf = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.map(([f]) => (f as { queryKey: string[] }).queryKey[0])
+
+  it('listChangeInvalidatesTheSummary', async () => {
+    replies['GET /purchase-lists/l1'] = [
+      200,
+      {
+        id: 'l1',
+        description: 'Manga Ottobre',
+        month: 10,
+        year: 2026,
+        closed: true,
+        items: [],
+        subtotalCents: 0,
+        discountCents: 0,
+        discountAuto: true,
+        pointsDiscountCents: 0,
+        totalCents: 0,
+      },
+    ]
+    replies['POST /purchase-lists/l1/reopen'] = [
+      200,
+      { ...(replies['GET /purchase-lists/l1'][1] as object), closed: false },
+    ]
+    const { client } = renderApp('/purchases/l1')
+    const user = userEvent.setup()
+    const reopen = await screen.findByRole('button', { name: 'Riapri lista' })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    await user.click(reopen)
+    await waitFor(() => expect(keysOf(spy)).toContain('purchase-summary'))
+  })
+
+  it('savingPurchaseSettingsInvalidatesTheSummary', async () => {
+    replies['GET /account/purchase-settings'] = [
+      200,
+      { chfRate: 1.2, discountPercent: 10 },
+    ]
+    replies['PUT /account/purchase-settings'] = [
+      200,
+      { chfRate: 1.2, discountPercent: 15 },
+    ]
+    const { client } = renderApp('/account')
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const user = userEvent.setup()
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Salva' })).at(-1)!,
+    )
+    await waitFor(() => expect(keysOf(spy)).toContain('purchase-summary'))
+  })
+
   it('axeCleanOnRiepilogo', async () => {
     const { container } = renderApp('/purchases?vista=riepilogo')
     await monthsTable()

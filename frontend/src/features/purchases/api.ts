@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { api } from '../../api/client'
 import type {
   ListDetail,
@@ -24,6 +29,7 @@ export function usePurchaseSummary(year: number) {
   return useQuery({
     queryKey: ['purchase-summary', year],
     queryFn: () => api<SpendingSummary>(`/purchase-summary?year=${year}`),
+    placeholderData: keepPreviousData,
   })
 }
 
