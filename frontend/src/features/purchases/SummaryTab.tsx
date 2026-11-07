@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router'
 import { t } from '../../i18n/t'
 import { usePurchaseSummary } from './api'
+import ColumnChart from './ColumnChart'
 import SummaryTable from './SummaryTable'
 
 const monthName = new Intl.DateTimeFormat('it-IT', { month: 'long' })
@@ -51,7 +52,16 @@ export default function SummaryTab() {
       </div>
       <section className="summary-block">
         <h2>{t('summary.months')}</h2>
-        <div className="summary-chart" />
+        <ColumnChart
+          label={t('summary.chartMonths', { year: data.year })}
+          averageCents={data.monthTotals.averageCents}
+          columns={data.months.map((m) => {
+            const full = capitalised(
+              monthName.format(new Date(2000, m.month - 1, 1)),
+            )
+            return { ...m, short: full.charAt(0), full }
+          })}
+        />
         <SummaryTable
           firstColumn={t('summary.month')}
           totals={data.monthTotals}
@@ -65,7 +75,15 @@ export default function SummaryTab() {
       </section>
       <section className="summary-block">
         <h2>{t('summary.years')}</h2>
-        <div className="summary-chart" />
+        <ColumnChart
+          label={t('summary.chartYears')}
+          averageCents={data.yearTotals.averageCents}
+          columns={data.byYear.map((y) => ({
+            ...y,
+            short: String(y.year),
+            full: String(y.year),
+          }))}
+        />
         <SummaryTable
           firstColumn={t('summary.year')}
           totals={data.yearTotals}

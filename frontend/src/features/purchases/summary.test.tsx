@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -350,6 +356,69 @@ describe('purchase summary', () => {
       (await screen.findAllByRole('button', { name: 'Salva' })).at(-1)!,
     )
     await waitFor(() => expect(keysOf(spy)).toContain('purchase-summary'))
+  })
+
+  const chartOf = async (name: string) => {
+    await monthsTable()
+    return screen.getByRole('img', { name })
+  }
+
+  it('chartHasALabelAndOneColumnPerMonth', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    expect(within(chart.parentElement!).getAllByText('Speso')).toHaveLength(1)
+    expect(chart.querySelectorAll('[data-testid="hit"]')).toHaveLength(12)
+    expect(chart.textContent).toContain('G')
+    const years = await chartOf('Spesa per anno')
+    expect(years.querySelectorAll('[data-testid="hit"]')).toHaveLength(2)
+  })
+
+  it('hoverShowsTheValues', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    const hits = chart.querySelectorAll('[data-testid="hit"]')
+    fireEvent.pointerEnter(hits[10])
+    expect(
+      screen.getByText('Novembre: speso CHF 0.00 · in arrivo CHF 147.78'),
+    ).toBeVisible()
+    fireEvent.pointerLeave(hits[10])
+    expect(screen.queryByText(/^Novembre: speso/)).toBeNull()
+    fireEvent.click(hits[9])
+    expect(screen.getByText(/^Ottobre: speso CHF 1'642.38/)).toBeVisible()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByText(/^Ottobre: speso/)).toBeNull()
+  })
+
+  it('aboveAverageColumnsHaveTheMarker', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    expect(chart.querySelectorAll('[data-testid="above"]')).toHaveLength(1)
+  })
+
+  it('averageLineShowsItsAmount', async () => {
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    expect(
+      within(chart as unknown as HTMLElement).getByText('CHF 895.08'),
+    ).toBeTruthy()
+  })
+
+  it('allZeroDrawsNoAverageLine', async () => {
+    replies['GET /purchase-summary?year=2026'] = [
+      200,
+      summary({
+        months: months({ 1: { hasLists: true } }),
+        monthTotals: {
+          totalCents: 0,
+          averageCents: 0,
+          spentCents: 0,
+          upcomingCents: 0,
+        },
+      }),
+    ]
+    renderApp('/purchases?vista=riepilogo')
+    const chart = await chartOf('Spesa per mese, 2026')
+    expect(chart.querySelector('[data-testid="average"]')).toBeNull()
   })
 
   it('axeCleanOnRiepilogo', async () => {

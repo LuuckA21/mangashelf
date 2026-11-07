@@ -14,6 +14,7 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 
 ### Added
 
+- Spending summary in Acquisti → Riepilogo: month by month for a chosen year and year by year, with totals, averages and column charts.
 - Purchase lists: monthly lists of volumes to buy, with release dates, EUR and CHF prices, discount and totals; mark rows booked, move rows between lists, close a list (booked rows become owned) and reopen it.
 - A footer on every page, login included: © year, app version (with the commit on staging) and the Privacy link.
 - Collection statistics beside the list: volumes, editions, series, completed, missing, completion, and charts by publisher, type and status.
