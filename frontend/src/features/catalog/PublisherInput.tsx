@@ -46,60 +46,62 @@ export default function PublisherInput({
 
   return (
     <div className="combo">
-      <input
-        {...input}
-        ref={field}
-        role="combobox"
-        aria-autocomplete="list"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-activedescendant={
-          open && active >= 0 ? `${listId}-${active}` : undefined
-        }
-        autoComplete="off"
-        value={value}
-        onFocus={show}
-        onClick={() => open || show()}
-        onBlur={() => setOpen(false)}
-        onChange={(e) => {
-          onChange(e.target.value)
-          setOpen(true)
-          setTyped(true)
-          setActive(-1)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault()
-            if (!open) return show()
-            const step = e.key === 'ArrowDown' ? 1 : -1
-            setActive((a) => (a + step + items.length) % items.length)
-          } else if (e.key === 'Enter' && open && active >= 0) {
-            e.preventDefault() // pick, do not submit the form
-            choose(items[active])
-          } else if (e.key === 'Escape') {
-            setOpen(false)
+      <div className="combo-field">
+        <input
+          {...input}
+          ref={field}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-activedescendant={
+            open && active >= 0 ? `${listId}-${active}` : undefined
           }
-        }}
-      />
-      <button
-        type="button"
-        className="quiet combo-toggle"
-        tabIndex={-1} // the field already opens it from the keyboard
-        aria-label={t('edition.showPublishers')}
-        aria-expanded={open}
-        aria-controls={listId}
-        // keep the focus in the field, so blur does not close the list first
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          if (open) setOpen(false)
-          else {
-            field.current?.focus()
-            show()
-          }
-        }}
-      >
-        ▾
-      </button>
+          autoComplete="off"
+          value={value}
+          onFocus={show}
+          onClick={() => open || show()}
+          onBlur={() => setOpen(false)}
+          onChange={(e) => {
+            onChange(e.target.value)
+            setOpen(true)
+            setTyped(true)
+            setActive(-1)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              if (!open) return show()
+              const step = e.key === 'ArrowDown' ? 1 : -1
+              setActive((a) => (a + step + items.length) % items.length)
+            } else if (e.key === 'Enter' && open && active >= 0) {
+              e.preventDefault() // pick, do not submit the form
+              choose(items[active])
+            } else if (e.key === 'Escape') {
+              setOpen(false)
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="quiet combo-toggle"
+          tabIndex={-1} // the field already opens it from the keyboard
+          aria-label={t('edition.showPublishers')}
+          aria-expanded={open}
+          aria-controls={listId}
+          // keep the focus in the field, so blur does not close the list first
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (open) setOpen(false)
+            else {
+              field.current?.focus()
+              show()
+            }
+          }}
+        >
+          ▾
+        </button>
+      </div>
       {open && (
         <ul id={listId} role="listbox" className="combo-list">
           {items.map((p, i) => (

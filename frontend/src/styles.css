@@ -1330,26 +1330,34 @@ button[aria-pressed='true'] {
 
 /* ------------------------------------------------- suggestion list (combo) -- */
 
-.combo {
-  position: relative;
+.combo-field {
   display: flex;
+  border-radius: var(--radius);
 }
-.combo > input {
+.combo-field > input {
   flex: 1;
   min-width: 0;
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+/* one control: a single focus ring around field and toggle */
+.combo-field > input:focus-visible {
+  outline: none;
+  border-color: var(--ash-line);
+}
+.combo-field:focus-within {
+  outline: 2px solid var(--indigo);
+  outline-offset: 1px;
 }
 .combo-toggle {
   width: 44px;
   flex: none;
   padding: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
+/* in the page flow: opening it pushes the rest of the form down */
 .combo-list {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 2px);
-  z-index: 10;
-  margin: 0;
+  margin: 2px 0 0;
   padding: calc(var(--s) * 0.5) 0;
   list-style: none;
   background: var(--paper-raised);
@@ -1359,18 +1367,35 @@ button[aria-pressed='true'] {
   overflow-y: auto;
 }
 .combo-list li {
-  min-height: 44px;
+  min-height: 36px;
   display: flex;
   align-items: center;
+  gap: var(--s);
   padding: 0 calc(var(--s) * 1.5);
   cursor: pointer;
 }
-.combo-list li:hover,
 .combo-list li.active {
-  background: var(--indigo-wash);
+  background: var(--indigo);
+  color: #fff;
+}
+/* touch screens keep :hover after a tap: highlight under the mouse only */
+@media (hover: hover) {
+  .combo-list li:hover {
+    background: var(--indigo);
+    color: #fff;
+  }
 }
 .combo-list li[aria-selected='true'] {
   font-weight: 600;
+}
+.combo-list li[aria-selected='true']::after {
+  content: '✓' / '';
+  margin-left: auto;
+}
+@media (max-width: 700px) {
+  .combo-list li {
+    min-height: 44px;
+  }
 }
 
 /* ------------------------------------------------------- admin: publishers -- */
