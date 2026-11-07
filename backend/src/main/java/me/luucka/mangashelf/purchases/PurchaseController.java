@@ -1,6 +1,8 @@
 package me.luucka.mangashelf.purchases;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.List;
 import java.util.UUID;
 import me.luucka.mangashelf.purchases.dto.ItemPatch;
@@ -12,6 +14,7 @@ import me.luucka.mangashelf.purchases.dto.ListSummary;
 import me.luucka.mangashelf.purchases.dto.MoveRequest;
 import me.luucka.mangashelf.purchases.dto.Proposal;
 import me.luucka.mangashelf.purchases.dto.PurchaseSettings;
+import me.luucka.mangashelf.purchases.dto.SpendingSummary;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,9 +35,18 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class PurchaseController {
 
   private final PurchaseService service;
+  private final PurchaseSummaryService summaries;
 
-  public PurchaseController(PurchaseService service) {
+  public PurchaseController(PurchaseService service, PurchaseSummaryService summaries) {
     this.service = service;
+    this.summaries = summaries;
+  }
+
+  @GetMapping("/api/v1/purchase-summary")
+  public SpendingSummary summary(
+      @AuthenticationPrincipal AppUserPrincipal me,
+      @RequestParam(required = false) @Min(2000) @Max(2100) Integer year) {
+    return summaries.summary(me.id(), year);
   }
 
   @GetMapping("/api/v1/account/purchase-settings")
