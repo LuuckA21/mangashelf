@@ -8,6 +8,7 @@ import {
 import { api } from '../../api/client'
 import type {
   CollectionEntry,
+  CollectionStats,
   EditionResponse,
   EditionStatus,
   EditionType,
@@ -24,6 +25,14 @@ export type CollectionFilters = {
 }
 
 type Owned = { owned: number[] }
+
+/** Under the 'collection' key, so every collection invalidation refreshes it too. */
+export function useCollectionStats() {
+  return useQuery({
+    queryKey: ['collection', 'stats'],
+    queryFn: () => api<CollectionStats>('/collection/stats'),
+  })
+}
 
 export function useCollection(filters: CollectionFilters) {
   return useQuery({
@@ -81,7 +90,8 @@ export function useSetOwned(editionId: string) {
 
   function show(owned: number[]) {
     client.setQueriesData<Page<CollectionEntry>>(
-      { queryKey: ['collection'] },
+      // The stats share the 'collection' prefix but are not a page of entries.
+      { queryKey: ['collection'], predicate: (q) => q.queryKey[1] !== 'stats' },
       (page) =>
         page && {
           ...page,

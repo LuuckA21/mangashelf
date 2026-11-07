@@ -6,6 +6,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
@@ -25,6 +26,8 @@ public class AppUser {
   private Role role;
 
   private boolean mustChangePassword;
+  private BigDecimal chfRate = new BigDecimal("1.20");
+  private int discountPercent = 10;
   private Instant createdAt;
   private Instant updatedAt;
 
@@ -59,6 +62,11 @@ public class AppUser {
     this.role = role;
   }
 
+  public void setPurchaseSettings(BigDecimal chfRate, int discountPercent) {
+    this.chfRate = chfRate.setScale(2);
+    this.discountPercent = discountPercent;
+  }
+
   public UUID getId() {
     return id;
   }
@@ -77,6 +85,14 @@ public class AppUser {
 
   public boolean isMustChangePassword() {
     return mustChangePassword;
+  }
+
+  public BigDecimal getChfRate() {
+    return chfRate;
+  }
+
+  public int getDiscountPercent() {
+    return discountPercent;
   }
 
   public Instant getCreatedAt() {

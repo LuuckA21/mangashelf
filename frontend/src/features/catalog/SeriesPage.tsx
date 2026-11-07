@@ -12,6 +12,7 @@ import {
   useRenameSeries,
   useSeriesDetail,
 } from './api'
+import CoverThumb from '../../components/CoverThumb'
 import CoverInput from './CoverInput'
 import EditionForm from './EditionForm'
 import SeriesForm from './SeriesForm'
@@ -20,6 +21,7 @@ function EditionRow({ e }: { e: EditionResponse }) {
   const add = useAddToCollection(e.id)
   return (
     <li className="edition-row">
+      <CoverThumb editionId={e.id} hasCover={e.hasCover} version={e.version} />
       <div className="grow">
         <Link className="name" to={`/editions/${e.id}`}>
           {e.name}
@@ -44,6 +46,7 @@ function EditionRow({ e }: { e: EditionResponse }) {
         <span className="muted">{t('series.inCollection')}</span>
       ) : (
         <button
+          className="quiet"
           onClick={() => add.mutate()}
           disabled={add.isPending}
           aria-label={`${t('edition.add')}: ${e.name}`}

@@ -148,6 +148,57 @@ class AuthIT {
         .andExpect(status().isForbidden());
   }
 
+  private static final String FOURTEEN_DAYS = "Max-Age=" + 14 * 24 * 3600;
+
+  private static String sessionHeader(org.springframework.mock.web.MockHttpServletResponse r) {
+    return r.getHeaders("Set-Cookie").stream()
+        .filter(c -> c.startsWith("SESSION="))
+        .reduce((a, b) -> b)
+        .orElse("");
+  }
+
+  @Test
+  void sessionCookieOutlivesTheBrowserForTheSessionTimeout() throws Exception {
+    var response = login("Luca", "correct-horse-1").andReturn().getResponse();
+    assertThat(sessionHeader(response)).contains(FOURTEEN_DAYS);
+  }
+
+  @Test
+  void eachVisitRenewsTheSessionCookie() throws Exception {
+    var session =
+        cookie(login("Luca", "correct-horse-1").andReturn().getResponse(), "SESSION").orElseThrow();
+    var response =
+        mvc.perform(get("/api/v1/auth/me").cookie(session))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    assertThat(sessionHeader(response))
+        .startsWith("SESSION=" + session.getValue() + ";")
+        .contains(FOURTEEN_DAYS)
+        .contains("HttpOnly");
+  }
+
+  @Test
+  void noSessionCookieIsWrittenWithoutASession() throws Exception {
+    var response = mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse();
+    assertThat(sessionHeader(response)).isEmpty();
+  }
+
+  @Test
+  void logoutStillExpiresTheSessionCookie() throws Exception {
+    var session =
+        cookie(login("Luca", "correct-horse-1").andReturn().getResponse(), "SESSION").orElseThrow();
+    var token = xsrf();
+    var response =
+        mvc.perform(
+                post("/api/v1/auth/logout")
+                    .cookie(session, token)
+                    .header("X-XSRF-TOKEN", token.getValue()))
+            .andReturn()
+            .getResponse();
+    assertThat(cookie(response, "SESSION")).isEmpty();
+  }
+
   @Test
   void logoutEndsSessionAndClearsXsrf() throws Exception {
     var session =

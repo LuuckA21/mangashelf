@@ -6,11 +6,27 @@ GitHub Release notes (see `.github/workflows/release.yml`), so write it for user
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-07
+
+### Added
+
+- Purchase lists: monthly lists of volumes to buy, with release dates, EUR and CHF prices, discount and totals; mark rows booked, move rows between lists, close a list (booked rows become owned) and reopen it.
+- Spending summary in Acquisti → Riepilogo: month by month for a chosen year and year by year, with totals, averages and column charts.
+- Collection statistics beside the list: volumes, editions, series, completed, missing, completion, and charts by publisher, type and status.
+- A footer on every page, login included: © year, app version (with the commit on staging) and the Privacy link.
+
+### Changed
+
+- The publisher of an edition is now chosen from a list managed by admins on the new Amministrazione page. Existing editions start without a publisher.
+- New navigation: icons beside each entry; on phones a bottom bar. Admins reach Utenti and Amministrazione from the ⚙ button; Esci is on the Account page.
+- You stay logged in after closing the browser, until 14 days without opening the app.
+
 ## [0.1.0] - 2026-11-04
 
 First release.
 
 ### Added
+
 - Personal manga collection tracked volume by volume on a shared catalog of series and editions.
 - Catalog: series and editions (type, status, volume count), with a cover for each edition.
 - Collection: search and filters (type, status, only incomplete), covers, progress and missing volumes per edition.

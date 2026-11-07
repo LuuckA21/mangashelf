@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import type { MeResponse } from '../../api/types'
 import { t } from '../../i18n/t'
+import SiteFooter from '../../components/SiteFooter'
 
 type LoginState = { from?: string; passwordChanged?: boolean }
 
@@ -41,46 +42,49 @@ export default function LoginPage() {
       : login.error && t('error.generic')
 
   return (
-    <div className="auth-shell">
-      <main className="auth-card">
-        <h1>{t('auth.login.title')}</h1>
-        {state.passwordChanged && (
-          <p className="success" role="status">
-            {t('auth.login.passwordChanged')}
-          </p>
-        )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <form onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="username">{t('auth.username')}</label>
-            <input
-              id="username"
-              autoComplete="username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">{t('auth.password')}</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <button type="submit" disabled={login.isPending}>
-            {t('auth.login.submit')}
-          </button>
-        </form>
-      </main>
-    </div>
+    <>
+      <div className="auth-shell">
+        <main className="auth-card">
+          <h1>{t('auth.login.title')}</h1>
+          {state.passwordChanged && (
+            <p className="success" role="status">
+              {t('auth.login.passwordChanged')}
+            </p>
+          )}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <form onSubmit={submit}>
+            <div className="field">
+              <label htmlFor="username">{t('auth.username')}</label>
+              <input
+                id="username"
+                autoComplete="username"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">{t('auth.password')}</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <button type="submit" disabled={login.isPending}>
+              {t('auth.login.submit')}
+            </button>
+          </form>
+        </main>
+      </div>
+      <SiteFooter />
+    </>
   )
 }

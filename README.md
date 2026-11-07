@@ -1,6 +1,6 @@
 # mangashelf
 
-App web self-hosted per me e pochi amici: ognuno tiene traccia della propria collezione manga, volume per volume, su un catalogo di serie ed edizioni condiviso.
+App web self-hosted per me e pochi amici: ognuno tiene traccia della propria collezione manga, volume per volume, su un catalogo di serie ed edizioni condiviso. Include le liste di acquisto mensili (prezzi EUR/CHF, sconto, righe prenotate, spostamento tra liste, chiusura che rende possedute le righe prenotate).
 
 ## Tech stack
 
@@ -83,10 +83,10 @@ migrations are backwards-compatible, so code rolls back without touching data.
 
 ## Backup & restore
 
-- RPO: 24h · RTO: <fill in>
+- RPO: 24h · RTO: under 1 minute (staging test, small database; measure again on production)
 - Backups: PostgreSQL and covers (`/app/uploads`) with `backup.sh`, restic / Swiss Backup, daily
-- Restore runbook: still to be written (`docs/runbooks/restore.md`); until then follow the restore steps in project-standards 01-backup.md
-- Last restore test: YYYY-MM-DD
+- Set-up and restore runbook: [`docs/runbooks/restore.md`](docs/runbooks/restore.md)
+- Last restore test: 2026-11-05 (staging, full restore; log in the runbook)
 
 ## Standards
 

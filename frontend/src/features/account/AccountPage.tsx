@@ -3,17 +3,29 @@ import { ApiError } from '../../api/client'
 import { t } from '../../i18n/t'
 import ChangePasswordForm from '../auth/ChangePasswordForm'
 import { useExportData } from './api'
+import PurchaseSettingsForm from './PurchaseSettingsForm'
 import DeleteAccount from './DeleteAccount'
+import { useLogout } from '../auth/useLogout'
 
 export default function AccountPage() {
   const navigate = useNavigate()
   const exportData = useExportData()
   const exportError = exportData.error
+  // Esci lives here, not in the header.
+  const { logout, failed: logoutFailed } = useLogout()
   return (
     <>
       <div className="page-head">
         <h1>{t('account.title')}</h1>
+        <button className="quiet" onClick={logout}>
+          {t('nav.logout')}
+        </button>
       </div>
+      {logoutFailed && (
+        <p className="error" role="alert">
+          {t('error.generic')}
+        </p>
+      )}
 
       <section className="panel settings-panel settings-section">
         <h2>{t('account.passwordTitle')}</h2>
@@ -27,6 +39,8 @@ export default function AccountPage() {
           }
         />
       </section>
+
+      <PurchaseSettingsForm />
 
       <section className="panel settings-panel settings-section">
         <h2>{t('account.exportTitle')}</h2>

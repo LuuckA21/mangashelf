@@ -32,4 +32,10 @@ class ApiExceptionHandlerTest {
                 .getStatus())
         .isEqualTo(500);
   }
+
+  @Test
+  void foreignKeyViolationIs409() {
+    assertThat(handler.integrity(violation("fk_editions_publisher_id", "missing")).getStatus())
+        .isEqualTo(409);
+  }
 }

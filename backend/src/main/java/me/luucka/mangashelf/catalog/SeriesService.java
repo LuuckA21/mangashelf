@@ -59,13 +59,14 @@ public class SeriesService {
                     Collectors.toMap(
                         CollectionEditionRepository.EditionCount::editionId,
                         CollectionEditionRepository.EditionCount::count));
+    var names = editionService.publisherNames(list);
     return new SeriesDetail(
         s.getId().toString(),
         s.getTitle(),
         list.stream()
             .map(e ->
                 editionService.toResponse(
-                    e, me, mine.contains(e.getId()), counts.getOrDefault(e.getId(), 0L)))
+                    e, me, mine.contains(e.getId()), counts.getOrDefault(e.getId(), 0L), names))
             .toList());
   }
 
@@ -97,7 +98,7 @@ public class SeriesService {
     return series.findById(id).orElseThrow(() -> new NotFoundException("Serie non trovata"));
   }
 
-  static void requireAdmin(AppUserPrincipal me) {
+  public static void requireAdmin(AppUserPrincipal me) {
     if (!me.isAdmin()) {
       throw new AccessDeniedException("Admin only");
     }

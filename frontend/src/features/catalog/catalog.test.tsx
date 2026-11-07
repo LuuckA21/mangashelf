@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +16,7 @@ const edition = (over: Partial<EditionResponse> = {}): EditionResponse => ({
   seriesId: 's1',
   seriesTitle: 'Berserk',
   name: 'Deluxe',
+  publisherId: 'p2',
   publisher: 'Panini',
   type: 'REGULAR',
   status: 'ONGOING',
@@ -46,7 +47,7 @@ function login(role: Role) {
 }
 
 beforeEach(() => {
-  replies = {}
+  replies = { 'GET /publishers': [200, [{ id: 'p2', name: 'Panini' }]] }
   login('USER')
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const r = replies[`${init.method} ${url.replace('/api/v1', '')}`] ?? [
@@ -192,7 +193,7 @@ describe('series page', () => {
     expect(JSON.parse(calls('POST', '/series/s1/editions')[0][1].body)).toEqual(
       {
         name: 'Perfect',
-        publisher: null,
+        publisherId: null,
         type: 'VARIANT',
         status: 'ONGOING',
         volumeCount: 12,
@@ -538,5 +539,285 @@ describe('review fixes', () => {
     expect(
       await screen.findByText('Regolare · In corso · Volumi 5'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('edition form publisher', () => {
+  const panini = { id: 'p2', name: 'Panini' }
+  const star = { id: 'p1', name: 'Star Comics' }
+  async function fill(publisher: string) {
+    replies['GET /publishers'] = [200, [star, panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [201, edition({ id: 'e9' })]
+    replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
+    if (publisher)
+      await userEvent.type(screen.getByLabelText(/^Editore/), publisher)
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+  }
+  const sent = () => JSON.parse(calls('POST', '/series/s1/editions')[0][1].body)
+
+  async function openForm() {
+    replies['GET /publishers'] = [200, [star, panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [201, edition({ id: 'e9' })]
+    replies['GET /editions/e9'] = [200, edition({ id: 'e9' })]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    return screen.getByRole('combobox', { name: /^Editore/ })
+  }
+
+  it('suggestionsFilterAsYouType', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'com')
+    const list = await screen.findByRole('listbox')
+    expect(
+      within(list)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['Nessun editore', 'Star Comics'])
+    expect(input).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  const optionNames = () =>
+    within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map((o) => o.textContent)
+
+  it('tapOnTheFieldShowsTheWholeList', async () => {
+    const input = await openForm()
+    await userEvent.click(input)
+    expect(optionNames()).toEqual(['Nessun editore', 'Star Comics', 'Panini'])
+  })
+
+  it('arrowButtonOpensAndClosesTheList', async () => {
+    await openForm()
+    const arrow = screen.getByRole('button', { name: 'Mostra editori' })
+    await userEvent.click(arrow)
+    expect(screen.getByRole('listbox')).toBeVisible()
+    expect(arrow).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(arrow)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('showsAtMostTwentyPublishers', async () => {
+    replies['GET /publishers'] = [
+      200,
+      Array.from({ length: 25 }, (_, i) => ({
+        id: `m${i}`,
+        name: `Editore ${String(i + 1).padStart(2, '0')}`,
+      })),
+    ]
+    replies['GET /series/s1'] = [200, detail([])]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Editore/ }))
+    await vi.waitFor(() => expect(optionNames()).toHaveLength(21))
+    expect(optionNames()[20]).toBe('Editore 20')
+  })
+
+  it('noPublisherOptionEmptiesTheField', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'Pan')
+    await userEvent.click(
+      screen.getByRole('option', { name: 'Nessun editore' }),
+    )
+    expect(input).toHaveValue('')
+  })
+
+  it('reopeningShowsTheWholeListWithTheCurrentOneSelected', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'Panini')
+    await userEvent.click(screen.getByLabelText('Nome edizione'))
+    await userEvent.click(input)
+    expect(optionNames()).toEqual(['Nessun editore', 'Star Comics', 'Panini'])
+    expect(screen.getByRole('option', { name: 'Panini' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
+  it('openingScrollsTheListToTheCurrentPublisher', async () => {
+    // jsdom has no layout: put the current publisher 300px below the list's top
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const current = this.getAttribute('aria-selected') === 'true'
+        return { top: current ? 300 : 0 } as DOMRect
+      })
+    try {
+      const input = await openForm()
+      await userEvent.type(input, 'Panini')
+      await userEvent.click(screen.getByLabelText('Nome edizione'))
+      await userEvent.click(input)
+      expect(screen.getByRole('listbox').scrollTop).toBe(300)
+    } finally {
+      rect.mockRestore()
+    }
+  })
+
+  it('arrowsKeepTheHighlightedPublisherVisible', async () => {
+    // jsdom has no layout: the list shows 0–100px, each option is 40px tall
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const i = Number(/-(\d+)$/.exec(this.id)?.[1] ?? -1)
+        if (this.getAttribute('role') === 'listbox')
+          return { top: 0, bottom: 100 } as DOMRect
+        if (this.getAttribute('role') === 'option' && i >= 0)
+          return { top: i * 40, bottom: i * 40 + 40 } as DOMRect
+        return { top: 0, bottom: 0 } as DOMRect
+      })
+    try {
+      const input = await openForm()
+      await userEvent.click(input)
+      await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+      expect(screen.getByRole('listbox').scrollTop).toBe(0)
+      await userEvent.keyboard('{ArrowDown}') // third option: 80–120px
+      expect(screen.getByRole('listbox').scrollTop).toBe(20)
+    } finally {
+      rect.mockRestore()
+    }
+  })
+
+  it('currentPublisherBeyondTheFirstTwentyIsListed', async () => {
+    replies['GET /publishers'] = [
+      200,
+      Array.from({ length: 25 }, (_, i) => ({
+        id: `m${i}`,
+        name: `Editore ${String(i + 1).padStart(2, '0')}`,
+      })),
+    ]
+    replies['GET /series/s1'] = [200, detail([])]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
+    const input = screen.getByRole('combobox', { name: /^Editore/ })
+    await userEvent.type(input, 'Editore 25')
+    await userEvent.click(screen.getByLabelText('Nome edizione'))
+    await userEvent.click(input)
+    expect(optionNames()).toHaveLength(22)
+    expect(optionNames()[20]).toBe('Editore 20')
+    expect(screen.getByRole('option', { name: 'Editore 25' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
+  it('tapSuggestionPicksIt', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'pan')
+    await userEvent.click(await screen.findByRole('option', { name: 'Panini' }))
+    expect(input).toHaveValue('Panini')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p2'))
+  })
+
+  it('keyboardPicksSuggestionWithoutSubmitting', async () => {
+    const input = await openForm()
+    await userEvent.type(input, 'st')
+    await screen.findByRole('listbox')
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+    expect(input).toHaveValue('Star Comics')
+    expect(calls('POST', '/series/s1/editions')).toHaveLength(0)
+  })
+
+  it('pickPublisherSendsId', async () => {
+    await fill('Panini')
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p2'))
+  })
+
+  it('emptyPublisherSendsNull', async () => {
+    await fill('')
+    await vi.waitFor(() => expect(sent().publisherId).toBeNull())
+  })
+
+  it('pickIgnoresCase', async () => {
+    await fill('  star COMICS ')
+    await vi.waitFor(() => expect(sent().publisherId).toBe('p1'))
+  })
+
+  it('unknownPublisherShowsErrorAndDoesNotSave', async () => {
+    await fill('Nessuno')
+    const input = screen.getByLabelText(/^Editore/)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription('Scegli un editore dalla lista')
+    expect(input).toHaveFocus()
+    expect(calls('POST', '/series/s1/editions')).toHaveLength(0)
+  })
+
+  it('serverPublisherIdErrorShowsOnField', async () => {
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    replies['POST /series/s1/editions'] = [
+      400,
+      {
+        detail: 'Invalid',
+        errors: [{ field: 'publisherId', message: 'Editore non trovato' }],
+      },
+    ]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await userEvent.click(screen.getByRole('button', { name: 'Crea edizione' }))
+    expect(
+      await screen.findByLabelText(/^Editore/),
+    ).toHaveAccessibleDescription('Editore non trovato')
+  })
+
+  it('editShowsCurrentPublisher', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /editions/e1'] = [200, edition()]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    expect(screen.getByLabelText(/^Editore/)).toHaveValue('Panini')
+  })
+
+  it('unchangedPublisherSavesWithoutPublisherList', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [500, { detail: 'boom' }]
+    replies['GET /editions/e1'] = [200, edition()]
+    replies['PUT /editions/e1'] = [200, edition({ volumeCount: 6 })]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    const count = screen.getByLabelText(/^Numero di volumi/)
+    await userEvent.clear(count)
+    await userEvent.type(count, '6')
+    await userEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await vi.waitFor(() => expect(calls('PUT', '/editions/e1')).toHaveLength(1))
+    expect(
+      JSON.parse(calls('PUT', '/editions/e1')[0][1].body).publisherId,
+    ).toBe('p2')
+  })
+
+  it('failedPublisherListIsAnnounced', async () => {
+    login('ADMIN')
+    replies['GET /publishers'] = [500, { detail: 'boom' }]
+    replies['GET /editions/e1'] = [200, edition()]
+    renderApp('/editions/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifica edizione' }),
+    )
+    expect(
+      await screen.findByText(
+        "Elenco degli editori non disponibile: puoi tenere l'editore attuale o lasciarlo vuoto.",
+      ),
+    ).toBeVisible()
+  })
+
+  it('hasNoAxeViolations', async () => {
+    replies['GET /publishers'] = [200, [panini]]
+    replies['GET /series/s1'] = [200, detail([])]
+    const { container } = renderApp('/series/s1')
+    await screen.findByLabelText('Nome edizione')
+    expect((await axe(container)).violations).toEqual([])
   })
 })

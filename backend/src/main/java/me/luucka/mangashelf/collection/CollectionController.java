@@ -5,6 +5,7 @@ import java.util.UUID;
 import me.luucka.mangashelf.catalog.EditionStatus;
 import me.luucka.mangashelf.catalog.EditionType;
 import me.luucka.mangashelf.collection.dto.CollectionEntry;
+import me.luucka.mangashelf.collection.dto.CollectionStats;
 import me.luucka.mangashelf.collection.dto.OwnedVolumesRequest;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,11 @@ public class CollectionController {
       @RequestParam(defaultValue = "false") boolean incomplete,
       Pageable pageable) {
     return service.list(me.id(), q, type, status, incomplete, pageable);
+  }
+
+  @GetMapping("/api/v1/collection/stats")
+  public CollectionStats stats(@AuthenticationPrincipal AppUserPrincipal me) {
+    return service.stats(me.id());
   }
 
   @GetMapping("/api/v1/collection/editions/{editionId}")

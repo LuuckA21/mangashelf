@@ -1,7 +1,12 @@
 package me.luucka.mangashelf.catalog;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import me.luucka.mangashelf.catalog.dto.EditionRequest;
 import me.luucka.mangashelf.catalog.dto.EditionResponse;
 import me.luucka.mangashelf.collection.CollectionEditionRepository;
@@ -9,6 +14,9 @@ import me.luucka.mangashelf.collection.OwnedVolumeRepository;
 import me.luucka.mangashelf.common.ConflictException;
 import me.luucka.mangashelf.common.FieldValidationException;
 import me.luucka.mangashelf.common.NotFoundException;
+import me.luucka.mangashelf.publishers.Publisher;
+import me.luucka.mangashelf.publishers.PublisherRepository;
+import me.luucka.mangashelf.purchases.PurchaseItemRepository;
 import me.luucka.mangashelf.users.AppUserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +35,8 @@ public class EditionService {
   private final SeriesRepository series;
   private final CollectionEditionRepository collection;
   private final OwnedVolumeRepository ownedVolumes;
+  private final PurchaseItemRepository purchaseItems;
+  private final PublisherRepository publishers;
   private final CoverStorage covers;
 
   public EditionService(
@@ -34,11 +44,15 @@ public class EditionService {
       SeriesRepository series,
       CollectionEditionRepository collection,
       OwnedVolumeRepository ownedVolumes,
+      PurchaseItemRepository purchaseItems,
+      PublisherRepository publishers,
       CoverStorage covers) {
     this.editions = editions;
     this.series = series;
     this.collection = collection;
     this.ownedVolumes = ownedVolumes;
+    this.purchaseItems = purchaseItems;
+    this.publishers = publishers;
     this.covers = covers;
   }
 
@@ -59,7 +73,7 @@ public class EditionService {
         new Edition(
             s,
             r.name().strip(),
-            publisher(r),
+            publisherId(r),
             r.type(),
             r.status(),
             r.volumeCount(),
@@ -84,7 +98,10 @@ public class EditionService {
     if (ownedVolumes.findMaxNumberByEditionId(id).orElse(0) > r.volumeCount()) {
       throw new ConflictException("Alcuni utenti possiedono volumi oltre questo numero");
     }
-    e.update(r.name().strip(), publisher(r), r.type(), r.status(), r.volumeCount());
+    if (purchaseItems.findMaxVolumeByEditionId(id).orElse(0) > r.volumeCount()) {
+      throw new ConflictException("Alcune liste acquisti hanno volumi oltre questo numero");
+    }
+    e.update(r.name().strip(), publisherId(r), r.type(), r.status(), r.volumeCount());
     return toResponse(editions.saveAndFlush(e), me);
   }
 
@@ -92,8 +109,23 @@ public class EditionService {
   public void delete(UUID id, AppUserPrincipal me) {
     SeriesService.requireAdmin(me);
     var e = require(id);
+    if (purchaseItems.existsByEditionId(id)) {
+      throw new ConflictException("L'edizione è in una lista acquisti");
+    }
     editions.delete(e);
     afterCompletion(e.getCoverFile(), null);
+  }
+
+  /**
+   * A purchase row above the count raises it, for everyone; no client version needed, but a
+   * concurrent edit of the edition still fails on @Version.
+   */
+  @Transactional
+  public void raiseVolumeCount(UUID editionId, int volume) {
+    var e = require(editionId);
+    if (volume > e.getVolumeCount()) {
+      e.setVolumeCount(volume);
+    }
   }
 
   @Transactional
@@ -155,17 +187,23 @@ public class EditionService {
         e,
         me,
         collection.existsByUserIdAndEditionId(me.id(), e.getId()),
-        collection.countByEditionId(e.getId()));
+        collection.countByEditionId(e.getId()),
+        publisherNames(List.of(e)));
   }
 
   EditionResponse toResponse(
-      Edition e, AppUserPrincipal me, boolean inMyCollection, long collectionCount) {
+      Edition e,
+      AppUserPrincipal me,
+      boolean inMyCollection,
+      long collectionCount,
+      Map<UUID, String> publisherNames) {
     return new EditionResponse(
         e.getId().toString(),
         e.getSeries().getId().toString(),
         e.getSeries().getTitle(),
         e.getName(),
-        e.getPublisher(),
+        e.getPublisherId() == null ? null : e.getPublisherId().toString(),
+        e.getPublisherId() == null ? null : publisherNames.get(e.getPublisherId()),
         e.getType(),
         e.getStatus(),
         e.getVolumeCount(),
@@ -176,8 +214,19 @@ public class EditionService {
         inMyCollection);
   }
 
-  private static String publisher(EditionRequest r) {
-    var p = r.publisher() == null ? "" : r.publisher().strip();
-    return p.isEmpty() ? null : p;
+  /** One query for the names of all publishers used by these editions. */
+  Map<UUID, String> publisherNames(Collection<Edition> list) {
+    var ids = list.stream().map(Edition::getPublisherId).filter(Objects::nonNull).toList();
+    return ids.isEmpty()
+        ? Map.of()
+        : publishers.findAllById(ids).stream()
+            .collect(Collectors.toMap(Publisher::getId, Publisher::getName));
+  }
+
+  private UUID publisherId(EditionRequest r) {
+    if (r.publisherId() != null && !publishers.existsById(r.publisherId())) {
+      throw new FieldValidationException("publisherId", "Editore non trovato");
+    }
+    return r.publisherId();
   }
 }

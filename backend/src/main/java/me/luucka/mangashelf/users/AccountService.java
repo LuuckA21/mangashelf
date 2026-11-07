@@ -5,6 +5,7 @@ import java.util.UUID;
 import me.luucka.mangashelf.collection.CollectionService;
 import me.luucka.mangashelf.common.ApiExceptionHandler;
 import me.luucka.mangashelf.common.ConflictException;
+import me.luucka.mangashelf.purchases.PurchaseService;
 import me.luucka.mangashelf.users.dto.AccountExport;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -20,23 +21,31 @@ public class AccountService {
   private final PasswordEncoder encoder;
   private final UserSessions sessions;
   private final CollectionService collection;
+  private final PurchaseService purchases;
 
   public AccountService(
       AppUserRepository users,
       PasswordEncoder encoder,
       UserSessions sessions,
-      CollectionService collection) {
+      CollectionService collection,
+      PurchaseService purchases) {
     this.users = users;
     this.encoder = encoder;
     this.sessions = sessions;
     this.collection = collection;
+    this.purchases = purchases;
   }
 
   @Transactional(readOnly = true)
   public AccountExport export(UUID userId) {
     var user = users.findById(userId).orElseThrow();
     return new AccountExport(
-        user.getUsername(), user.getRole(), user.getCreatedAt(), collection.listAll(userId));
+        user.getUsername(),
+        user.getRole(),
+        user.getCreatedAt(),
+        collection.listAll(userId),
+        purchases.settings(userId),
+        purchases.exportAll(userId));
   }
 
   /** Deletes the account and closes all its sessions, including the current one. */

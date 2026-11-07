@@ -108,7 +108,7 @@ export function useCreateEdition(seriesId: string) {
     }) => {
       const created = await api<EditionResponse>(
         `/series/${seriesId}/editions`,
-        json('POST', body(v.values)),
+        json('POST', v.values),
       )
       let coverError: unknown = null
       if (v.cover)
@@ -118,11 +118,6 @@ export function useCreateEdition(seriesId: string) {
     onSuccess: () => refreshEdition(client, seriesId),
   })
 }
-
-const body = (v: EditionFormValues) => ({
-  ...v,
-  publisher: v.publisher.trim() || null,
-})
 
 function refreshEdition(client: QueryClient, seriesId: string, id?: string) {
   return Promise.all([
@@ -139,7 +134,7 @@ export function useUpdateEdition(edition: EditionResponse) {
     mutationFn: (values: EditionFormValues) =>
       api<EditionResponse>(
         `/editions/${edition.id}`,
-        json('PUT', { ...body(values), version: edition.version }),
+        json('PUT', { ...values, version: edition.version }),
       ),
     // Also after a 409: the refetch brings the fresh version and values.
     onSettled: () => refreshEdition(client, edition.seriesId, edition.id),

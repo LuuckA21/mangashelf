@@ -5,14 +5,14 @@ same PR that adds a field, a processor or a purpose. See project-standards 09-pr
 
 Controller: <name, address>, privacy contact: <email>
 EU representative (GDPR art. 27): <name / "not appointed, because …">
-Last reviewed: 2026-11-04
+Last reviewed: 2026-11-06
 
 ## Processing activities
 
 | Purpose | Data categories | Data subjects | Legal basis (GDPR art. 6) | Retention |
 |---------|-----------------|---------------|---------------------------|-----------|
 | User accounts and login | Username, password hash (bcrypt), session data (Spring Session JDBC, expires after 14 days of inactivity) | Users | Contract (b) | Until account deletion; sessions 14 days |
-| Providing the service | Collection (series, editions, owned volumes); catalog authorship (`series.created_by`, `editions.created_by`: which user added a series or edition) | Users | Contract (b) | Until account deletion; then authorship is set to null and the catalog entries stay without an author |
+| Providing the service | Collection (series, editions, owned volumes); purchase lists (description, month and year, edition, volume, release date, prices in EUR and CHF, discounts, booked/closed state) and purchase settings (CHF rate, discount percent); catalog authorship (`series.created_by`, `editions.created_by`: which user added a series or edition) | Users | Contract (b) | Until deleted by the user or until account deletion (purchase lists are deleted with the account); then authorship is set to null and the catalog entries stay without an author |
 | Security logs | IP address, timestamps (reverse proxy access logs) | Visitors, users | Legitimate interest (f): security | 14–30 days |
 | Backups | All of the above | All | Legitimate interest (f): data safety | 12 months |
 
@@ -27,7 +27,7 @@ Last reviewed: 2026-11-04
 ## Technical and organizational measures
 
 - HTTPS everywhere (HSTS at the proxy); encrypted backups (restic)
-- Passwords stored only as bcrypt hashes; session cookies HttpOnly, SameSite=Lax, CSRF protection on
+- Passwords stored only as bcrypt hashes; session cookie HttpOnly, SameSite=Lax, kept by the browser until 14 days of inactivity (renewed on each visit), CSRF protection on
 - Secrets in Bitwarden
 - Access to servers: SSH keys only, separate admin and app users (06)
 - Personal data deleted physically; deleted data stays in encrypted backups until they expire (max 12 months)

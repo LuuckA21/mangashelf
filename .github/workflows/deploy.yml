@@ -87,6 +87,7 @@ jobs:
           file: backend/Dockerfile
           push: true
           tags: ${{ needs.resolve.outputs.image }}:${{ needs.resolve.outputs.tag }}
+          build-args: APP_COMMIT=${{ github.sha }} # footer shows it on staging only
 
   deploy:
     needs: [resolve, build]

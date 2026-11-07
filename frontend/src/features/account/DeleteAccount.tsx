@@ -30,7 +30,7 @@ export default function DeleteAccount() {
   }, [msg, error])
 
   return (
-    <section className="panel settings-panel account-danger">
+    <section className="panel settings-panel settings-section account-danger">
       <h2>{t('account.deleteTitle')}</h2>
       <p className="muted">{t('account.deleteHelp')}</p>
       {general && (

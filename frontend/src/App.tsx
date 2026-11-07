@@ -16,7 +16,12 @@ const CollectionPage = lazy(
 const EditionPage = lazy(() => import('./features/collection/EditionPage'))
 const CatalogPage = lazy(() => import('./features/catalog/CatalogPage'))
 const SeriesPage = lazy(() => import('./features/catalog/SeriesPage'))
+const PurchasesPage = lazy(() => import('./features/purchases/PurchasesPage'))
+const PurchaseListPage = lazy(
+  () => import('./features/purchases/PurchaseListPage'),
+)
 const UsersPage = lazy(() => import('./features/users/UsersPage'))
+const AdminPage = lazy(() => import('./features/admin/AdminPage'))
 const AccountPage = lazy(() => import('./features/account/AccountPage'))
 const PrivacyPage = lazy(() => import('./features/account/PrivacyPage'))
 
@@ -33,9 +38,12 @@ export function AppRoutes() {
             <Route path="/editions/:id" element={<EditionPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/series/:id" element={<SeriesPage />} />
+            <Route path="/purchases" element={<PurchasesPage />} />
+            <Route path="/purchases/:id" element={<PurchaseListPage />} />
             <Route path="/account" element={<AccountPage />} />
           </Route>
           <Route element={<RequireAuth admin />}>
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { EditionResponse } from '../../api/types'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import Shelf from '../../components/Shelf'
 import { t } from '../../i18n/t'
@@ -22,51 +22,63 @@ import {
 } from './api'
 import { formatMissing } from './formatMissing'
 
-function AdminActions({ edition }: { edition: EditionResponse }) {
+function AdminActions({
+  edition,
+  onEdit,
+}: {
+  edition: EditionResponse
+  onEdit: () => void
+}) {
   const navigate = useNavigate()
-  const update = useUpdateEdition(edition)
   const remove = useDeleteEdition(edition)
-  const [editing, setEditing] = useState(false)
   return (
     <>
-      {!editing && (
-        <>
-          <button className="quiet" onClick={() => setEditing(true)}>
-            {t('edition.edit')}
-          </button>
-          <ConfirmDelete
-            label={t('edition.delete')}
-            what={t('edition.deleteWhat', { n: edition.collectionCount })}
-            onConfirm={() =>
-              remove.mutateAsync().then(
-                () => navigate(`/series/${edition.seriesId}`),
-                () => undefined,
-              )
-            }
-          />
-          {remove.isError && (
-            <p className="error" role="alert">
-              {errorText(remove.error)}
-            </p>
-          )}
-        </>
-      )}
-      {editing && (
-        // A new version (after a stale-edit refetch) remounts the form with fresh values.
-        <EditionForm
-          key={edition.version}
-          initial={{ ...edition, publisher: edition.publisher ?? '' }}
-          submitLabel={t('common.save')}
-          pending={update.isPending}
-          error={update.error}
-          conflictNote={t('edition.reloaded')}
-          onCancel={() => setEditing(false)}
-          onSubmit={(values) =>
-            update.mutate(values, { onSuccess: () => setEditing(false) })
-          }
-        />
+      <button className="quiet" onClick={onEdit}>
+        {t('edition.edit')}
+      </button>
+      <ConfirmDelete
+        label={t('edition.delete')}
+        what={t('edition.deleteWhat', { n: edition.collectionCount })}
+        onConfirm={() =>
+          remove.mutateAsync().then(
+            () => navigate(`/series/${edition.seriesId}`),
+            () => undefined,
+          )
+        }
+      />
+      {remove.isError && (
+        <p className="error" role="alert">
+          {errorText(remove.error)}
+        </p>
       )}
     </>
+  )
+}
+
+/** The edit form gets its own panel under the header, not a squeeze between the buttons. */
+function EditPanel({
+  edition,
+  onDone,
+}: {
+  edition: EditionResponse
+  onDone: () => void
+}) {
+  const update = useUpdateEdition(edition)
+  return (
+    <section className="panel settings-panel">
+      <h2>{t('edition.edit')}</h2>
+      {/* A new version (after a stale-edit refetch) remounts the form with fresh values. */}
+      <EditionForm
+        key={edition.version}
+        initial={edition}
+        submitLabel={t('common.save')}
+        pending={update.isPending}
+        error={update.error}
+        conflictNote={t('edition.reloaded')}
+        onCancel={onDone}
+        onSubmit={(values) => update.mutate(values, { onSuccess: onDone })}
+      />
+    </section>
   )
 }
 
@@ -113,6 +125,7 @@ export default function EditionPage() {
   const setOwned = useSetOwned(id)
   const add = useAddToCollection(id)
   const remove = useRemoveFromCollection(id)
+  const [editing, setEditing] = useState(false)
 
   if (isPending || entry.isLoading)
     return <p className="muted">{t('common.loading')}</p>
@@ -138,9 +151,11 @@ export default function EditionPage() {
   return (
     <>
       <div className="page-head">
-        <h1>{edition.seriesTitle}</h1>
+        <h1>
+          <Link to={`/series/${edition.seriesId}`}>{edition.seriesTitle}</Link>
+        </h1>
       </div>
-      <div className="row">
+      <div className="edition-head">
         {edition.hasCover ? (
           <img
             className="detail-cover"
@@ -166,7 +181,7 @@ export default function EditionPage() {
               .filter(Boolean)
               .join(' · ')}
           </p>
-          <div className="inline-actions">
+          <div className="edition-actions">
             {edition.inMyCollection ? (
               <ConfirmDelete
                 label={t('edition.remove')}
@@ -178,7 +193,9 @@ export default function EditionPage() {
                 {t('edition.add')}
               </button>
             )}
-            {isAdmin && <AdminActions edition={edition} />}
+            {isAdmin && !editing && (
+              <AdminActions edition={edition} onEdit={() => setEditing(true)} />
+            )}
           </div>
           {createdCoverError && (
             <p className="error" role="alert">
@@ -198,6 +215,10 @@ export default function EditionPage() {
           )}
         </div>
       </div>
+
+      {editing && (
+        <EditPanel edition={edition} onDone={() => setEditing(false)} />
+      )}
 
       <h2 className="section-title">{t('shelf.title')}</h2>
       <Shelf

@@ -58,8 +58,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(DataIntegrityViolationException.class)
   ProblemDetail integrity(DataIntegrityViolationException e) {
-    if (constraintName(e).startsWith("uq_")) {
+    var constraint = constraintName(e);
+    if (constraint.startsWith("uq_")) {
       return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Valore già in uso");
+    }
+    if (constraint.startsWith("fk_")) {
+      return ProblemDetail.forStatusAndDetail(
+          HttpStatus.CONFLICT, "Il dato è stato modificato da un'altra operazione, riprova");
     }
     log.error("Unexpected data integrity violation", e);
     return ProblemDetail.forStatusAndDetail(

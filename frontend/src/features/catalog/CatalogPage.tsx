@@ -39,7 +39,7 @@ export default function CatalogPage() {
       <div className="page-head">
         <h1>{t('catalog.title')}</h1>
       </div>
-      <form role="search" className="row" onSubmit={submit}>
+      <form role="search" className="search-form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="q">{t('catalog.searchLabel')}</label>
           <input

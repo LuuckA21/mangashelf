@@ -17,6 +17,8 @@
   /* 4.59:1 on paper and 5.06:1 on raised paper: readable at text sizes. */
   --ash: #706b63;
   --ash-line: #d6d2c8;
+  /* Light yellow behind above-average rows; indigo-deep on it is ~13:1. */
+  --highlight: #fbf0b8;
 
   --font-display:
     'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
@@ -168,7 +170,7 @@ label {
 .auth-shell {
   display: grid;
   place-items: center;
-  min-height: 100vh;
+  flex: 1;
   padding: calc(var(--s) * 3);
 }
 .auth-card {
@@ -339,6 +341,43 @@ label {
   border: 1px solid var(--ash-line);
   border-radius: var(--radius);
   padding: calc(var(--s) * 3);
+  /* Space from the list or panel above (block margins collapse, so no double gaps). */
+  margin-top: calc(var(--s) * 4);
+}
+.panel > h2:first-child {
+  margin-bottom: calc(var(--s) * 1.5);
+}
+
+/* Edition page actions: one column of equally wide buttons. */
+.edition-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s);
+  max-width: 280px;
+}
+.edition-actions > button {
+  width: 100%;
+}
+
+/* Edition page: cover beside the title, details and actions. */
+.edition-head {
+  display: flex;
+  gap: calc(var(--s) * 3);
+  align-items: flex-start;
+}
+.edition-head h2 {
+  margin-bottom: var(--s);
+}
+.edition-head .muted {
+  margin: 0 0 calc(var(--s) * 2);
+}
+.page-head h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.page-head h1 a:hover {
+  text-decoration: underline;
 }
 .settings-panel {
   max-width: 520px;
@@ -561,7 +600,7 @@ label {
 }
 
 /* Series headings in lists, and the shelf heading on an edition. */
-section > h2,
+.series-group > h2,
 .section-title {
   margin: calc(var(--s) * 4) 0 calc(var(--s) * 1.5);
 }
@@ -664,14 +703,37 @@ button.danger:hover:not(:disabled) {
  * Filters read as a single row of switches rather than a dropdown: with
  * three options the choice and its state are both visible at a glance.
  */
-.chips {
-  display: flex;
+/* Search: the field and its button share one row and the full width; the button
+   lines up with the input (not with the label above it) and has the same height. */
+.search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--s);
-  flex-wrap: wrap;
+  align-items: end;
+  max-width: 520px;
+  margin-bottom: calc(var(--s) * 2);
+}
+.search-form .field {
+  margin-bottom: 0;
+}
+.search-form input,
+.search-form button {
+  height: 44px;
+}
+
+/* Filters line up in equal columns, so both rows of chips match in size. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s);
+  max-width: 420px;
+  margin-top: var(--s);
 }
 
 .chip {
-  padding: 6px 14px;
+  padding: 6px 8px;
+  text-align: center;
+  white-space: nowrap;
   background: transparent;
   color: var(--ash);
   border: 1px solid var(--ash-line);
@@ -834,6 +896,12 @@ button.danger:hover:not(:disabled) {
   .edition-row:has(> .thumb) .grow {
     flex: 1 1 0;
   }
+  /* With a thumbnail the row's button or status drops to its own line. */
+  .edition-row:has(> .thumb) > button,
+  .edition-row:has(> .thumb) > .muted,
+  .edition-row:has(> .thumb) > .edition-progress {
+    flex: 1 1 100%;
+  }
   .edition-row .inline-actions {
     width: 100%;
   }
@@ -875,6 +943,7 @@ button.danger:hover:not(:disabled) {
   .admin-users-table td:last-child {
     border-bottom: none;
   }
+  /* Your own row has no actions: no empty "Azioni" label. */
   .admin-users-table select,
   .admin-users-table button {
     width: 100%;
@@ -883,6 +952,10 @@ button.danger:hover:not(:disabled) {
   .admin-user-action {
     display: block !important;
     padding-top: var(--s) !important;
+  }
+  /* Your own row has no actions: no empty "Azioni" label (after the rule above). */
+  .admin-users-table td.admin-user-action:empty {
+    display: none !important;
   }
 }
 
@@ -907,4 +980,732 @@ button.danger:hover:not(:disabled) {
   flex: 0 0 auto;
   width: auto;
   margin-top: 5px;
+}
+
+/* ---------------------------------------------------- collection stats */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.collection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: calc(var(--s) * 4);
+  align-items: start;
+}
+/* Stays in view beside a long list; scrolls inside itself on short windows. */
+.stats-panel {
+  position: sticky;
+  top: calc(var(--s) * 2);
+  max-height: calc(100vh - var(--s) * 4);
+  overflow-y: auto;
+  margin-top: 0;
+}
+.stats-panel h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ash);
+  margin: calc(var(--s) * 3) 0 var(--s);
+}
+.stat-numbers {
+  margin: 0;
+}
+.stat-numbers > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s);
+  padding: calc(var(--s) * 0.5) 0;
+  border-bottom: 1px solid var(--ash-line);
+}
+.stat-numbers dt {
+  color: var(--ash);
+}
+.stat-numbers dd {
+  margin: 0;
+  font-family: var(--font-data);
+  color: var(--indigo-deep);
+}
+.stat-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stat-bars li + li {
+  margin-top: var(--s);
+}
+.stat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: calc(var(--s) * 0.5) var(--s);
+}
+.stat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-n {
+  font-family: var(--font-data);
+}
+.stat-track {
+  grid-column: 1 / -1;
+  height: 8px;
+  background: var(--indigo-wash);
+  border-radius: var(--radius);
+}
+.stat-bar {
+  display: block;
+  height: 100%;
+  background: var(--indigo);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 700px) {
+  .purchase-create > h2 {
+    flex-basis: 100%;
+  }
+  .purchase-create > button {
+    flex: 1 1 120px;
+  }
+  .collection-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stats-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-top: calc(var(--s) * 4);
+  }
+}
+
+/* ------------------------------------------------------------- purchases -- */
+.purchase-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--s) * 2);
+}
+.purchase-create .field {
+  flex: 1 1 200px;
+  /* Margin would push the button below the input it sits beside. */
+  margin-bottom: 0;
+}
+.purchase-create input,
+.purchase-create > button {
+  height: 44px;
+}
+.purchase-row {
+  padding: 0;
+}
+.purchase-row.closed {
+  background: var(--paper);
+  border-left-color: var(--ash-line);
+}
+.purchase-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 2);
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  min-width: 0;
+}
+.purchase-link .muted {
+  display: block;
+}
+.month-badge {
+  flex: none;
+  width: 56px;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  line-height: 1.1;
+}
+.month-badge .m {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--indigo);
+}
+.month-badge .y {
+  font-size: 12px;
+  color: var(--ash);
+}
+.closed .month-badge .m,
+.closed .name {
+  color: var(--ash);
+}
+.list-state {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.list-state.open {
+  color: var(--indigo);
+  background: var(--indigo-wash);
+  border: 1px solid var(--indigo);
+}
+.list-state.open .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--indigo);
+}
+.list-state.closed {
+  color: var(--ash);
+  border: 1px solid var(--ash-line);
+}
+.list-total {
+  flex: none;
+  min-width: 7.5em;
+  text-align: right;
+  font-family: var(--font-data);
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Tabs: the active one is underlined; a thin rule runs under both. */
+.purchase-tabs {
+  display: flex;
+  gap: calc(var(--s) * 3);
+  margin-bottom: calc(var(--s) * 3);
+  border-bottom: 1px solid var(--ash-line);
+}
+.purchase-tabs .tab {
+  padding: var(--s) 2px;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--ash);
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  font-size: 16px;
+}
+.purchase-tabs .tab:hover:not(.active) {
+  background: transparent;
+  color: var(--indigo);
+}
+.purchase-tabs .tab.active {
+  color: var(--indigo);
+  font-weight: 600;
+  border-bottom-color: var(--indigo);
+}
+@media (max-width: 700px) {
+  .purchase-link {
+    flex-wrap: wrap;
+    row-gap: var(--s);
+  }
+  .purchase-link .grow {
+    flex: 1 1 calc(100% - 56px - var(--s) * 2);
+  }
+  /* second line: state and total under the description */
+  .list-state {
+    margin-left: calc(56px + var(--s) * 2);
+  }
+  .list-total {
+    min-width: 0;
+    margin-left: auto;
+  }
+}
+
+.item-group > h2 {
+  font-size: 19px;
+  margin: calc(var(--s) * 3) 0 var(--s);
+}
+.item-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--s) * 2);
+  margin-bottom: calc(var(--s) * 2);
+}
+.item-fields .field {
+  flex: 1 1 120px;
+}
+.item-row.booked {
+  background: var(--indigo-wash);
+}
+.item-row .num {
+  font-family: var(--font-data);
+  white-space: nowrap;
+}
+button[aria-pressed='true'] {
+  background: var(--indigo);
+  color: var(--paper-raised);
+}
+.totals dl {
+  margin: 0 0 calc(var(--s) * 2);
+}
+.totals dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--s) * 2);
+}
+.totals dt {
+  color: var(--ash);
+}
+.totals dd {
+  margin: 0;
+  font-family: var(--font-data);
+}
+.totals .grand {
+  font-size: 21px;
+  font-weight: 600;
+  border-top: 1px solid var(--indigo-deep);
+  padding-top: var(--s);
+}
+.totals .grand dt {
+  color: inherit;
+}
+@media (max-width: 700px) {
+  .item-row {
+    flex-wrap: wrap;
+  }
+  .item-row .grow {
+    flex-basis: 100%;
+  }
+  .item-row button,
+  .item-form button,
+  .totals button,
+  .edition-picker button {
+    min-height: 44px;
+  }
+}
+
+/* Move rows: selection bar and modal panel. */
+.row-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.row-select input {
+  width: auto;
+  min-height: 0;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: calc(var(--s) * 2);
+}
+.selection-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s);
+  padding: calc(var(--s) * 1.5) calc(var(--s) * 2);
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--s) * 2);
+  background: rgb(0 0 0 / 0.45);
+  z-index: 10;
+}
+.modal {
+  width: min(100%, 28rem);
+  margin: 0;
+}
+@media (max-width: 700px) {
+  /* Checkboxes get a 44px target too. */
+  .row-select {
+    width: 44px;
+    height: 44px;
+  }
+  /* The checkbox stays beside the name instead of on a line alone. */
+  .item-row:has(> .row-select) .grow {
+    flex: 1 1 calc(100% - 44px - var(--s) * 2);
+    min-width: 0;
+  }
+  /* Line 2: prices and actions share the line instead of the actions taking all of it. */
+  .item-row .inline-actions {
+    width: auto;
+    flex: 1 1 auto;
+  }
+}
+
+/* ------------------------------------------------- phone tab bar and gear -- */
+
+/* Esci sits beside the Account title. */
+.page-head:has(> button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s);
+}
+
+/* Same icons as the phone tab bar, beside the label on a computer. */
+.topbar nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-icon {
+  width: 18px;
+  height: 18px;
+}
+.admin-menu {
+  position: relative;
+  margin-left: auto;
+}
+.admin-menu .gear {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--s) * 0.5) 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+}
+.admin-menu-panel a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 calc(var(--s) * 2);
+  color: var(--indigo-deep);
+  text-decoration: none;
+}
+.admin-menu-panel a.active {
+  color: var(--indigo);
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  /* The bar is fixed: leave room so the footer is never hidden under it. */
+  body:has(.topbar nav) #root {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  .topbar-inner {
+    padding: var(--s) calc(var(--s) * 2);
+  }
+  .topbar nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    width: auto;
+    order: 0;
+    padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+    background: var(--paper-raised);
+    border-top: 1px solid var(--ash-line);
+  }
+  .topbar nav a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    font-size: 12px;
+  }
+  .nav-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
+  /* While typing, the keyboard and any open list need the room: hide the bar. */
+  body:has(input:focus, textarea:focus) .topbar nav {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------- suggestion list (combo) -- */
+
+.combo-field {
+  display: flex;
+  border-radius: var(--radius);
+}
+.combo-field > input {
+  flex: 1;
+  min-width: 0;
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+/* one control: a single focus ring around field and toggle */
+.combo-field > input:focus-visible {
+  outline: none;
+  border-color: var(--ash-line);
+}
+.combo-field:focus-within {
+  outline: 2px solid var(--indigo);
+  outline-offset: 1px;
+}
+.combo-toggle {
+  width: 44px;
+  flex: none;
+  padding: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+/* in the page flow: opening it pushes the rest of the form down */
+.combo-list {
+  margin: 2px 0 0;
+  padding: calc(var(--s) * 0.5) 0;
+  list-style: none;
+  background: var(--paper-raised);
+  border: 1px solid var(--ash-line);
+  border-radius: var(--radius);
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+}
+.combo-list li {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: var(--s);
+  padding: 0 calc(var(--s) * 1.5);
+  cursor: pointer;
+}
+.combo-list li.active {
+  background: var(--indigo);
+  color: #fff;
+}
+/* touch screens keep :hover after a tap: highlight under the mouse only */
+@media (hover: hover) {
+  .combo-list li:hover {
+    background: var(--indigo);
+    color: #fff;
+  }
+}
+.combo-list li[aria-selected='true'] {
+  font-weight: 600;
+}
+.combo-list li[aria-selected='true']::after {
+  content: '✓' / '';
+  margin-left: auto;
+}
+@media (max-width: 700px) {
+  .combo-list li {
+    min-height: 44px;
+  }
+}
+
+/* ------------------------------------------------------- admin: publishers -- */
+
+.admin-section > h2 {
+  margin: 0 0 calc(var(--s) * 1.5);
+}
+.admin-section .panel {
+  margin-top: calc(var(--s) * 2);
+}
+.admin-section .panel > h3 {
+  margin: 0 0 calc(var(--s) * 1.5);
+}
+.list-head {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--s) * 2);
+  margin-bottom: var(--s);
+}
+.list-head .field {
+  flex: 0 1 360px;
+  margin-bottom: 0;
+}
+.list-head .count {
+  margin: 0 0 10px auto;
+  color: var(--ash);
+  white-space: nowrap;
+}
+.publisher-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.publisher-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--s);
+  padding: var(--s) 0;
+  border-top: 1px solid var(--ash-line);
+}
+.publisher-list .name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.publisher-list .inline-actions button {
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 700px) {
+  .list-head .field {
+    flex: 1 1 auto;
+  }
+  .publisher-list li {
+    flex-wrap: wrap;
+  }
+  /* Short names keep their buttons on the same line; long ones wrap. */
+  .publisher-list .name {
+    flex: 1 1 120px;
+  }
+}
+
+/* ----------------------------------------------------------------- footer -- */
+
+/* The footer sits at the bottom of the window on short pages, after the content on long ones. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+#root > main {
+  flex: 1;
+  width: 100%;
+}
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 var(--s);
+  padding: calc(var(--s) * 2) calc(var(--s) * 3);
+  border-top: 1px solid var(--ash-line);
+  color: var(--ash);
+  font-size: 13px;
+}
+.site-footer > * + *::before {
+  content: '·' / '';
+  display: inline-block; /* keeps the link's underline off the dot */
+  margin-right: var(--s);
+  color: var(--ash);
+}
+
+/* ------------------------------------------------------ purchase summary */
+
+.summary-year {
+  max-width: 200px;
+}
+.summary-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: calc(var(--s) * 2);
+  align-items: start;
+  margin-top: calc(var(--s) * 3);
+}
+.summary-block h2 {
+  grid-column: 1 / -1;
+}
+.summary-chart {
+  grid-column: 1;
+  position: relative;
+}
+.chart-legend {
+  display: flex;
+  gap: calc(var(--s) * 2);
+  font-size: 14px;
+  margin-bottom: var(--s);
+}
+.chart-legend .swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+  border: 1px solid var(--indigo);
+}
+.chart-legend .spent {
+  background: var(--indigo);
+}
+.chart-legend .upcoming {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--indigo-wash) 0 3px,
+    var(--indigo) 3px 6px
+  );
+}
+.chart-svg {
+  display: block;
+}
+.chart-tip {
+  min-height: 2.6em; /* reserves two lines so the chart does not jump */
+  margin-bottom: var(--s);
+  font-size: 13px;
+}
+.chart-svg .hit {
+  fill: transparent;
+}
+.chart-svg .hit.on {
+  fill: var(--indigo);
+  fill-opacity: 0.1;
+}
+.summary-table {
+  grid-column: 2;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.summary-table th,
+.summary-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--ash-line);
+}
+.summary-table .num {
+  text-align: right;
+  font-family: var(--font-data);
+  white-space: nowrap;
+}
+.summary-table th {
+  color: var(--ash);
+  font-weight: 600;
+}
+.summary-table tr.above {
+  background: var(--highlight);
+}
+.summary-table tfoot th,
+.summary-table tfoot td {
+  font-weight: 700;
+}
+.summary-table tfoot .foot-first th,
+.summary-table tfoot .foot-first td {
+  border-top: 2px solid var(--indigo);
+}
+@media (max-width: 700px) {
+  .summary-block {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-table {
+    grid-column: 1;
+  }
+  .purchase-tabs .tab {
+    min-height: 44px;
+  }
+  .summary-table th,
+  .summary-table td {
+    padding: 10px 8px;
+  }
 }
