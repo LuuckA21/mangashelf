@@ -39,7 +39,14 @@ export default function PublisherInput({
     typed && query
       ? options.filter((p) => p.name.toLowerCase().includes(query))
       : options
-  const items = [NONE, ...shown.slice(0, MAX)]
+  const first = shown.slice(0, MAX)
+  // the current publisher is always listed, even past the first MAX names
+  const current = shown.find((p) => p.name.toLowerCase() === query)
+  const items = [
+    NONE,
+    ...first,
+    ...(current && !first.includes(current) ? [current] : []),
+  ]
 
   // On opening, centre the current publisher in the list (its own scroll, not the page's).
   useLayoutEffect(() => {
@@ -51,6 +58,17 @@ export default function PublisherInput({
       ul.getBoundingClientRect().top -
       (ul.clientHeight - li.offsetHeight) / 2
   }, [open])
+
+  // Arrow keys: keep the highlighted option inside the list's visible part.
+  useLayoutEffect(() => {
+    const ul = list.current
+    const li = active >= 0 ? ul?.children[active] : null
+    if (!ul || !li) return
+    const box = ul.getBoundingClientRect()
+    const row = li.getBoundingClientRect()
+    if (row.top < box.top) ul.scrollTop -= box.top - row.top
+    else if (row.bottom > box.bottom) ul.scrollTop += row.bottom - box.bottom
+  }, [active])
 
   function show() {
     setOpen(true)

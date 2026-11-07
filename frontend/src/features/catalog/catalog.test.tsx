@@ -659,6 +659,54 @@ describe('edition form publisher', () => {
     }
   })
 
+  it('arrowsKeepTheHighlightedPublisherVisible', async () => {
+    // jsdom has no layout: the list shows 0–100px, each option is 40px tall
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const i = Number(/-(\d+)$/.exec(this.id)?.[1] ?? -1)
+        if (this.getAttribute('role') === 'listbox')
+          return { top: 0, bottom: 100 } as DOMRect
+        if (this.getAttribute('role') === 'option' && i >= 0)
+          return { top: i * 40, bottom: i * 40 + 40 } as DOMRect
+        return { top: 0, bottom: 0 } as DOMRect
+      })
+    try {
+      const input = await openForm()
+      await userEvent.click(input)
+      await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+      expect(screen.getByRole('listbox').scrollTop).toBe(0)
+      await userEvent.keyboard('{ArrowDown}') // third option: 80–120px
+      expect(screen.getByRole('listbox').scrollTop).toBe(20)
+    } finally {
+      rect.mockRestore()
+    }
+  })
+
+  it('currentPublisherBeyondTheFirstTwentyIsListed', async () => {
+    replies['GET /publishers'] = [
+      200,
+      Array.from({ length: 25 }, (_, i) => ({
+        id: `m${i}`,
+        name: `Editore ${String(i + 1).padStart(2, '0')}`,
+      })),
+    ]
+    replies['GET /series/s1'] = [200, detail([])]
+    renderApp('/series/s1')
+    await userEvent.type(await screen.findByLabelText('Nome edizione'), 'P')
+    await vi.waitFor(() => expect(calls('GET', '/publishers')).toHaveLength(1))
+    const input = screen.getByRole('combobox', { name: /^Editore/ })
+    await userEvent.type(input, 'Editore 25')
+    await userEvent.click(screen.getByLabelText('Nome edizione'))
+    await userEvent.click(input)
+    expect(optionNames()).toHaveLength(22)
+    expect(optionNames()[20]).toBe('Editore 20')
+    expect(screen.getByRole('option', { name: 'Editore 25' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
   it('tapSuggestionPicksIt', async () => {
     const input = await openForm()
     await userEvent.type(input, 'pan')
