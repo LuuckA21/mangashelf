@@ -1,6 +1,6 @@
 # Build context: the repository root  →  docker build -f backend/Dockerfile .
 # The React app is built first and served by Spring Boot as static files (11-frontend.md).
-FROM node:24-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
