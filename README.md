@@ -8,6 +8,11 @@ App web self-hosted per me e pochi amici: ognuno tiene traccia della propria col
 - Database: PostgreSQL 17 (Flyway)
 - Hosting: self-hosted, Docker
 
+## API
+
+Guide for other clients (e.g. a mobile app): [`docs/api.md`](docs/api.md). Full OpenAPI description:
+[`docs/openapi.json`](docs/openapi.json), checked against the code by `OpenApiDocIT`.
+
 ## Getting started
 
 ```bash

@@ -1,0 +1,2251 @@
+{
+  "components" : {
+    "schemas" : {
+      "AccountExport" : {
+        "properties" : {
+          "collection" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CollectionEntry"
+            },
+            "type" : "array"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "purchaseLists" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ListDetail"
+            },
+            "type" : "array"
+          },
+          "purchaseSettings" : {
+            "$ref" : "#/components/schemas/PurchaseSettings"
+          },
+          "role" : {
+            "enum" : [ "ADMIN", "USER" ],
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CollectionEntry" : {
+        "properties" : {
+          "editionId" : {
+            "type" : "string"
+          },
+          "editionName" : {
+            "type" : "string"
+          },
+          "hasCover" : {
+            "type" : "boolean"
+          },
+          "owned" : {
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "publisher" : {
+            "type" : "string"
+          },
+          "seriesId" : {
+            "type" : "string"
+          },
+          "seriesTitle" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ONGOING", "COMPLETED" ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "REGULAR", "VARIANT", "JAPANESE" ],
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "volumeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CollectionStats" : {
+        "properties" : {
+          "byPublisher" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StatBar"
+            },
+            "type" : "array"
+          },
+          "byStatus" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StatBar"
+            },
+            "type" : "array"
+          },
+          "byType" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StatBar"
+            },
+            "type" : "array"
+          },
+          "completedEditions" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "editions" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "ownedVolumes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "series" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalVolumes" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateUserRequest" : {
+        "properties" : {
+          "role" : {
+            "enum" : [ "ADMIN", "USER" ],
+            "type" : "string"
+          },
+          "temporaryPassword" : {
+            "maxLength" : 64,
+            "minLength" : 12,
+            "type" : "string"
+          },
+          "username" : {
+            "pattern" : "[a-zA-Z0-9._-]{3,32}",
+            "type" : "string"
+          }
+        },
+        "required" : [ "role", "temporaryPassword", "username" ],
+        "type" : "object"
+      },
+      "DeleteAccountRequest" : {
+        "properties" : {
+          "password" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "password" ],
+        "type" : "object"
+      },
+      "EditionRequest" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "publisherId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ONGOING", "COMPLETED" ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "REGULAR", "VARIANT", "JAPANESE" ],
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "volumeCount" : {
+            "format" : "int32",
+            "maximum" : 9999,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "name", "status", "type" ],
+        "type" : "object"
+      },
+      "EditionResponse" : {
+        "properties" : {
+          "canEditCover" : {
+            "type" : "boolean"
+          },
+          "collectionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hasCover" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "inMyCollection" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "publisher" : {
+            "type" : "string"
+          },
+          "publisherId" : {
+            "type" : "string"
+          },
+          "seriesId" : {
+            "type" : "string"
+          },
+          "seriesTitle" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ONGOING", "COMPLETED" ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "REGULAR", "VARIANT", "JAPANESE" ],
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "volumeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ItemPatch" : {
+        "properties" : {
+          "booked" : {
+            "type" : "boolean"
+          },
+          "clearReleaseDate" : {
+            "type" : "boolean"
+          },
+          "editionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "priceChfCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "priceEurCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "releaseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "volume" : {
+            "format" : "int32",
+            "maximum" : 9999,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ItemRequest" : {
+        "properties" : {
+          "booked" : {
+            "type" : "boolean"
+          },
+          "editionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "priceChfCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "priceEurCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "releaseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "volume" : {
+            "format" : "int32",
+            "maximum" : 9999,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "editionId", "priceChfCents", "priceEurCents", "volume" ],
+        "type" : "object"
+      },
+      "ItemView" : {
+        "properties" : {
+          "alsoIn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "booked" : {
+            "type" : "boolean"
+          },
+          "editionId" : {
+            "type" : "string"
+          },
+          "editionName" : {
+            "type" : "string"
+          },
+          "editionVolumeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "priceChfCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "priceEurCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "releaseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "seriesId" : {
+            "type" : "string"
+          },
+          "seriesTitle" : {
+            "type" : "string"
+          },
+          "volume" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ListDetail" : {
+        "properties" : {
+          "closed" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "discountAuto" : {
+            "type" : "boolean"
+          },
+          "discountCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ItemView"
+            },
+            "type" : "array"
+          },
+          "month" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pointsDiscountCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "subtotalCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ListPatch" : {
+        "properties" : {
+          "description" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : "(?s).*\\S.*",
+            "type" : "string"
+          },
+          "discountAuto" : {
+            "type" : "boolean"
+          },
+          "discountCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "month" : {
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "pointsDiscountCents" : {
+            "format" : "int64",
+            "maximum" : 100000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "year" : {
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ListRequest" : {
+        "properties" : {
+          "description" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "month" : {
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "year" : {
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "description", "month", "year" ],
+        "type" : "object"
+      },
+      "ListSummary" : {
+        "properties" : {
+          "closed" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "itemCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "month" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "unbookedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "password" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "username" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "password", "username" ],
+        "type" : "object"
+      },
+      "MeResponse" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "mustChangePassword" : {
+            "type" : "boolean"
+          },
+          "role" : {
+            "enum" : [ "ADMIN", "USER" ],
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MonthSpend" : {
+        "properties" : {
+          "aboveAverage" : {
+            "type" : "boolean"
+          },
+          "hasLists" : {
+            "type" : "boolean"
+          },
+          "month" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "spentCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "upcomingCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MoveRequest" : {
+        "properties" : {
+          "itemIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "releaseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "targetListId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "itemIds", "targetListId" ],
+        "type" : "object"
+      },
+      "OwnedVolumesRequest" : {
+        "properties" : {
+          "owned" : {
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "owned" ],
+        "type" : "object"
+      },
+      "PageMetadata" : {
+        "properties" : {
+          "number" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "number", "size", "totalElements", "totalPages" ],
+        "type" : "object"
+      },
+      "Pageable" : {
+        "properties" : {
+          "page" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "sort" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PagedModelCollectionEntry" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CollectionEntry"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PagedModelSeriesSummary" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SeriesSummary"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PagedModelUserResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/UserResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PasswordChangeRequest" : {
+        "properties" : {
+          "currentPassword" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "newPassword" : {
+            "maxLength" : 64,
+            "minLength" : 12,
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentPassword", "newPassword" ],
+        "type" : "object"
+      },
+      "Proposal" : {
+        "properties" : {
+          "priceEurCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "releaseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "volume" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PublisherRequest" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "PublisherResponse" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PurchaseSettings" : {
+        "properties" : {
+          "chfRate" : {
+            "maximum" : 9.99,
+            "minimum" : 0.01,
+            "type" : "number"
+          },
+          "discountPercent" : {
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "chfRate", "discountPercent" ],
+        "type" : "object"
+      },
+      "ResetPasswordRequest" : {
+        "properties" : {
+          "temporaryPassword" : {
+            "maxLength" : 64,
+            "minLength" : 12,
+            "type" : "string"
+          }
+        },
+        "required" : [ "temporaryPassword" ],
+        "type" : "object"
+      },
+      "SeriesDetail" : {
+        "properties" : {
+          "editions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EditionResponse"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SeriesRequest" : {
+        "properties" : {
+          "title" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "title" ],
+        "type" : "object"
+      },
+      "SeriesSummary" : {
+        "properties" : {
+          "editionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SpendTotals" : {
+        "properties" : {
+          "averageCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "spentCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "upcomingCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SpendingSummary" : {
+        "properties" : {
+          "byYear" : {
+            "items" : {
+              "$ref" : "#/components/schemas/YearSpend"
+            },
+            "type" : "array"
+          },
+          "monthTotals" : {
+            "$ref" : "#/components/schemas/SpendTotals"
+          },
+          "months" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MonthSpend"
+            },
+            "type" : "array"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "yearTotals" : {
+            "$ref" : "#/components/schemas/SpendTotals"
+          },
+          "years" : {
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "StatBar" : {
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "volumes" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateUserRequest" : {
+        "properties" : {
+          "role" : {
+            "enum" : [ "ADMIN", "USER" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "role" ],
+        "type" : "object"
+      },
+      "UserResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "mustChangePassword" : {
+            "type" : "boolean"
+          },
+          "role" : {
+            "enum" : [ "ADMIN", "USER" ],
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "YearSpend" : {
+        "properties" : {
+          "aboveAverage" : {
+            "type" : "boolean"
+          },
+          "spentCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "upcomingCents" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Session cookie + XSRF header authentication; see docs/api.md for the guide.",
+    "title" : "MangaShelf API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/account" : {
+      "delete" : {
+        "operationId" : "delete_5",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/v1/account/export" : {
+      "get" : {
+        "operationId" : "export",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountExport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/v1/account/purchase-settings" : {
+      "get" : {
+        "operationId" : "settings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseSettings"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PurchaseSettings"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PurchaseSettings"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/v1/auth/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/v1/auth/password" : {
+      "post" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PasswordChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/v1/collection" : {
+      "get" : {
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "type",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "REGULAR", "VARIANT", "JAPANESE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "ONGOING", "COMPLETED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "incomplete",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelCollectionEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      }
+    },
+    "/api/v1/collection/editions/{editionId}" : {
+      "delete" : {
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "editionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "editionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      },
+      "put" : {
+        "operationId" : "add",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "editionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      }
+    },
+    "/api/v1/collection/editions/{editionId}/volumes" : {
+      "put" : {
+        "operationId" : "setOwned",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "editionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OwnedVolumesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      }
+    },
+    "/api/v1/collection/stats" : {
+      "get" : {
+        "operationId" : "stats",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionStats"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "collection-controller" ]
+      }
+    },
+    "/api/v1/editions/{id}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      },
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EditionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EditionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EditionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      }
+    },
+    "/api/v1/editions/{id}/cover" : {
+      "delete" : {
+        "operationId" : "deleteCover",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      },
+      "get" : {
+        "operationId" : "cover",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      },
+      "put" : {
+        "operationId" : "putCover",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "file" ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      }
+    },
+    "/api/v1/publishers" : {
+      "get" : {
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PublisherResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "publisher-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_4",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PublisherRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublisherResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "publisher-controller" ]
+      }
+    },
+    "/api/v1/publishers/{id}" : {
+      "delete" : {
+        "operationId" : "delete_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "publisher-controller" ]
+      },
+      "patch" : {
+        "operationId" : "rename_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PublisherRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublisherResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "publisher-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists" : {
+      "get" : {
+        "operationId" : "lists",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ListSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ListRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}" : {
+      "delete" : {
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      },
+      "patch" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ListPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/close" : {
+      "post" : {
+        "operationId" : "close",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/items" : {
+      "post" : {
+        "operationId" : "addItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ItemRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/items/move" : {
+      "post" : {
+        "operationId" : "move",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/items/{itemId}" : {
+      "delete" : {
+        "operationId" : "deleteItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "itemId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      },
+      "patch" : {
+        "operationId" : "updateItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "itemId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ItemPatch"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/proposal" : {
+      "get" : {
+        "operationId" : "proposal",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "editionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-lists/{id}/reopen" : {
+      "post" : {
+        "operationId" : "reopen",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/purchase-summary" : {
+      "get" : {
+        "operationId" : "summary",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "year",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpendingSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "purchase-controller" ]
+      }
+    },
+    "/api/v1/series" : {
+      "get" : {
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelSeriesSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "series-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SeriesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SeriesSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "series-controller" ]
+      }
+    },
+    "/api/v1/series/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "series-controller" ]
+      },
+      "get" : {
+        "operationId" : "detail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SeriesDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "series-controller" ]
+      },
+      "put" : {
+        "operationId" : "rename",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SeriesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SeriesSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "series-controller" ]
+      }
+    },
+    "/api/v1/series/{seriesId}/editions" : {
+      "post" : {
+        "operationId" : "create_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "seriesId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EditionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EditionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "edition-controller" ]
+      }
+    },
+    "/api/v1/users" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "admin-user-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "admin-user-controller" ]
+      }
+    },
+    "/api/v1/users/{id}" : {
+      "delete" : {
+        "operationId" : "delete_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "admin-user-controller" ]
+      },
+      "patch" : {
+        "operationId" : "changeRole",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "admin-user-controller" ]
+      }
+    },
+    "/api/v1/users/{id}/reset-password" : {
+      "post" : {
+        "operationId" : "resetPassword",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "admin-user-controller" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ]
+}
