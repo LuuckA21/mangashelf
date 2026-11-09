@@ -4,10 +4,7 @@ import type { ItemView, PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
 import { fetchProposal, useListChange } from './api'
 import EditionPicker, { type PickedEdition } from './EditionPicker'
-import { parseAmount, proposeChf } from './money'
-
-const amountText = (c: number) =>
-  `${Math.floor(c / 100)}.${String(c % 100).padStart(2, '0')}`
+import { amountText, parseAmount, proposeChf } from './money'
 
 type Props = {
   listId: string

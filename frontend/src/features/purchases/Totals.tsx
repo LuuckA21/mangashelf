@@ -3,10 +3,7 @@ import { errorText, fieldMessage } from '../../api/client'
 import type { ListDetail, PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
 import { useListChange } from './api'
-import { formatChf, parseAmount } from './money'
-
-const amountText = (c: number) =>
-  `${Math.floor(c / 100)}.${String(c % 100).padStart(2, '0')}`
+import { amountText, formatChf, parseAmount } from './money'
 
 function AmountEditor(props: {
   id: string

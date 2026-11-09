@@ -30,7 +30,8 @@ describe('responsive accessibility tokens', () => {
   it('keeps mobile controls at a thumb-sized 44 pixel minimum', () => {
     expect(css).toContain('@media (max-width: 700px)')
     expect(css).toMatch(/button,\s*input,\s*select\s*{\s*min-height: 44px;/)
-    expect(css).toMatch(/\.topbar nav\s*{[\s\S]*?flex-wrap: wrap;/)
+    // phone tab bar entries
+    expect(css).toMatch(/\.topbar nav a\s*{[^}]*min-height: 52px;/)
     expect(css).toContain('content: attr(data-label)')
   })
 })

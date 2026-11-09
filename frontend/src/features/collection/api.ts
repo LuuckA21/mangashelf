@@ -5,7 +5,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query'
-import { api } from '../../api/client'
+import { api, json } from '../../api/client'
 import type {
   CollectionEntry,
   CollectionStats,
@@ -106,10 +106,10 @@ export function useSetOwned(editionId: string) {
   const mutation = useMutation({
     scope: { id: `owned-${editionId}` },
     mutationFn: (owned: number[]) =>
-      api<CollectionEntry>(`/collection/editions/${editionId}/volumes`, {
-        method: 'PUT',
-        body: JSON.stringify({ owned }),
-      }),
+      api<CollectionEntry>(
+        `/collection/editions/${editionId}/volumes`,
+        json('PUT', { owned }),
+      ),
     onMutate: async (owned) => {
       await client.cancelQueries({ queryKey: ['collection'] })
       await client.cancelQueries({ queryKey: entryKey })

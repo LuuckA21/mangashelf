@@ -223,7 +223,11 @@ label {
   gap: calc(var(--s) * 2);
   font-size: 14px;
 }
+/* Icon beside the label on a computer; on a phone the tab bar stacks them. */
 .topbar nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--ash);
   text-decoration: none;
 }
@@ -660,33 +664,6 @@ button.danger:hover:not(:disabled) {
   }
   .panel {
     padding: calc(var(--s) * 2);
-  }
-
-  .topbar-inner {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0 calc(var(--s) * 2);
-    padding: var(--s) calc(var(--s) * 2) 0;
-  }
-  /* Logout sits at the right of the brand, so the nav takes one short row. */
-  .topbar-inner > button {
-    margin-left: auto;
-  }
-  /* The spacer would push the account onto a line of its own; on a phone the
-     nav wrapping under the brand reads better. */
-  .topbar .spacer {
-    display: none;
-  }
-  .topbar nav {
-    order: 3;
-    width: 100%;
-    gap: 0 calc(var(--s) * 2);
-    flex-wrap: wrap;
-  }
-  .topbar nav a {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
   }
 
   .field-narrow {
@@ -1166,12 +1143,6 @@ button[aria-pressed='true'] {
   gap: var(--s);
 }
 
-/* Same icons as the phone tab bar, beside the label on a computer. */
-.topbar nav a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
 .nav-icon {
   width: 18px;
   height: 18px;
@@ -1220,6 +1191,7 @@ button[aria-pressed='true'] {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
   .topbar-inner {
+    align-items: center;
     padding: var(--s) calc(var(--s) * 2);
   }
   .topbar nav {
