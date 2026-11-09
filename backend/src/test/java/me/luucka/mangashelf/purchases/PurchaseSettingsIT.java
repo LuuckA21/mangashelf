@@ -1,7 +1,6 @@
 package me.luucka.mangashelf.purchases;
 
-import static me.luucka.mangashelf.users.AuthTestSupport.cookie;
-import static me.luucka.mangashelf.users.AuthTestSupport.login;
+import static me.luucka.mangashelf.users.AuthTestSupport.session;
 import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -10,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.users.AppUser;
 import me.luucka.mangashelf.users.AppUserRepository;
@@ -44,17 +44,11 @@ class PurchaseSettingsIT {
 
   @BeforeEach
   void seed() throws Exception {
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(new AppUser("Anna", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
     users.save(new AppUser("Bruno", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    a = session("Anna");
-    b = session("Bruno");
-  }
-
-  private Cookie session(String username) throws Exception {
-    return cookie(login(mvc, username, PASSWORD).andReturn().getResponse(), "SESSION")
-        .orElseThrow();
+    a = session(mvc, "Anna", PASSWORD);
+    b = session(mvc, "Bruno", PASSWORD);
   }
 
   private ResultActions save(Cookie who, String body) throws Exception {

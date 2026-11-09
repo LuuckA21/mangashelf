@@ -1,8 +1,7 @@
 package me.luucka.mangashelf.collection;
 
-import static me.luucka.mangashelf.users.AuthTestSupport.cookie;
-import static me.luucka.mangashelf.users.AuthTestSupport.login;
-import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
+import static me.luucka.mangashelf.users.AuthTestSupport.send;
+import static me.luucka.mangashelf.users.AuthTestSupport.session;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.nullValue;
@@ -18,6 +17,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.users.AppUser;
 import me.luucka.mangashelf.users.AppUserRepository;
@@ -28,12 +28,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -52,34 +50,15 @@ class CollectionStatsIT {
 
   @BeforeEach
   void seed() throws Exception {
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    jdbc.update("DELETE FROM publishers");
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(new AppUser("Anna", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
     users.save(new AppUser("Bruno", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    a = session("Anna");
-    b = session("Bruno");
-  }
-
-  private Cookie session(String username) throws Exception {
-    return cookie(login(mvc, username, PASSWORD).andReturn().getResponse(), "SESSION")
-        .orElseThrow();
-  }
-
-  private ResultActions send(MockHttpServletRequestBuilder req, Cookie session, String body)
-      throws Exception {
-    var token = xsrf(mvc);
-    req.cookie(session, token).header("X-XSRF-TOKEN", token.getValue());
-    if (body != null) {
-      req.contentType(MediaType.APPLICATION_JSON).content(body);
-    }
-    return mvc.perform(req);
+    a = session(mvc, "Anna", PASSWORD);
+    b = session(mvc, "Bruno", PASSWORD);
   }
 
   private String series(String title) throws Exception {
-    var r = send(post("/api/v1/series"), a, "{\"title\":\"%s\"}".formatted(title));
+    var r = send(mvc, post("/api/v1/series"), a, "{\"title\":\"%s\"}".formatted(title));
     return JsonPath.read(r.andReturn().getResponse().getContentAsString(), "$.id");
   }
 
@@ -90,7 +69,7 @@ class CollectionStatsIT {
     var json =
         "{\"name\":\"%s\",\"publisherId\":%s,\"type\":\"%s\",\"status\":\"%s\",\"volumeCount\":%d}"
             .formatted(name, pub, type, status, volumes);
-    var r = send(post("/api/v1/series/" + seriesId + "/editions"), a, json);
+    var r = send(mvc, post("/api/v1/series/" + seriesId + "/editions"), a, json);
     return JsonPath.read(r.andReturn().getResponse().getContentAsString(), "$.id");
   }
 
@@ -113,9 +92,11 @@ class CollectionStatsIT {
 
   /** Adds the edition to the collection and sets exactly these owned volumes. */
   private void own(Cookie who, String editionId, int... numbers) throws Exception {
-    send(put("/api/v1/collection/editions/" + editionId), who, null).andExpect(status().isOk());
+    send(mvc, put("/api/v1/collection/editions/" + editionId), who, null)
+        .andExpect(status().isOk());
     var list = Arrays.stream(numbers).mapToObj(String::valueOf).collect(Collectors.joining(","));
     send(
+            mvc,
             put("/api/v1/collection/editions/" + editionId + "/volumes"),
             who,
             "{\"owned\":[%s]}".formatted(list))
@@ -220,6 +201,6 @@ class CollectionStatsIT {
   @Test
   void isForbiddenWhileThePasswordMustChange() throws Exception {
     users.save(new AppUser("Carla", encoder.encode(PASSWORD), Role.USER, true, Instant.now()));
-    stats(session("Carla")).andExpect(status().isForbidden());
+    stats(session(mvc, "Carla", PASSWORD)).andExpect(status().isForbidden());
   }
 }

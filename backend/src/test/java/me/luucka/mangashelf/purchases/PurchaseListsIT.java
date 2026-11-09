@@ -1,8 +1,7 @@
 package me.luucka.mangashelf.purchases;
 
-import static me.luucka.mangashelf.users.AuthTestSupport.cookie;
-import static me.luucka.mangashelf.users.AuthTestSupport.login;
-import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
+import static me.luucka.mangashelf.users.AuthTestSupport.send;
+import static me.luucka.mangashelf.users.AuthTestSupport.session;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.nullValue;
@@ -16,23 +15,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.users.AppUser;
 import me.luucka.mangashelf.users.AppUserRepository;
 import me.luucka.mangashelf.users.Role;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -53,43 +50,20 @@ class PurchaseListsIT {
 
   @BeforeEach
   void seed() throws Exception {
-    clean();
+    TestDatabase.clean(jdbc);
     users.save(new AppUser("Anna", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
     users.save(new AppUser("Bruno", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    a = session("Anna");
-    b = session("Bruno");
-    var s = send(post("/api/v1/series"), a, "{\"title\":\"Berserk\"}");
+    a = session(mvc, "Anna", PASSWORD);
+    b = session(mvc, "Bruno", PASSWORD);
+    var s = send(mvc, post("/api/v1/series"), a, "{\"title\":\"Berserk\"}");
     var sid = JsonPath.read(s.andReturn().getResponse().getContentAsString(), "$.id");
     var e =
         send(
+            mvc,
             post("/api/v1/series/" + sid + "/editions"),
             a,
             "{\"name\":\"Deluxe\",\"type\":\"REGULAR\",\"status\":\"ONGOING\",\"volumeCount\":10}");
     edition = JsonPath.read(e.andReturn().getResponse().getContentAsString(), "$.id");
-  }
-
-  @AfterEach
-  void clean() {
-    // users first: their lists and rows cascade, and rows restrict deleting editions
-    users.deleteAll();
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    jdbc.update("DELETE FROM spring_session");
-  }
-
-  private Cookie session(String username) throws Exception {
-    return cookie(login(mvc, username, PASSWORD).andReturn().getResponse(), "SESSION")
-        .orElseThrow();
-  }
-
-  private ResultActions send(MockHttpServletRequestBuilder req, Cookie session, String body)
-      throws Exception {
-    var token = xsrf(mvc);
-    req.cookie(session, token).header("X-XSRF-TOKEN", token.getValue());
-    if (body != null) {
-      req.contentType(MediaType.APPLICATION_JSON).content(body);
-    }
-    return mvc.perform(req);
   }
 
   private String json(ResultActions r, String path) throws Exception {
@@ -99,6 +73,7 @@ class PurchaseListsIT {
   private String list(String description, int month, int year) throws Exception {
     var r =
         send(
+                mvc,
                 post(URL),
                 a,
                 "{\"description\":\"%s\",\"month\":%d,\"year\":%d}"
@@ -111,6 +86,7 @@ class PurchaseListsIT {
       throws Exception {
     var d = date == null ? "null" : "\"" + date + "\"";
     return send(
+        mvc,
         post(URL + "/" + listId + "/items"),
         a,
         "{\"editionId\":\"%s\",\"volume\":%d,\"releaseDate\":%s,\"priceEurCents\":%d,\"priceChfCents\":%d}"
@@ -118,13 +94,13 @@ class PurchaseListsIT {
   }
 
   private ResultActions patchList(String id, String body) throws Exception {
-    return send(patch(URL + "/" + id), a, body);
+    return send(mvc, patch(URL + "/" + id), a, body);
   }
 
   @Test
   void createReturnsLocationOfTheNewList() throws Exception {
     var r =
-        send(post(URL), a, "{\"description\":\"Ottobre\",\"month\":10,\"year\":2026}")
+        send(mvc, post(URL), a, "{\"description\":\"Ottobre\",\"month\":10,\"year\":2026}")
             .andExpect(status().isCreated())
             .andReturn()
             .getResponse();
@@ -140,7 +116,7 @@ class PurchaseListsIT {
     var sep = list("Settembre", 9, 2026);
     item(sep, 1, null, 790, 950);
     item(sep, 2, null, 995, 1190).andExpect(status().isCreated());
-    send(patch(URL + "/" + sep + "/items/" + firstItem(sep)), a, "{\"booked\":true}");
+    send(mvc, patch(URL + "/" + sep + "/items/" + firstItem(sep)), a, "{\"booked\":true}");
 
     mvc.perform(get(URL).cookie(a))
         .andExpect(status().isOk())
@@ -159,7 +135,7 @@ class PurchaseListsIT {
 
   @Test
   void listValidation() throws Exception {
-    send(post(URL), a, "{\"description\":\"  \",\"month\":13,\"year\":1999}")
+    send(mvc, post(URL), a, "{\"description\":\"  \",\"month\":13,\"year\":1999}")
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[*].field").value(hasItems("description", "month", "year")));
     var id = list("Ok", 1, 2026);
@@ -172,6 +148,7 @@ class PurchaseListsIT {
   void rowValidationAndDefaults() throws Exception {
     var id = list("Ok", 1, 2026);
     send(
+            mvc,
             post(URL + "/" + id + "/items"),
             a,
             "{\"editionId\":\"%s\",\"volume\":1,\"priceChfCents\":100}".formatted(edition))
@@ -186,6 +163,7 @@ class PurchaseListsIT {
         .andExpect(jsonPath("$.items[0].editionVolumeCount").value(10))
         .andExpect(jsonPath("$.items[0].alsoIn.length()").value(0));
     send(
+            mvc,
             post(URL + "/" + id + "/items"),
             a,
             "{\"editionId\":\"%s\",\"volume\":1,\"priceEurCents\":1,\"priceChfCents\":1}"
@@ -262,7 +240,7 @@ class PurchaseListsIT {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 950);
     patchList(id, "{\"discountCents\":900}").andExpect(status().isOk());
-    send(delete(URL + "/" + id + "/items/" + firstItem(id)), a, null)
+    send(mvc, delete(URL + "/" + id + "/items/" + firstItem(id)), a, null)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items.length()").value(0))
         .andExpect(jsonPath("$.discountCents").value(900))
@@ -274,7 +252,8 @@ class PurchaseListsIT {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 950);
     patchList(id, "{\"discountCents\":900,\"pointsDiscountCents\":50}").andExpect(status().isOk());
-    send(delete(URL + "/" + id + "/items/" + firstItem(id)), a, null).andExpect(status().isOk());
+    send(mvc, delete(URL + "/" + id + "/items/" + firstItem(id)), a, null)
+        .andExpect(status().isOk());
     patchList(id, "{\"pointsDiscountCents\":0}")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.pointsDiscountCents").value(0));
@@ -287,7 +266,8 @@ class PurchaseListsIT {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 950);
     patchList(id, "{\"discountCents\":900,\"pointsDiscountCents\":50}").andExpect(status().isOk());
-    send(delete(URL + "/" + id + "/items/" + firstItem(id)), a, null).andExpect(status().isOk());
+    send(mvc, delete(URL + "/" + id + "/items/" + firstItem(id)), a, null)
+        .andExpect(status().isOk());
     patchList(id, "{\"description\":\"x\"}")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.description").value("x"))
@@ -301,7 +281,7 @@ class PurchaseListsIT {
   void deleteOpenListRemovesRows() throws Exception {
     var id = list("Ok", 1, 2026);
     item(id, 1, null, 100, 100);
-    send(delete(URL + "/" + id), a, null).andExpect(status().isNoContent());
+    send(mvc, delete(URL + "/" + id), a, null).andExpect(status().isNoContent());
     mvc.perform(get(URL + "/" + id).cookie(a)).andExpect(status().isNotFound());
     org.assertj.core.api.Assertions.assertThat(
             jdbc.queryForObject("SELECT count(*) FROM purchase_items", Long.class))
@@ -312,7 +292,7 @@ class PurchaseListsIT {
   void closedListCannotBeDeleted() throws Exception {
     var id = list("Ok", 1, 2026);
     jdbc.update("UPDATE purchase_lists SET closed = true");
-    send(delete(URL + "/" + id), a, null)
+    send(mvc, delete(URL + "/" + id), a, null)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.detail").value("Una lista chiusa non si può eliminare"));
   }
@@ -323,17 +303,19 @@ class PurchaseListsIT {
     item(id, 1, null, 100, 100);
     var itemId = firstItem(id);
     mvc.perform(get(URL + "/" + id).cookie(b)).andExpect(status().isNotFound());
-    send(patch(URL + "/" + id), b, "{\"month\":2}").andExpect(status().isNotFound());
-    send(delete(URL + "/" + id), b, null).andExpect(status().isNotFound());
+    send(mvc, patch(URL + "/" + id), b, "{\"month\":2}").andExpect(status().isNotFound());
+    send(mvc, delete(URL + "/" + id), b, null).andExpect(status().isNotFound());
     send(
+            mvc,
             post(URL + "/" + id + "/items"),
             b,
             "{\"editionId\":\"%s\",\"volume\":1,\"priceEurCents\":1,\"priceChfCents\":1}"
                 .formatted(edition))
         .andExpect(status().isNotFound());
-    send(patch(URL + "/" + id + "/items/" + itemId), b, "{\"booked\":true}")
+    send(mvc, patch(URL + "/" + id + "/items/" + itemId), b, "{\"booked\":true}")
         .andExpect(status().isNotFound());
-    send(delete(URL + "/" + id + "/items/" + itemId), b, null).andExpect(status().isNotFound());
+    send(mvc, delete(URL + "/" + id + "/items/" + itemId), b, null)
+        .andExpect(status().isNotFound());
   }
 
   @Test
@@ -342,9 +324,10 @@ class PurchaseListsIT {
     var listB = list("B", 2, 2026);
     item(listB, 1, null, 100, 100);
     var itemOfB = firstItem(listB);
-    send(patch(URL + "/" + listA + "/items/" + itemOfB), a, "{\"booked\":true}")
+    send(mvc, patch(URL + "/" + listA + "/items/" + itemOfB), a, "{\"booked\":true}")
         .andExpect(status().isNotFound());
-    send(delete(URL + "/" + listA + "/items/" + itemOfB), a, null).andExpect(status().isNotFound());
+    send(mvc, delete(URL + "/" + listA + "/items/" + itemOfB), a, null)
+        .andExpect(status().isNotFound());
   }
 
   @Test
@@ -352,6 +335,7 @@ class PurchaseListsIT {
     var id = list("Ok", 1, 2026);
     item(id, 1, "2026-01-01", 100, 100);
     send(
+            mvc,
             patch(URL + "/" + id + "/items/" + firstItem(id)),
             a,
             "{\"clearReleaseDate\":true,\"priceChfCents\":250,\"booked\":true}")

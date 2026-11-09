@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,8 +41,7 @@ class PasswordChangeIT {
 
   @BeforeEach
   void seed() {
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(new AppUser("Mario", encoder.encode(OLD), Role.USER, true, Instant.now()));
   }
 

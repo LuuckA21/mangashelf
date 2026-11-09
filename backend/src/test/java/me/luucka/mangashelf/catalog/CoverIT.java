@@ -1,7 +1,6 @@
 package me.luucka.mangashelf.catalog;
 
-import static me.luucka.mangashelf.users.AuthTestSupport.cookie;
-import static me.luucka.mangashelf.users.AuthTestSupport.login;
+import static me.luucka.mangashelf.users.AuthTestSupport.session;
 import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -28,6 +27,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.stream.Stream;
 import javax.imageio.ImageIO;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.users.AppUser;
 import me.luucka.mangashelf.users.AppUserRepository;
@@ -79,10 +79,7 @@ class CoverIT {
 
   @BeforeEach
   void seed() throws Exception {
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     try (Stream<Path> files = Files.list(uploads)) {
       for (var f : files.toList()) {
         Files.delete(f);
@@ -91,9 +88,9 @@ class CoverIT {
     users.save(new AppUser("Admin", encoder.encode(PASSWORD), Role.ADMIN, false, Instant.now()));
     users.save(new AppUser("Mario", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
     users.save(new AppUser("Luigi", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    admin = session("Admin");
-    mario = session("Mario");
-    luigi = session("Luigi");
+    admin = session(mvc, "Admin", PASSWORD);
+    mario = session(mvc, "Mario", PASSWORD);
+    luigi = session(mvc, "Luigi", PASSWORD);
     var series =
         JsonPath.<String>read(
             send(post("/api/v1/series"), mario, "{\"title\":\"One Piece\"}")
@@ -111,11 +108,6 @@ class CoverIT {
                 .getResponse()
                 .getContentAsString(),
             "$.id");
-  }
-
-  private Cookie session(String username) throws Exception {
-    return cookie(login(mvc, username, PASSWORD).andReturn().getResponse(), "SESSION")
-        .orElseThrow();
   }
 
   private ResultActions send(MockHttpServletRequestBuilder req, Cookie session, String json)

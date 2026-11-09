@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,10 +51,7 @@ class AccountExportIT {
 
   @Test
   void exportsProfileAndCollection() throws Exception {
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(
         new AppUser("Anna", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
     var s =
@@ -94,10 +92,7 @@ class AccountExportIT {
 
   @Test
   void exportIncludesPurchases() throws Exception {
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(
         new AppUser("Anna", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
     var s =

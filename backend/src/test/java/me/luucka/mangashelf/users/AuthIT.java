@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.Optional;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,7 @@ class AuthIT {
 
   @BeforeEach
   void seed() {
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(
         new AppUser("Luca", encoder.encode("correct-horse-1"), Role.USER, false, Instant.now()));
   }

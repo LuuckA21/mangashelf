@@ -9,8 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** SPA CSRF + session-cookie helpers shared by the auth integration tests. */
+/** SPA CSRF + session-cookie helpers shared by the integration tests. */
 public final class AuthTestSupport {
 
   private AuthTestSupport() {}
@@ -44,5 +45,23 @@ public final class AuthTestSupport {
 
   public static ResultActions login(MockMvc mvc, String u, String p) throws Exception {
     return loginWith(mvc, xsrf(mvc), u, p);
+  }
+
+  /** Logs in and returns the SESSION cookie. */
+  public static Cookie session(MockMvc mvc, String username, String password) throws Exception {
+    return cookie(login(mvc, username, password).andReturn().getResponse(), "SESSION")
+        .orElseThrow();
+  }
+
+  /** Sends the request as that session, with a fresh XSRF token and an optional JSON body. */
+  public static ResultActions send(
+      MockMvc mvc, MockHttpServletRequestBuilder req, Cookie session, String body)
+      throws Exception {
+    var token = xsrf(mvc);
+    req.cookie(session, token).header("X-XSRF-TOKEN", token.getValue());
+    if (body != null) {
+      req.contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+    return mvc.perform(req);
   }
 }

@@ -1,8 +1,7 @@
 package me.luucka.mangashelf.catalog;
 
-import static me.luucka.mangashelf.users.AuthTestSupport.cookie;
-import static me.luucka.mangashelf.users.AuthTestSupport.login;
-import static me.luucka.mangashelf.users.AuthTestSupport.xsrf;
+import static me.luucka.mangashelf.users.AuthTestSupport.send;
+import static me.luucka.mangashelf.users.AuthTestSupport.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,6 +15,7 @@ import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.UUID;
+import me.luucka.mangashelf.TestDatabase;
 import me.luucka.mangashelf.TestcontainersConfig;
 import me.luucka.mangashelf.users.AppUser;
 import me.luucka.mangashelf.users.AppUserRepository;
@@ -26,12 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -52,34 +49,16 @@ class CatalogIT {
 
   @BeforeEach
   void seed() throws Exception {
-    jdbc.update("DELETE FROM editions");
-    jdbc.update("DELETE FROM series");
-    users.deleteAll();
-    jdbc.update("DELETE FROM spring_session");
+    TestDatabase.clean(jdbc);
     users.save(new AppUser("Admin", encoder.encode(PASSWORD), Role.ADMIN, false, Instant.now()));
     users.save(new AppUser("Mario", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    admin = session("Admin");
-    mario = session("Mario");
-  }
-
-  private Cookie session(String username) throws Exception {
-    return cookie(login(mvc, username, PASSWORD).andReturn().getResponse(), "SESSION")
-        .orElseThrow();
-  }
-
-  private ResultActions send(MockHttpServletRequestBuilder req, Cookie session, String body)
-      throws Exception {
-    var token = xsrf(mvc);
-    req.cookie(session, token).header("X-XSRF-TOKEN", token.getValue());
-    if (body != null) {
-      req.contentType(MediaType.APPLICATION_JSON).content(body);
-    }
-    return mvc.perform(req);
+    admin = session(mvc, "Admin", PASSWORD);
+    mario = session(mvc, "Mario", PASSWORD);
   }
 
   private String createSeries(String title) throws Exception {
     var body =
-        send(post("/api/v1/series"), mario, "{\"title\":\"%s\"}".formatted(title))
+        send(mvc, post("/api/v1/series"), mario, "{\"title\":\"%s\"}".formatted(title))
             .andExpect(status().isCreated())
             .andReturn()
             .getResponse()
@@ -89,7 +68,7 @@ class CatalogIT {
 
   private String createEdition(String seriesId, String json) throws Exception {
     var body =
-        send(post("/api/v1/series/" + seriesId + "/editions"), mario, json)
+        send(mvc, post("/api/v1/series/" + seriesId + "/editions"), mario, json)
             .andExpect(status().isCreated())
             .andReturn()
             .getResponse()
@@ -104,12 +83,12 @@ class CatalogIT {
 
   @Test
   void anyUserCreatesSeriesAndEdition() throws Exception {
-    send(post("/api/v1/series"), mario, "{\"title\":\"One Piece\"}")
+    send(mvc, post("/api/v1/series"), mario, "{\"title\":\"One Piece\"}")
         .andExpect(status().isCreated())
         .andExpect(header().exists("Location"))
         .andExpect(jsonPath("$.title").value("One Piece"));
     var id = jdbc.queryForObject("SELECT id::text FROM series", String.class);
-    send(post("/api/v1/series/" + id + "/editions"), mario, EDITION)
+    send(mvc, post("/api/v1/series/" + id + "/editions"), mario, EDITION)
         .andExpect(status().isCreated())
         .andExpect(header().exists("Location"))
         .andExpect(jsonPath("$.publisher").value(org.hamcrest.Matchers.nullValue()))
@@ -123,7 +102,7 @@ class CatalogIT {
   @Test
   void validationMessagesAreItalianWhateverTheBrowserLocale() throws Exception {
     var req = post("/api/v1/series").header("Accept-Language", "en");
-    send(req, mario, "{\"title\":\"  \"}")
+    send(mvc, req, mario, "{\"title\":\"  \"}")
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].message").value("Campo obbligatorio"));
   }
@@ -136,10 +115,10 @@ class CatalogIT {
   @Test
   void duplicateTitleTrimmedAndIgnoringCaseIs409() throws Exception {
     var one = createSeries("One Piece");
-    send(post("/api/v1/series"), mario, "{\"title\":\" one piece \"}")
+    send(mvc, post("/api/v1/series"), mario, "{\"title\":\" one piece \"}")
         .andExpect(status().isConflict());
     createEdition(one, EDITION);
-    send(post("/api/v1/series/" + one + "/editions"), mario, EDITION.replace("blu", "BLU "))
+    send(mvc, post("/api/v1/series/" + one + "/editions"), mario, EDITION.replace("blu", "BLU "))
         .andExpect(status().isConflict());
     var other = createSeries("Naruto");
     createEdition(other, EDITION);
@@ -187,17 +166,18 @@ class CatalogIT {
   void nonAdminCannotUpdateOrDelete() throws Exception {
     var s = createSeries("One Piece");
     var e = createEdition(s, EDITION);
-    send(put("/api/v1/series/" + s), mario, "{\"title\":\"X\"}").andExpect(status().isForbidden());
-    send(delete("/api/v1/series/" + s), mario, null).andExpect(status().isForbidden());
-    send(put("/api/v1/editions/" + e), mario, editionJson("X", 0))
+    send(mvc, put("/api/v1/series/" + s), mario, "{\"title\":\"X\"}")
         .andExpect(status().isForbidden());
-    send(delete("/api/v1/editions/" + e), mario, null).andExpect(status().isForbidden());
+    send(mvc, delete("/api/v1/series/" + s), mario, null).andExpect(status().isForbidden());
+    send(mvc, put("/api/v1/editions/" + e), mario, editionJson("X", 0))
+        .andExpect(status().isForbidden());
+    send(mvc, delete("/api/v1/editions/" + e), mario, null).andExpect(status().isForbidden());
   }
 
   @Test
   void adminUpdatesSeries() throws Exception {
     var s = createSeries("One Piece");
-    send(put("/api/v1/series/" + s), admin, "{\"title\":\"One Piece 2\"}")
+    send(mvc, put("/api/v1/series/" + s), admin, "{\"title\":\"One Piece 2\"}")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.title").value("One Piece 2"));
   }
@@ -205,13 +185,14 @@ class CatalogIT {
   @Test
   void adminUpdatesEditionWithVersion() throws Exception {
     var e = createEdition(createSeries("One Piece"), EDITION);
-    send(put("/api/v1/editions/" + e), admin, editionJson("Nuova", 0))
+    send(mvc, put("/api/v1/editions/" + e), admin, editionJson("Nuova", 0))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("Nuova"))
         .andExpect(jsonPath("$.version").value(1));
-    send(put("/api/v1/editions/" + e), admin, editionJson("Ancora", 0))
+    send(mvc, put("/api/v1/editions/" + e), admin, editionJson("Ancora", 0))
         .andExpect(status().isConflict());
     send(
+            mvc,
             put("/api/v1/editions/" + e),
             admin,
             editionJson("Ancora", 1).replace(",\"version\":1", ""))
@@ -223,7 +204,7 @@ class CatalogIT {
   void volumeCountOutOfRangeIs400() throws Exception {
     var s = createSeries("One Piece");
     for (var bad : new String[] {"0", "10000"}) {
-      send(post("/api/v1/series/" + s + "/editions"), mario, EDITION.replace("114", bad))
+      send(mvc, post("/api/v1/series/" + s + "/editions"), mario, EDITION.replace("114", bad))
           .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.errors[0].field").value("volumeCount"));
     }
@@ -232,7 +213,7 @@ class CatalogIT {
   @Test
   void unknownTypeIs400() throws Exception {
     var s = createSeries("One Piece");
-    send(post("/api/v1/series/" + s + "/editions"), mario, EDITION.replace("REGULAR", "WEIRD"))
+    send(mvc, post("/api/v1/series/" + s + "/editions"), mario, EDITION.replace("REGULAR", "WEIRD"))
         .andExpect(status().isBadRequest());
   }
 
@@ -240,20 +221,20 @@ class CatalogIT {
   void deleteSeriesWithEditionsIs409() throws Exception {
     var s = createSeries("One Piece");
     createEdition(s, EDITION);
-    send(delete("/api/v1/series/" + s), admin, null).andExpect(status().isConflict());
+    send(mvc, delete("/api/v1/series/" + s), admin, null).andExpect(status().isConflict());
   }
 
   @Test
   void deleteEmptySeriesIs204() throws Exception {
     var s = createSeries("One Piece");
-    send(delete("/api/v1/series/" + s), admin, null).andExpect(status().isNoContent());
+    send(mvc, delete("/api/v1/series/" + s), admin, null).andExpect(status().isNoContent());
     assertThat(jdbc.queryForObject("SELECT count(*) FROM series", Integer.class)).isZero();
   }
 
   @Test
   void adminDeletesEditionIs204() throws Exception {
     var e = createEdition(createSeries("One Piece"), EDITION);
-    send(delete("/api/v1/editions/" + e), admin, null).andExpect(status().isNoContent());
+    send(mvc, delete("/api/v1/editions/" + e), admin, null).andExpect(status().isNoContent());
     mvc.perform(get("/api/v1/editions/" + e).cookie(mario)).andExpect(status().isNotFound());
   }
 
@@ -262,9 +243,9 @@ class CatalogIT {
     var id = UUID.randomUUID();
     mvc.perform(get("/api/v1/series/" + id).cookie(mario)).andExpect(status().isNotFound());
     mvc.perform(get("/api/v1/editions/" + id).cookie(mario)).andExpect(status().isNotFound());
-    send(post("/api/v1/series/" + id + "/editions"), mario, EDITION)
+    send(mvc, post("/api/v1/series/" + id + "/editions"), mario, EDITION)
         .andExpect(status().isNotFound());
-    send(delete("/api/v1/series/" + id), admin, null).andExpect(status().isNotFound());
+    send(mvc, delete("/api/v1/series/" + id), admin, null).andExpect(status().isNotFound());
   }
 
   @Test
@@ -273,7 +254,7 @@ class CatalogIT {
     mvc.perform(get("/api/v1/editions/" + e).cookie(admin))
         .andExpect(jsonPath("$.canEditCover").value(true));
     users.save(new AppUser("Luigi", encoder.encode(PASSWORD), Role.USER, false, Instant.now()));
-    mvc.perform(get("/api/v1/editions/" + e).cookie(session("Luigi")))
+    mvc.perform(get("/api/v1/editions/" + e).cookie(session(mvc, "Luigi", PASSWORD)))
         .andExpect(jsonPath("$.canEditCover").value(false));
   }
 }
