@@ -27,7 +27,6 @@ public class Edition {
   private Series series;
 
   private String name;
-  // editions.publisher (text) is legacy and deliberately unmapped.
   private UUID publisherId;
 
   @Enumerated(EnumType.STRING)
