@@ -1,18 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import type { ItemView, ListDetail, ListSummary } from '../../api/types'
 import { axe } from '../../test/axe'
 import { formatChf, formatEur, parseAmount, proposeChf } from './money'
+import { renderApp as renderAt } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
@@ -72,20 +65,7 @@ function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>
 }
 
-function renderApp(path: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-        <Where />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-  return { ...view, client }
-}
+const renderApp = (path: string) => renderAt(path, <Where />)
 
 const bodyOf = (method: string, url: string) => {
   const call = fetchMock.mock.calls.find(

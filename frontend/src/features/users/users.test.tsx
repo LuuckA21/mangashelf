@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import type { UserResponse } from '../../api/types'
 import { axe } from '../../test/axe'
+import { renderApp } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
@@ -51,19 +49,6 @@ afterEach(() => {
   fetchMock.mockReset()
 })
 
-function renderApp() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/admin/users']}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-}
-
 const calls = (method: string, url: string) =>
   fetchMock.mock.calls.filter(
     (c) => c[1].method === method && c[0] === `/api/v1${url}`,
@@ -76,7 +61,7 @@ const rowOf = async (name: string) =>
 
 describe('users page', () => {
   it('labelsEveryCellForTheMobileLayout', async () => {
-    renderApp()
+    renderApp('/admin/users')
     await screen.findByText('bruno')
     const cells = screen.getAllByRole('cell')
     expect(cells).toHaveLength(8)
@@ -86,7 +71,7 @@ describe('users page', () => {
 
   it('createsUserWithTemporaryPassword', async () => {
     replies['POST /users'] = [201, user({ id: 'u3', username: 'carla' })]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.type(await screen.findByLabelText('Nome utente'), 'carla')
     await userEvent.type(
       screen.getByLabelText('Password temporanea'),
@@ -114,7 +99,7 @@ describe('users page', () => {
         errors: [{ field: 'username', message: 'Da 3 a 32 caratteri' }],
       },
     ]
-    renderApp()
+    renderApp('/admin/users')
     const input = await screen.findByLabelText('Nome utente')
     await userEvent.type(input, 'a b')
     await userEvent.type(
@@ -130,7 +115,7 @@ describe('users page', () => {
 
   it('duplicateUsernameShowsDetail', async () => {
     replies['POST /users'] = [409, { detail: 'Nome utente già in uso' }]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.type(await screen.findByLabelText('Nome utente'), 'bruno')
     await userEvent.type(
       screen.getByLabelText('Password temporanea'),
@@ -143,7 +128,7 @@ describe('users page', () => {
   })
 
   it('ownRowHasNoRoleOrDeleteControls', async () => {
-    renderApp()
+    renderApp('/admin/users')
     const own = await rowOf('anna')
     expect(within(own).queryByRole('combobox')).not.toBeInTheDocument()
     expect(within(own).queryByRole('button')).not.toBeInTheDocument()
@@ -152,7 +137,7 @@ describe('users page', () => {
 
   it('changesRole', async () => {
     replies['PATCH /users/u2'] = [200, user({ id: 'u2', role: 'ADMIN' })]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.selectOptions(
       await screen.findByLabelText('Ruolo di bruno'),
       'ADMIN',
@@ -169,7 +154,7 @@ describe('users page', () => {
       pageOf([user(), user({ id: 'u2', username: 'bruno' })]),
     ]
     replies['PATCH /users/u2'] = [409, { detail: 'Serve almeno un admin' }]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.selectOptions(
       await screen.findByLabelText('Ruolo di bruno'),
       'USER',
@@ -182,7 +167,7 @@ describe('users page', () => {
 
   it('resetsPassword', async () => {
     replies['POST /users/u2/reset-password'] = [204]
-    renderApp()
+    renderApp('/admin/users')
     const row = await rowOf('bruno')
     await userEvent.click(
       within(row).getByRole('button', { name: 'Reimposta password' }),
@@ -211,7 +196,7 @@ describe('users page', () => {
         errors: [{ field: 'temporaryPassword', message: 'Troppo corta' }],
       },
     ]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.click(
       within(await rowOf('bruno')).getByRole('button', {
         name: 'Reimposta password',
@@ -226,7 +211,7 @@ describe('users page', () => {
 
   it('deletesUserAfterConfirmation', async () => {
     replies['DELETE /users/u2'] = [204]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.click(
       within(await rowOf('bruno')).getByRole('button', { name: 'Elimina' }),
     )
@@ -237,7 +222,7 @@ describe('users page', () => {
 
   it('deleteConflictShown', async () => {
     replies['DELETE /users/u2'] = [409, { detail: 'Ultimo admin' }]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.click(
       within(await rowOf('bruno')).getByRole('button', { name: 'Elimina' }),
     )
@@ -248,7 +233,7 @@ describe('users page', () => {
   it('pagesWithPrevNext', async () => {
     replies['GET /users?page=0&size=20'] = [200, pageOf([user()], 2)]
     replies['GET /users?page=1&size=20'] = [200, pageOf([bruno], 2)]
-    renderApp()
+    renderApp('/admin/users')
     await screen.findByText('Pagina 1 di 2')
     await userEvent.click(screen.getByRole('button', { name: 'Successiva' }))
     expect(await screen.findByText('Pagina 2 di 2')).toBeInTheDocument()
@@ -259,7 +244,7 @@ describe('users page', () => {
     replies['GET /users?page=0&size=20'] = [200, pageOf([user()], 2)]
     replies['GET /users?page=1&size=20'] = [200, pageOf([bruno], 2)]
     replies['DELETE /users/u2'] = [204]
-    renderApp()
+    renderApp('/admin/users')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Successiva' }),
     )
@@ -280,7 +265,7 @@ describe('users page', () => {
   })
 
   it('hasNoAccessibilityViolations', async () => {
-    const { container } = renderApp()
+    const { container } = renderApp('/admin/users')
     await screen.findByText('bruno')
     expect((await axe(container)).violations).toEqual([])
   })

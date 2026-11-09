@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import { t } from '../../i18n/t'
 import { axe } from '../../test/axe'
+import { renderApp } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
@@ -44,19 +42,6 @@ afterEach(() => {
   fetchMock.mockReset()
 })
 
-function renderApp(path = '/account') {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-}
-
 const calls = (method: string, url: string) =>
   fetchMock.mock.calls.filter(
     (c) => c[1].method === method && c[0] === `/api/v1${url}`,
@@ -65,7 +50,7 @@ const calls = (method: string, url: string) =>
 describe('account page', () => {
   it('changesPasswordAndGoesToLogin', async () => {
     replies['POST /auth/password'] = [204]
-    renderApp()
+    renderApp('/account')
     await userEvent.type(
       await screen.findByLabelText('Password attuale'),
       'vecchia-password-1',
@@ -96,7 +81,7 @@ describe('account page', () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {})
-    renderApp()
+    renderApp('/account')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Esporta i miei dati' }),
     )
@@ -113,7 +98,7 @@ describe('account page', () => {
 
   it('exportFailureShowsError', async () => {
     replies['GET /account/export'] = [500, { detail: 'Esportazione fallita' }]
-    renderApp()
+    renderApp('/account')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Esporta i miei dati' }),
     )
@@ -124,7 +109,7 @@ describe('account page', () => {
 
   it('deleteAccountRequiresPasswordAndLogsOut', async () => {
     replies['DELETE /account'] = [204]
-    renderApp()
+    renderApp('/account')
     await userEvent.type(
       await screen.findByLabelText('Password per confermare'),
       'la-mia-password-1',
@@ -151,7 +136,7 @@ describe('account page', () => {
         errors: [{ field: 'password', message: 'Password errata' }],
       },
     ]
-    renderApp()
+    renderApp('/account')
     const input = await screen.findByLabelText('Password per confermare')
     await userEvent.type(input, 'sbagliata-sbagliata')
     await userEvent.click(
@@ -169,7 +154,7 @@ describe('account page', () => {
       400,
       { detail: 'x', errors: [{ field: 'other', message: 'Campo strano' }] },
     ]
-    renderApp()
+    renderApp('/account')
     await userEvent.type(
       await screen.findByLabelText('Password per confermare'),
       'la-mia-password-1',
@@ -183,7 +168,7 @@ describe('account page', () => {
 
   it('lastAdminConflictShown', async () => {
     replies['DELETE /account'] = [409, { detail: 'Sei l’ultimo admin' }]
-    renderApp()
+    renderApp('/account')
     await userEvent.type(
       await screen.findByLabelText('Password per confermare'),
       'la-mia-password-1',
@@ -203,7 +188,7 @@ describe('account page', () => {
   })
 
   it('hasNoAccessibilityViolations', async () => {
-    const { container } = renderApp()
+    const { container } = renderApp('/account')
     await screen.findByLabelText('Password per confermare')
     expect((await axe(container)).violations).toEqual([])
   })

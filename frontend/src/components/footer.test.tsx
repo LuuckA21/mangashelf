@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../App'
 import { axe } from '../test/axe'
 import SiteFooter from './SiteFooter'
+import { renderApp } from '../test/renderApp'
 
 beforeEach(() => {
   vi.stubEnv('VITE_APP_VERSION', '0.1.0')
@@ -20,19 +19,6 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
-
-function renderApp(path: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-}
 
 const footerText = () =>
   render(

@@ -1,18 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import type { SpendingSummary } from '../../api/types'
 import { axe } from '../../test/axe'
 import { formatChfGrouped } from './money'
+import { renderApp as renderAt } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 let replies: Record<string, [number, unknown]> = {}
@@ -89,20 +82,7 @@ function Where() {
   return <div data-testid="where">{l.pathname + l.search}</div>
 }
 
-function renderApp(path: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const { container } = render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-        <Where />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-  return { client, container }
-}
+const renderApp = (path: string) => renderAt(path, <Where />)
 
 const where = () => screen.getByTestId('where').textContent
 const monthsTable = async () =>

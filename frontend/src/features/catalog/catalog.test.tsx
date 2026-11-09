@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import type { EditionResponse, Role, SeriesDetail } from '../../api/types'
 import { axe } from '../../test/axe'
+import { renderApp } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
@@ -68,19 +66,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
   fetchMock.mockReset()
 })
-
-function renderApp(path: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-}
 
 const calls = (method: string, url: string) =>
   fetchMock.mock.calls.filter(

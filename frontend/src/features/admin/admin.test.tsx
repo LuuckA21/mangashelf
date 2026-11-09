@@ -1,10 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import { axe } from '../../test/axe'
+import { renderApp } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 type Reply = [status: number, body?: unknown]
@@ -42,19 +40,6 @@ afterEach(() => {
   fetchMock.mockReset()
 })
 
-function renderApp(path = '/admin') {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-}
-
 const calls = (method: string, url: string) =>
   fetchMock.mock.calls.filter(
     (c) => c[1].method === method && c[0] === `/api/v1${url}`,
@@ -65,7 +50,7 @@ const rowOf = async (name: string) =>
 
 describe('admin page', () => {
   it('adminNavOnlyForAdmins', async () => {
-    renderApp()
+    renderApp('/admin')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Menu amministrazione' }),
     )
@@ -79,7 +64,7 @@ describe('admin page', () => {
 
   it('userSeesNoLinkAndNotFound', async () => {
     replies['GET /auth/me'] = [200, me('USER')]
-    renderApp()
+    renderApp('/admin')
     expect(
       await screen.findByRole('heading', { name: 'Pagina non trovata' }),
     ).toBeInTheDocument()
@@ -89,7 +74,7 @@ describe('admin page', () => {
   })
 
   it('showsPublishersInServerOrder', async () => {
-    renderApp()
+    renderApp('/admin')
     await screen.findByText('Star Comics')
     const items = screen.getAllByRole('listitem')
     expect(items.map((i) => i.querySelector('.name')?.textContent)).toEqual([
@@ -99,12 +84,12 @@ describe('admin page', () => {
   })
 
   it('countShowsTheTotal', async () => {
-    renderApp()
+    renderApp('/admin')
     expect(await screen.findByText('2 editori')).toBeVisible()
   })
 
   it('searchFiltersTheListAsYouType', async () => {
-    renderApp()
+    renderApp('/admin')
     await screen.findByText('Star Comics')
     await userEvent.type(screen.getByLabelText('Cerca editore'), 'STA')
     expect(
@@ -116,7 +101,7 @@ describe('admin page', () => {
   })
 
   it('searchWithoutResultsSaysSo', async () => {
-    renderApp()
+    renderApp('/admin')
     await screen.findByText('Star Comics')
     await userEvent.type(screen.getByLabelText('Cerca editore'), 'zzz')
     expect(screen.getByText('Nessun editore trovato.')).toBeVisible()
@@ -124,7 +109,7 @@ describe('admin page', () => {
   })
 
   it('newPublisherHasItsOwnPanel', async () => {
-    renderApp()
+    renderApp('/admin')
     expect(
       await screen.findByRole('heading', { level: 3, name: 'Nuovo editore' }),
     ).toBeVisible()
@@ -145,7 +130,7 @@ describe('admin page', () => {
   it('addClearsTheDeleteError', async () => {
     replies['DELETE /publishers/p1'] = [409, { detail: 'In uso' }]
     replies['POST /publishers'] = [201, { id: 'p3', name: 'Jpop' }]
-    renderApp()
+    renderApp('/admin')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Elimina Star Comics' }),
     )
@@ -160,7 +145,7 @@ describe('admin page', () => {
 
   it('addPublisher', async () => {
     replies['POST /publishers'] = [201, { id: 'p3', name: 'Jpop' }]
-    renderApp()
+    renderApp('/admin')
     await userEvent.type(await screen.findByLabelText('Nome'), 'Jpop')
     await userEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
     await vi.waitFor(() => expect(calls('POST', '/publishers')).toHaveLength(1))
@@ -179,7 +164,7 @@ describe('admin page', () => {
         errors: [{ field: 'name', message: 'Editore già presente' }],
       },
     ]
-    renderApp()
+    renderApp('/admin')
     const input = await screen.findByLabelText('Nome')
     await userEvent.type(input, 'panini')
     await userEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
@@ -191,7 +176,7 @@ describe('admin page', () => {
 
   it('renamePublisher', async () => {
     replies['PATCH /publishers/p1'] = [200, { id: 'p1', name: 'Star' }]
-    renderApp()
+    renderApp('/admin')
     const row = await rowOf('Star Comics')
     await userEvent.click(
       within(row).getByRole('button', { name: 'Rinomina Star Comics' }),
@@ -210,7 +195,7 @@ describe('admin page', () => {
   })
 
   it('renameAndCancel', async () => {
-    renderApp()
+    renderApp('/admin')
     const row = await rowOf('Star Comics')
     await userEvent.click(
       within(row).getByRole('button', { name: 'Rinomina Star Comics' }),
@@ -235,7 +220,7 @@ describe('admin page', () => {
         errors: [{ field: 'name', message: 'Editore già presente' }],
       },
     ]
-    renderApp()
+    renderApp('/admin')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Rinomina Star Comics' }),
     )
@@ -249,7 +234,7 @@ describe('admin page', () => {
 
   it('deleteAsksConfirmation', async () => {
     replies['DELETE /publishers/p1'] = [204]
-    renderApp()
+    renderApp('/admin')
     const row = await rowOf('Star Comics')
     await userEvent.click(
       within(row).getByRole('button', { name: 'Elimina Star Comics' }),
@@ -266,7 +251,7 @@ describe('admin page', () => {
       409,
       { detail: "L'editore è usato da alcune edizioni" },
     ]
-    renderApp()
+    renderApp('/admin')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Elimina Star Comics' }),
     )
@@ -281,7 +266,7 @@ describe('admin page', () => {
       409,
       { detail: "L'editore è usato da alcune edizioni" },
     ]
-    renderApp()
+    renderApp('/admin')
     const del = await screen.findByRole('button', {
       name: 'Elimina Star Comics',
     })
@@ -296,7 +281,7 @@ describe('admin page', () => {
   })
 
   it('hasNoAccessibilityViolations', async () => {
-    const { container } = renderApp()
+    const { container } = renderApp('/admin')
     await screen.findByText('Star Comics')
     expect((await axe(container)).violations).toEqual([])
   })

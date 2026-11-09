@@ -1,10 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppRoutes } from '../../App'
 import { axe } from '../../test/axe'
+import { renderApp } from '../../test/renderApp'
 
 const fetchMock = vi.fn()
 
@@ -36,20 +34,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
   fetchMock.mockReset()
 })
-
-function renderApp(path: string) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
-  return Object.assign(client, { container: view.container })
-}
 
 const me = (extra = {}) => ({
   id: '1',
@@ -172,7 +156,7 @@ describe('auth', () => {
       { chfRate: 1.2, discountPercent: 10 },
     ]
     // Esci lives in the Account page.
-    const client = renderApp('/account')
+    const { client } = renderApp('/account')
     const logout = await screen.findByRole('button', { name: 'Esci' })
     client.setQueryData(['collection'], ['previous user data'])
     await userEvent.click(logout)
