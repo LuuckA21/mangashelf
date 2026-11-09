@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError } from '../../api/client'
+import { errorText } from '../../api/client'
 import { t } from '../../i18n/t'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import { useMe } from '../auth/useMe'
@@ -19,8 +19,7 @@ export default function UsersPage() {
   const { changeRole, remove } = useUserMutations()
   // One slot for role and delete failures (409 last admin and the like).
   const [error, setError] = useState<unknown>(null)
-  const message =
-    error instanceof ApiError ? error.detail : error ? t('error.generic') : ''
+  const message = errorText(error)
 
   return (
     <>

@@ -2,7 +2,7 @@ import type { SpendTotals } from '../../api/types'
 import { t } from '../../i18n/t'
 import { formatChfGrouped } from './money'
 
-export type SummaryRow = {
+type SummaryRow = {
   label: string
   fullLabel: string
   spentCents: number

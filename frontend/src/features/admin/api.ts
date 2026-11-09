@@ -1,11 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../../api/client'
+import { api, json } from '../../api/client'
 import type { Publisher } from '../../api/types'
-
-const send = (method: string, body: unknown): RequestInit => ({
-  method,
-  body: JSON.stringify(body),
-})
 
 /** Sorted by name (case-insensitive) by the server. */
 export function usePublishers() {
@@ -28,12 +23,12 @@ export function usePublisherMutations() {
   return {
     create: useMutation({
       mutationFn: (name: string) =>
-        api<Publisher>('/publishers', send('POST', { name })),
+        api<Publisher>('/publishers', json('POST', { name })),
       onSuccess: refresh,
     }),
     rename: useMutation({
       mutationFn: (v: { id: string; name: string }) =>
-        api<Publisher>(`/publishers/${v.id}`, send('PATCH', { name: v.name })),
+        api<Publisher>(`/publishers/${v.id}`, json('PATCH', { name: v.name })),
       onSuccess: refreshAll,
     }),
     remove: useMutation({

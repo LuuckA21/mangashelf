@@ -3,14 +3,10 @@ import type { EditionResponse } from '../../api/types'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import Shelf from '../../components/Shelf'
+import { errorText } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useMe } from '../auth/useMe'
-import {
-  errorText,
-  useDeleteEdition,
-  useSetCover,
-  useUpdateEdition,
-} from '../catalog/api'
+import { useDeleteEdition, useSetCover, useUpdateEdition } from '../catalog/api'
 import CoverInput from '../catalog/CoverInput'
 import EditionForm from '../catalog/EditionForm'
 import {

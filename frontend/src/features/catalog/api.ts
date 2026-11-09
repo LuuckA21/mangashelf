@@ -5,14 +5,13 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query'
-import { ApiError, api } from '../../api/client'
+import { api, json } from '../../api/client'
 import type {
   EditionResponse,
   Page,
   SeriesDetail,
   SeriesSummary,
 } from '../../api/types'
-import { t } from '../../i18n/t'
 import type { EditionFormValues } from './EditionForm'
 
 /** `page` is 1-based, as shown in the URL. */
@@ -33,14 +32,6 @@ export function useSeriesDetail(id: string) {
     queryFn: () => api<SeriesDetail>(`/series/${id}`),
   })
 }
-
-export const errorText = (e: unknown) =>
-  e instanceof ApiError ? e.detail : t('error.generic')
-
-const json = (method: string, body: unknown): RequestInit => ({
-  method,
-  body: JSON.stringify(body),
-})
 
 export function useCreateSeries() {
   const client = useQueryClient()

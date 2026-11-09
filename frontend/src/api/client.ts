@@ -74,3 +74,22 @@ export function fieldMessage(error: unknown, field: string) {
     ? error.errors.find((e) => e.field === field)?.message
     : undefined
 }
+
+/**
+ * Text for a form's error banner ('' when there is no error). With `shownFields`, a 400's field
+ * errors are left to those fields and only the others are shown here, so none is lost.
+ */
+export function errorText(error: unknown, shownFields?: string[]): string {
+  if (!error) return ''
+  if (!(error instanceof ApiError)) return t('error.generic')
+  if (!shownFields || error.errors.length === 0) return error.detail
+  return error.errors
+    .filter((e) => !shownFields.includes(e.field))
+    .map((e) => e.message)
+    .join(' ')
+}
+
+export const json = (method: string, body: unknown): RequestInit => ({
+  method,
+  body: JSON.stringify(body),
+})

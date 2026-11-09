@@ -15,7 +15,7 @@ import type {
   Page,
 } from '../../api/types'
 
-export type CollectionFilters = {
+type CollectionFilters = {
   q?: string
   type?: EditionType
   status?: EditionStatus

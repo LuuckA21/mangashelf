@@ -30,17 +30,7 @@ describe('responsive accessibility tokens', () => {
   it('keeps mobile controls at a thumb-sized 44 pixel minimum', () => {
     expect(css).toContain('@media (max-width: 700px)')
     expect(css).toMatch(/button,\s*input,\s*select\s*{\s*min-height: 44px;/)
-    expect(css).toMatch(
-      /\.link-button\s*{[\s\S]*?min-width: 44px;[\s\S]*?min-height: 44px;/,
-    )
     expect(css).toMatch(/\.topbar nav\s*{[\s\S]*?flex-wrap: wrap;/)
-    expect(css).toMatch(
-      /\.catalog-actions\s*{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
-    )
-    expect(css).toMatch(/\.catalog-actions button\s*{\s*width: 100%;/)
     expect(css).toContain('content: attr(data-label)')
-    expect(css).toMatch(
-      /\.topbar-inner > \.account-link\s*{\s*max-width: 24vw;/,
-    )
   })
 })

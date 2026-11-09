@@ -4,13 +4,8 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
-import { api } from '../../api/client'
+import { api, json } from '../../api/client'
 import type { Page, Role, UserResponse } from '../../api/types'
-
-const send = (method: string, body: unknown): RequestInit => ({
-  method,
-  body: JSON.stringify(body),
-})
 
 /** `page` is 1-based. */
 export function useUsers(page: number) {
@@ -30,19 +25,19 @@ export function useUserMutations() {
         username: string
         temporaryPassword: string
         role: Role
-      }) => api('/users', send('POST', v)),
+      }) => api('/users', json('POST', v)),
       onSuccess: refresh,
     }),
     reset: useMutation({
       mutationFn: (v: { id: string; temporaryPassword: string }) =>
         api(
           `/users/${v.id}/reset-password`,
-          send('POST', { temporaryPassword: v.temporaryPassword }),
+          json('POST', { temporaryPassword: v.temporaryPassword }),
         ),
     }),
     changeRole: useMutation({
       mutationFn: (v: { id: string; role: Role }) =>
-        api(`/users/${v.id}`, send('PATCH', { role: v.role })),
+        api(`/users/${v.id}`, json('PATCH', { role: v.role })),
       onSuccess: refresh,
     }),
     remove: useMutation({

@@ -12,3 +12,11 @@ export const monthShort = (month: number) =>
     .format(new Date(2000, month - 1, 1))
     .replace('.', '')
     .toUpperCase()
+
+const long = new Intl.DateTimeFormat('it-IT', { month: 'long' })
+
+/** "Ottobre" */
+export const monthName = (month: number) => {
+  const name = long.format(new Date(2000, month - 1, 1))
+  return name.charAt(0).toUpperCase() + name.slice(1)
+}

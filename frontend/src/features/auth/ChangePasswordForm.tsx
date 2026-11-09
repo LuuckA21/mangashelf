@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type SyntheticEvent } from 'react'
-import { ApiError, api } from '../../api/client'
+import { api, ApiError, errorText } from '../../api/client'
 import { t } from '../../i18n/t'
 import { endSession } from './endSession'
 
@@ -32,10 +32,7 @@ export default function ChangePasswordForm({
   const fieldErrors = err instanceof ApiError ? err.errors : []
   const message = (field: string) =>
     fieldErrors.find((e) => e.field === field)?.message
-  const general =
-    err instanceof ApiError
-      ? fieldErrors.length === 0 && err.detail
-      : err && t('error.generic')
+  const general = errorText(err, ['currentPassword', 'newPassword'])
 
   // Focus the first invalid field once its error is rendered, so it is read out.
   const firstInvalid = (['currentPassword', 'newPassword'] as const).find(

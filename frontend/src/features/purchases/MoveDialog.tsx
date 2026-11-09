@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useListChange, usePurchaseLists } from './api'
 import { monthLabel } from './monthLabel'
@@ -71,11 +71,7 @@ export default function MoveDialog({ listId, itemIds, onClose }: Props) {
   }
 
   const error = change.error
-  const general =
-    error &&
-    (error instanceof ApiError
-      ? error.errors.length === 0 && error.detail
-      : t('error.generic'))
+  const general = errorText(error, ['targetListId'])
 
   return (
     <div className="modal-backdrop">

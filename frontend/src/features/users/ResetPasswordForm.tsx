@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useUserMutations } from './api'
 
@@ -19,15 +19,7 @@ export default function ResetPasswordForm({
 
   const error = reset.error
   const msg = fieldMessage(error, 'temporaryPassword')
-  const general =
-    error instanceof ApiError
-      ? error.errors.length === 0
-        ? error.detail
-        : error.errors
-            .filter((e) => e.field !== 'temporaryPassword')
-            .map((e) => e.message)
-            .join(' ')
-      : error && t('error.generic')
+  const general = errorText(error, ['temporaryPassword'])
 
   useEffect(() => {
     if (msg) document.getElementById(inputId)?.focus()

@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { api } from '../../api/client'
+import { api, json } from '../../api/client'
 import type {
   ListDetail,
   ListSummary,
@@ -12,11 +12,6 @@ import type {
   PurchaseSettings,
   SpendingSummary,
 } from '../../api/types'
-
-const json = (method: string, body: unknown): RequestInit => ({
-  method,
-  body: JSON.stringify(body),
-})
 
 export function usePurchaseLists() {
   return useQuery({

@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent, type SyntheticEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useCreatePurchaseList, usePurchaseLists } from './api'
 import { formatChfGrouped } from './money'
@@ -34,11 +34,7 @@ function CreateForm() {
   const err = create.error
   const descError = fieldMessage(err, 'description')
   const monthError = fieldMessage(err, 'month') ?? fieldMessage(err, 'year')
-  const general =
-    err &&
-    (err instanceof ApiError
-      ? err.errors.length === 0 && err.detail
-      : t('error.generic'))
+  const general = errorText(err, ['description', 'month', 'year'])
 
   return (
     <form className="panel purchase-create" onSubmit={submit}>

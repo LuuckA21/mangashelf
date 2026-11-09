@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import type { PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
 import { usePurchaseSettings, useSavePurchaseSettings } from '../purchases/api'
@@ -24,11 +24,7 @@ function Form({ initial }: { initial: PurchaseSettings }) {
     fieldMessage(save.error, 'chfRate') ??
     (invalid ? t('error.generic') : undefined)
   const discountError = fieldMessage(save.error, 'discountPercent')
-  const general =
-    save.error &&
-    (save.error instanceof ApiError
-      ? save.error.errors.length === 0 && save.error.detail
-      : t('error.generic'))
+  const general = errorText(save.error, ['chfRate', 'discountPercent'])
 
   return (
     <form onSubmit={submit}>

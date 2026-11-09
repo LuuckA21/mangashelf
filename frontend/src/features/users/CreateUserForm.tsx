@@ -1,5 +1,5 @@
 import { useEffect, useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import type { Role } from '../../api/types'
 import { t } from '../../i18n/t'
 import { useUserMutations } from './api'
@@ -13,17 +13,7 @@ export default function CreateUserForm() {
   const error = create.error
   const userMsg = fieldMessage(error, 'username')
   const passMsg = fieldMessage(error, 'temporaryPassword')
-  const unmatched =
-    error instanceof ApiError &&
-    error.errors.filter(
-      (e) => e.field !== 'username' && e.field !== 'temporaryPassword',
-    )
-  const general =
-    error instanceof ApiError
-      ? error.errors.length === 0
-        ? error.detail
-        : unmatched && unmatched.map((e) => e.message).join(' ')
-      : error && t('error.generic')
+  const general = errorText(error, ['username', 'temporaryPassword'])
 
   // Focus the first invalid field once its error is rendered, so it is read out.
   const firstInvalid = userMsg ? 'username' : passMsg ? 'temporaryPassword' : ''

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type SyntheticEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { ApiError, api } from '../../api/client'
+import { api, errorText } from '../../api/client'
 import type { MeResponse } from '../../api/types'
 import { t } from '../../i18n/t'
 import SiteFooter from '../../components/SiteFooter'
@@ -36,10 +36,7 @@ export default function LoginPage() {
     login.mutate()
   }
 
-  const error =
-    login.error instanceof ApiError
-      ? login.error.detail
-      : login.error && t('error.generic')
+  const error = errorText(login.error)
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import type { ItemView, PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
 import { fetchProposal, useListChange } from './api'
@@ -107,11 +107,12 @@ export default function ItemForm({ listId, settings, item, onDone }: Props) {
   }
 
   const err = change.error
-  const general =
-    err &&
-    (err instanceof ApiError
-      ? err.errors.length === 0 && err.detail
-      : t('error.generic'))
+  const general = errorText(err, [
+    'volume',
+    'releaseDate',
+    'priceEurCents',
+    'priceChfCents',
+  ])
   const fe = (f: string) => fieldMessage(err, f)
   const field = (name: string, label: string, error?: string | false) => {
     const id = `${uid}-${name}`

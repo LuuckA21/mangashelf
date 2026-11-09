@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ApiError, fieldMessage } from '../../api/client'
+import { ApiError, errorText, fieldMessage } from '../../api/client'
 import type { ItemView, ListDetail } from '../../api/types'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import { t } from '../../i18n/t'
@@ -68,11 +68,7 @@ function HeaderForm({
   const err = change.error
   const descError = fieldMessage(err, 'description')
   const monthError = fieldMessage(err, 'month') ?? fieldMessage(err, 'year')
-  const general =
-    err &&
-    (err instanceof ApiError
-      ? err.errors.length === 0 && err.detail
-      : t('error.generic'))
+  const general = errorText(err, ['description', 'month', 'year'])
 
   return (
     <form className="inline-actions" onSubmit={submit}>

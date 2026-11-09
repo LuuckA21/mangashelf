@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { t } from '../../i18n/t'
 import { formatChfGrouped } from './money'
 
-export interface ChartColumn {
+interface ChartColumn {
   short: string
   full: string
   spentCents: number

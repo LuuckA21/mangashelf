@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import type { ListDetail, PurchaseSettings } from '../../api/types'
 import { t } from '../../i18n/t'
 import { useListChange } from './api'
@@ -25,11 +25,7 @@ function AmountEditor(props: {
   const [bad, setBad] = useState(false)
   const error =
     (bad && t('purchases.badAmount')) || fieldMessage(change.error, props.field)
-  const general =
-    change.error &&
-    (change.error instanceof ApiError
-      ? change.error.errors.length === 0 && change.error.detail
-      : t('error.generic'))
+  const general = errorText(change.error, [props.field])
 
   async function submit(ev: SyntheticEvent) {
     ev.preventDefault()

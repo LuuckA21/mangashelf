@@ -5,7 +5,7 @@ import {
   type ReactNode,
   type SyntheticEvent,
 } from 'react'
-import { ApiError } from '../../api/client'
+import { ApiError, errorText } from '../../api/client'
 import type { EditionStatus, EditionType } from '../../api/types'
 import { t } from '../../i18n/t'
 import { usePublishers } from '../admin/api'
@@ -68,15 +68,7 @@ export default function EditionForm({
       ? t('edition.publisherUnknown')
       : fieldErrors.find((e) => e.field === serverField(f))?.message
   // Errors for fields this form does not show (e.g. `version`) must not vanish.
-  const unmatched = fieldErrors.filter(
-    (e) => !(FIELDS.map(serverField) as string[]).includes(e.field),
-  )
-  const general =
-    error instanceof ApiError
-      ? fieldErrors.length === 0
-        ? error.detail
-        : unmatched.map((e) => e.message).join(' ')
-      : error !== null && error !== undefined && t('error.generic')
+  const general = errorText(error, FIELDS.map(serverField))
 
   // Focus the first invalid field once its error is rendered, so it is read out.
   const firstInvalid = FIELDS.find(message)

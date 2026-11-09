@@ -3,9 +3,7 @@ import { t } from '../../i18n/t'
 import { usePurchaseSummary } from './api'
 import ColumnChart from './ColumnChart'
 import SummaryTable from './SummaryTable'
-
-const monthName = new Intl.DateTimeFormat('it-IT', { month: 'long' })
-const capitalised = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+import { monthName } from './monthLabel'
 
 export default function SummaryTab() {
   const [params, setParams] = useSearchParams()
@@ -57,9 +55,7 @@ export default function SummaryTab() {
           label={t('summary.chartMonths', { year: data.year })}
           averageCents={data.monthTotals.averageCents}
           columns={data.months.map((m) => {
-            const full = capitalised(
-              monthName.format(new Date(2000, m.month - 1, 1)),
-            )
+            const full = monthName(m.month)
             return { ...m, short: full.charAt(0), full }
           })}
         />
@@ -67,9 +63,7 @@ export default function SummaryTab() {
           firstColumn={t('summary.month')}
           totals={data.monthTotals}
           rows={data.months.map((m) => {
-            const full = capitalised(
-              monthName.format(new Date(2000, m.month - 1, 1)),
-            )
+            const full = monthName(m.month)
             return { ...m, label: full.charAt(0), fullLabel: full }
           })}
         />

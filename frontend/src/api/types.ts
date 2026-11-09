@@ -137,7 +137,7 @@ export type SpendTotals = {
   upcomingCents: number
 }
 
-export type MonthSpend = {
+type MonthSpend = {
   month: number
   spentCents: number
   upcomingCents: number
@@ -145,7 +145,7 @@ export type MonthSpend = {
   aboveAverage: boolean
 }
 
-export type YearSpend = {
+type YearSpend = {
   year: number
   spentCents: number
   upcomingCents: number

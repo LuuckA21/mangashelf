@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type SyntheticEvent } from 'react'
-import { ApiError, fieldMessage } from '../../api/client'
+import { errorText, fieldMessage } from '../../api/client'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import type { Publisher } from '../../api/types'
 import { t } from '../../i18n/t'
@@ -8,14 +8,7 @@ import { usePublisherMutations, usePublishers } from './api'
 /** Shows the server's field message under the input, or the detail above. */
 function useNameError(error: unknown, inputId: string) {
   const msg = fieldMessage(error, 'name')
-  const general =
-    error instanceof ApiError
-      ? error.errors.length === 0
-        ? error.detail
-        : ''
-      : error
-        ? t('error.generic')
-        : ''
+  const general = errorText(error, ['name'])
   useEffect(() => {
     if (msg) document.getElementById(inputId)?.focus()
   }, [msg, error, inputId])
@@ -190,8 +183,7 @@ export default function PublishersSection() {
   const [error, setError] = useState<unknown>(null)
   const [search, setSearch] = useState('')
   const searchId = useId()
-  const message =
-    error instanceof ApiError ? error.detail : error ? t('error.generic') : ''
+  const message = errorText(error)
   const query = search.trim().toLowerCase()
   const shown = (data ?? []).filter((p) => p.name.toLowerCase().includes(query))
   const total = data?.length ?? 0

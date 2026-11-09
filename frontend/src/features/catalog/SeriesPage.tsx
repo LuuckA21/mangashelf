@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import ConfirmDelete from '../../components/ConfirmDelete'
 import type { EditionResponse } from '../../api/types'
+import { errorText } from '../../api/client'
 import { t } from '../../i18n/t'
 import { useAddToCollection } from '../collection/api'
 import { useMe } from '../auth/useMe'
 import {
-  errorText,
   useCreateEdition,
   useDeleteSeries,
   useRenameSeries,

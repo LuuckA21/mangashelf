@@ -1,5 +1,5 @@
 import { useEffect, useState, type SyntheticEvent } from 'react'
-import { ApiError } from '../../api/client'
+import { ApiError, errorText } from '../../api/client'
 import { t } from '../../i18n/t'
 
 /** One title field; used to create a series and to rename it. */
@@ -33,15 +33,7 @@ export default function SeriesForm({
 
   const fieldErrors = error instanceof ApiError ? error.errors : []
   const titleError = fieldErrors.find((e) => e.field === 'title')?.message
-  const others = fieldErrors.filter((e) => e.field !== 'title')
-  const general =
-    error === undefined
-      ? undefined
-      : error instanceof ApiError
-        ? fieldErrors.length === 0
-          ? error.detail
-          : others.map((e) => e.message).join(' ')
-        : t('error.generic')
+  const general = errorText(error, ['title'])
 
   useEffect(() => {
     if (titleError) document.getElementById('series-title')?.focus()
