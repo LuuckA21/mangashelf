@@ -70,9 +70,12 @@ public class PurchaseService {
             """)
         .param("userId", userId)
         .query((rs, i) -> {
-          long sub = rs.getLong("subtotal");
-          long fixed = rs.getLong("discount_cents");
-          long discount = rs.wasNull() ? Money.discount(sub, percent) : fixed;
+          var totals =
+              totals(
+                  rs.getLong("subtotal"),
+                  rs.getObject("discount_cents", Integer.class),
+                  rs.getLong("points_discount_cents"),
+                  percent);
           return new ListSummary(
               rs.getString("id"),
               rs.getString("description"),
@@ -81,7 +84,7 @@ public class PurchaseService {
               rs.getBoolean("closed"),
               rs.getInt("n"),
               rs.getInt("unbooked"),
-              total(sub, discount, rs.getLong("points_discount_cents")));
+              totals.total());
         })
         .list();
   }
@@ -328,8 +331,15 @@ public class PurchaseService {
     return List.of((String[]) array.getArray());
   }
 
-  private static long total(long subtotal, long discount, long points) {
-    return Math.max(0, subtotal - discount - points);
+  private record Totals(long discount, long total) {}
+
+  /**
+   * The one place for a list's discount and total: a fixed discount, or {@code percent} of the
+   * subtotal when none is set; the total never goes below 0.
+   */
+  private static Totals totals(long subtotal, Integer fixedDiscount, long points, int percent) {
+    long discount = fixedDiscount == null ? Money.discount(subtotal, percent) : fixedDiscount;
+    return new Totals(discount, Math.max(0, subtotal - discount - points));
   }
 
   private ListDetail detail(UUID userId, PurchaseList l) {
@@ -368,10 +378,8 @@ public class PurchaseService {
             .list();
     long sub = rows.stream().mapToLong(ItemView::priceChfCents).sum();
     boolean auto = l.getDiscountCents() == null;
-    long discount =
-        auto
-            ? Money.discount(sub, users.findById(userId).orElseThrow().getDiscountPercent())
-            : l.getDiscountCents();
+    int percent = auto ? users.findById(userId).orElseThrow().getDiscountPercent() : 0;
+    var totals = totals(sub, l.getDiscountCents(), l.getPointsDiscountCents(), percent);
     return new ListDetail(
         l.getId().toString(),
         l.getDescription(),
@@ -380,10 +388,10 @@ public class PurchaseService {
         l.isClosed(),
         rows,
         sub,
-        discount,
+        totals.discount(),
         auto,
         l.getPointsDiscountCents(),
-        total(sub, discount, l.getPointsDiscountCents()));
+        totals.total());
   }
 
   @Transactional(readOnly = true)

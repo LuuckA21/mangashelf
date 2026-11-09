@@ -52,10 +52,6 @@ public class PurchaseItem {
     return id;
   }
 
-  public UUID getListId() {
-    return listId;
-  }
-
   public UUID getEditionId() {
     return editionId;
   }

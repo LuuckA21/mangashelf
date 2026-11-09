@@ -26,58 +26,64 @@ public class PurchaseSummaryService {
     var years = lists.stream().map(ListSummary::year).distinct().sorted().toList();
     Integer year = years.isEmpty() ? null : years.contains(requested) ? requested : years.getLast();
 
-    var monthLists = lists.stream().filter(l -> year != null && l.year() == year).toList();
     var months =
         IntStream.rangeClosed(1, 12)
-            .mapToObj(m -> monthLists.stream().filter(l -> l.month() == m).toList())
+            .mapToObj(m ->
+                Spend.of(
+                    lists.stream()
+                        .filter(l -> year != null && l.year() == year && l.month() == m)
+                        .toList()))
             .toList();
-    var monthTotals = totals(months.stream().map(PurchaseSummaryService::sum).toList());
+    var monthTotals = totals(months);
     var monthRows =
         IntStream.rangeClosed(1, 12)
             .mapToObj(m -> {
-              var sum = sum(months.get(m - 1));
+              var s = months.get(m - 1);
               return new MonthSpend(
-                  m,
-                  sum[0],
-                  sum[1],
-                  !months.get(m - 1).isEmpty(),
-                  sum[0] + sum[1] > monthTotals.averageCents());
+                  m, s.spent(), s.upcoming(), s.hasLists(), s.total() > monthTotals.averageCents());
             })
             .toList();
 
-    var yearSums = years.stream().map(y -> sum(lists.stream().filter(l -> l.year() == y).toList()));
-    var sums = yearSums.toList();
-    var yearTotals = totals(sums);
+    var perYear =
+        years.stream()
+            .map(y -> Spend.of(lists.stream().filter(l -> l.year() == y).toList()))
+            .toList();
+    var yearTotals = totals(perYear);
     var byYear =
         IntStream.range(0, years.size())
-            .mapToObj(i ->
-                new YearSpend(
-                    years.get(i),
-                    sums.get(i)[0],
-                    sums.get(i)[1],
-                    sums.get(i)[0] + sums.get(i)[1] > yearTotals.averageCents()))
+            .mapToObj(i -> {
+              var s = perYear.get(i);
+              return new YearSpend(
+                  years.get(i), s.spent(), s.upcoming(), s.total() > yearTotals.averageCents());
+            })
             .toList();
     return new SpendingSummary(years, year, monthRows, monthTotals, byYear, yearTotals);
   }
 
-  /** {spent, upcoming}: closed lists are spent, open ones upcoming. */
-  private static long[] sum(List<ListSummary> lists) {
-    long spent = 0;
-    long upcoming = 0;
-    for (var l : lists) {
-      if (l.closed()) {
-        spent += l.totalCents();
-      } else {
-        upcoming += l.totalCents();
+  /** Closed lists are spent, open ones upcoming. */
+  private record Spend(long spent, long upcoming, boolean hasLists) {
+    static Spend of(List<ListSummary> lists) {
+      long spent = 0;
+      long upcoming = 0;
+      for (var l : lists) {
+        if (l.closed()) {
+          spent += l.totalCents();
+        } else {
+          upcoming += l.totalCents();
+        }
       }
+      return new Spend(spent, upcoming, !lists.isEmpty());
     }
-    return new long[] {spent, upcoming};
+
+    long total() {
+      return spent + upcoming;
+    }
   }
 
-  private static SpendTotals totals(List<long[]> sums) {
-    long spent = sums.stream().mapToLong(s -> s[0]).sum();
-    long upcoming = sums.stream().mapToLong(s -> s[1]).sum();
-    long n = sums.stream().filter(s -> s[0] + s[1] > 0).count();
+  private static SpendTotals totals(List<Spend> spends) {
+    long spent = spends.stream().mapToLong(Spend::spent).sum();
+    long upcoming = spends.stream().mapToLong(Spend::upcoming).sum();
+    long n = spends.stream().filter(s -> s.total() > 0).count();
     long total = spent + upcoming;
     // integer half-up rounding; totals are never negative
     long average = n == 0 ? 0 : (2 * total + n) / (2 * n);

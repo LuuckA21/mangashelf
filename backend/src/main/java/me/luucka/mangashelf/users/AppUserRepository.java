@@ -8,7 +8,5 @@ public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
 
   Optional<AppUser> findByUsernameIgnoreCase(String username);
 
-  boolean existsByUsernameIgnoreCase(String username);
-
   long countByRole(Role role);
 }

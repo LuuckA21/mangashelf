@@ -156,10 +156,15 @@ public class EditionService {
 
   private Edition requireCoverEditor(UUID id, AppUserPrincipal me) {
     var e = require(id);
-    if (!me.isAdmin() && !me.id().equals(e.getCreatedBy())) {
+    if (!canEditCover(e, me)) {
       throw new AccessDeniedException("Not allowed to change this cover");
     }
     return e;
+  }
+
+  /** Admins, and whoever created the edition. Also sent to clients as {@code canEditCover}. */
+  private static boolean canEditCover(Edition e, AppUserPrincipal me) {
+    return me.isAdmin() || me.id().equals(e.getCreatedBy());
   }
 
   /** Deletes {@code onCommit} once the transaction commits, {@code onRollback} if it does not. */
@@ -208,7 +213,7 @@ public class EditionService {
         e.getStatus(),
         e.getVolumeCount(),
         e.getCoverFile() != null,
-        me.isAdmin() || me.id().equals(e.getCreatedBy()),
+        canEditCover(e, me),
         e.getVersion(),
         collectionCount,
         inMyCollection);
